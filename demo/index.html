@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic Name Input Demo</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    .hidden { display: none; }
+    .bounce { animation: bounceIn 0.4s ease; }
+    @keyframes bounceIn {
+      0% { transform: scale(0.9); opacity: 0; }
+      60% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    input { margin: 0.25rem 0; padding: 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Dynamic Name Input Demo</h1>
+  <p>Click the field below to edit the individual name components.</p>
+  <div class="name-input">
+    <input id="fullNameDisplay" readonly />
+    <div id="nameFields" class="hidden bounce">
+      <input id="prefix" placeholder="Mr./Ms." />
+      <input id="first" placeholder="First" />
+      <input id="middle" placeholder="Middle" />
+      <input id="last" placeholder="Last" />
+      <input id="suffix" placeholder="Jr./MD" />
+    </div>
+  </div>
+
+  <script>
+    const display = document.getElementById('fullNameDisplay');
+    const fields  = document.getElementById('nameFields');
+    const inputs  = [...fields.querySelectorAll('input')];
+
+    function updateDisplay() {
+      const [pref, first, middle, last, suff] = inputs.map(i => i.value.trim());
+      display.value = [pref, first, middle, last, suff].filter(Boolean).join(' ');
+    }
+
+    display.addEventListener('focus', () => {
+      display.classList.add('hidden');
+      fields.classList.remove('hidden');
+      fields.classList.add('bounce');
+      inputs[0].focus();
+    });
+
+    function collapse() {
+      updateDisplay();
+      fields.classList.add('hidden');
+      display.classList.remove('hidden');
+    }
+
+    inputs.forEach(i => i.addEventListener('blur', () => {
+      if (!fields.contains(document.activeElement)) collapse();
+    }));
+
+    inputs.forEach(i => i.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        collapse();
+      }
+    }));
+
+    updateDisplay();
+  </script>
+</body>
+</html>
