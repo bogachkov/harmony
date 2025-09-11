@@ -1,0 +1,37 @@
+body { font-family: sans-serif; padding: 2rem; }
+
+.hidden { display: none; }
+.bounce { animation: bounceIn 0.4s ease; }
+@keyframes bounceIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.name-input { width: 300px; }
+
+#fullNameDisplay,
+#nameFields input {
+  border: none;
+  border-bottom: 1px solid #ccc;
+  padding: 0.25rem;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#nameFields {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.field {
+  flex: 1;
+}
+
+.field label {
+  display: block;
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 0.25rem;
+}

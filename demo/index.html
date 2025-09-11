@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic Name Input Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Dynamic Name Input Demo</h1>
+  <p>Click the field below to edit the individual name components.</p>
+  <div class="name-input">
+    <input id="fullNameDisplay" readonly />
+    <div id="nameFields" class="hidden">
+      <div class="field">
+        <input id="prefix" placeholder="Mr./Ms." />
+        <label for="prefix">Prefix</label>
+      </div>
+      <div class="field">
+        <input id="first" placeholder="First" />
+        <label for="first">First</label>
+      </div>
+      <div class="field">
+        <input id="middle" placeholder="Middle" />
+        <label for="middle">Middle</label>
+      </div>
+      <div class="field">
+        <input id="last" placeholder="Last" />
+        <label for="last">Last</label>
+      </div>
+      <div class="field">
+        <input id="suffix" placeholder="Jr./MD" />
+        <label for="suffix">Suffix</label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const display = document.getElementById('fullNameDisplay');
+    const fields  = document.getElementById('nameFields');
+    const inputs  = [...fields.querySelectorAll('input')];
+
+    function updateDisplay() {
+      const [pref, first, middle, last, suff] = inputs.map(i => i.value.trim());
+      display.value = [pref, first, middle, last, suff].filter(Boolean).join(' ');
+    }
+
+    display.addEventListener('focus', () => {
+      display.classList.add('hidden');
+      fields.classList.remove('hidden');
+      fields.classList.add('bounce');
+      inputs[0].focus();
+    });
+
+    function collapse() {
+      updateDisplay();
+      fields.classList.add('hidden');
+      display.classList.remove('hidden');
+    }
+
+    fields.addEventListener('focusout', (e) => {
+      if (!fields.contains(e.relatedTarget)) collapse();
+    });
+
+    inputs.forEach(i => i.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        collapse();
+      }
+    }));
+
+    updateDisplay();
+  </script>
+</body>
+</html>
