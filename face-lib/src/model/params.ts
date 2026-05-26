@@ -67,6 +67,8 @@ export type FaceParams = {
     color: string;          // primary line color
     constructionColor: string;
     background: string | null;
+    skinFill: string | null;   // fill color for the head silhouette (null = no fill)
+    hairFill: string | null;   // fill color for the hair (null = outline only)
     showConstruction: boolean;
     showSidePlanes: boolean;
   };
@@ -136,8 +138,8 @@ export const defaults: FaceParams = {
   },
   neck: {
     visible: true,
-    width: 0.42,
-    length: 0.18,
+    width: 0.55,        // trapezius width at the base (fraction of head.width)
+    length: 0.22,
   },
   style: {
     lineWeight: 2,
@@ -147,6 +149,8 @@ export const defaults: FaceParams = {
     color: '#1a1a1a',
     constructionColor: '#c8c8c8',
     background: '#ffffff',
+    skinFill: '#f4d8c0',     // warm light skin default; override per-character
+    hairFill: '#3a2a1f',     // dark brown default
     showConstruction: false,
     showSidePlanes: false,
   },

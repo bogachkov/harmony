@@ -3,10 +3,13 @@ import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
+// `role` lets the renderer identify special curves (silhouette, hair) for fills.
 export type Curve = {
   kind: 'construction' | 'feature';
   closed: boolean;
   points: Vec3[];
+  role?: 'silhouette' | 'hair-top';
+  fill?: string | null;
 };
 
 export type Scaffold = {
@@ -110,16 +113,14 @@ const buildEye = (anchor: Vec3, halfWidth: number, openness: number, tilt: numbe
     { kind: 'feature', closed: false, points: lower },
   ];
   if (openness > 0.25) {
-    const irisR = halfWidth * 0.42;
-    const iris: Vec3[] = [];
+    // Just a pupil dot (filled small circle) — no separate iris ring. Avoids the "double-eye" stare.
+    const pupilR = halfWidth * 0.16;
     const pupil: Vec3[] = [];
-    for (let i = 0; i <= 28; i++) {
-      const a = (i / 28) * TAU;
-      iris.push([anchor[0] + Math.cos(a) * irisR, anchor[1] + Math.sin(a) * irisR * Math.min(1, openness), surfaceZ + 0.01]);
-      pupil.push([anchor[0] + Math.cos(a) * irisR * 0.45, anchor[1] + Math.sin(a) * irisR * 0.45 * Math.min(1, openness), surfaceZ + 0.012]);
+    for (let i = 0; i <= 16; i++) {
+      const a = (i / 16) * TAU;
+      pupil.push([anchor[0] + Math.cos(a) * pupilR, anchor[1] + Math.sin(a) * pupilR * Math.min(1, openness), surfaceZ + 0.012]);
     }
-    curves.push({ kind: 'feature', closed: true, points: iris });
-    curves.push({ kind: 'feature', closed: true, points: pupil });
+    curves.push({ kind: 'feature', closed: true, points: pupil, fill: '#1a1a1a' });
   }
   return curves;
 };
@@ -151,73 +152,58 @@ const buildBrow = (
 const buildNose = (
   bridgeTop: Vec3, length: number, width: number, surfaceZ: number, bridgeVisible: boolean,
 ): Curve[] => {
+  // Minimalist stylized nose: one short shadow-side bridge stroke, a single hook curve at the tip
+  // suggesting the underside, and two small angled nostril dashes. No symmetric "wings" — those
+  // were reading as a face/ghost shape.
   const curves: Curve[] = [];
   const tipY = bridgeTop[1] - length;
-  const tipZ = surfaceZ + 0.06;
+  const tipZ = surfaceZ + 0.05;
   const half = width / 2;
+  const cx0 = bridgeTop[0];
 
-  // Optional bridge (one-sided line for shadow side, kept dashed-light by emitting as a normal feature).
-  if (bridgeVisible) {
-    const bridgeShift = -width * 0.20;
-    curves.push({
-      kind: 'feature', closed: false,
-      points: [
-        [bridgeTop[0] + bridgeShift, bridgeTop[1] - length * 0.10, surfaceZ + 0.02],
-        [bridgeTop[0] + bridgeShift * 0.6, tipY + length * 0.05, surfaceZ + 0.04],
-      ],
-    });
+  // Bridge: short stroke on the shadow side (left by convention). Longer when bridgeVisible.
+  const bridgeXOffset = -half * 0.55;
+  const bridgeStartY = bridgeVisible ? bridgeTop[1] - length * 0.18 : tipY + length * 0.32;
+  const bridgeEndY = tipY + length * 0.06;
+  curves.push({
+    kind: 'feature', closed: false,
+    points: [
+      [cx0 + bridgeXOffset, bridgeStartY, surfaceZ + 0.02],
+      [cx0 + bridgeXOffset * 0.85, bridgeEndY, tipZ - 0.01],
+    ],
+  });
+
+  // Tip hook: a single "J"-shaped underside curve. Starts on the shadow-side, dips gently under
+  // the tip, then lifts at the right end to suggest the opposite nostril wing without closing
+  // into a U-shape.
+  const tipSamples = 16;
+  const hook: Vec3[] = [];
+  for (let i = 0; i <= tipSamples; i++) {
+    const t = i / tipSamples;
+    const x = cx0 + (-half * 0.55 + width * 0.55 * t);
+    // Shallow concave underside, with a small lift on the right end only
+    const baseDip = width * 0.10 * Math.sin(Math.PI * t);   // dips DOWN (negative direction handled below)
+    const rightLift = Math.pow(Math.max(0, t - 0.7) / 0.3, 1.5) * width * 0.08;
+    hook.push([x, tipY - baseDip + rightLift, tipZ]);
   }
+  curves.push({ kind: 'feature', closed: false, points: hook });
 
-  // Nose tip: a small rounded "U" with a slight bulge.
-  const tipBulgeSamples = 14;
-  const tip: Vec3[] = [];
-  for (let i = 0; i <= tipBulgeSamples; i++) {
-    const t = i / tipBulgeSamples;
-    const x = -half * 0.55 + width * 0.55 * t;
-    // Down then back up — the underside of the tip
-    const y = tipY - Math.sin(Math.PI * t) * width * 0.30;
-    tip.push([bridgeTop[0] + x, y, tipZ]);
-  }
-  curves.push({ kind: 'feature', closed: false, points: tip });
-
-  // Left nostril wing: short curve hooking up from the tip's left edge to suggest the alar groove.
-  const leftWing: Vec3[] = [];
-  const wingSamples = 8;
-  const leftWingStart: Vec3 = [bridgeTop[0] - half * 0.55, tipY, tipZ];
-  const leftWingEnd: Vec3 = [bridgeTop[0] - half * 0.85, tipY + width * 0.15, tipZ - 0.01];
-  for (let i = 0; i <= wingSamples; i++) {
-    const t = i / wingSamples;
-    const x = leftWingStart[0] + (leftWingEnd[0] - leftWingStart[0]) * t;
-    const y = leftWingStart[1] + (leftWingEnd[1] - leftWingStart[1]) * t + Math.sin(Math.PI * t) * width * 0.08;
-    leftWing.push([x, y, tipZ]);
-  }
-  curves.push({ kind: 'feature', closed: false, points: leftWing });
-
-  // Right nostril wing (mirror).
-  const rightWing: Vec3[] = [];
-  for (let i = 0; i <= wingSamples; i++) {
-    const t = i / wingSamples;
-    const x = bridgeTop[0] + half * 0.55 + ((bridgeTop[0] + half * 0.85) - (bridgeTop[0] + half * 0.55)) * t;
-    const y = tipY + width * 0.15 * t + Math.sin(Math.PI * t) * width * 0.08;
-    rightWing.push([x, y, tipZ]);
-  }
-  curves.push({ kind: 'feature', closed: false, points: rightWing });
-
-  // Nostril holes: tiny curved dashes under the tip.
-  const nostrilHalfX = half * 0.35;
+  // Two nostril dashes, angled outward like "\ /" — small marks, no holes drawn as ovals.
   const nostrilY = tipY - width * 0.05;
-  const mkNostril = (cx: number): Vec3[] => {
-    const pts: Vec3[] = [];
-    for (let i = 0; i <= 6; i++) {
-      const t = i / 6;
-      const x = cx + (-width * 0.10 + width * 0.20 * t);
-      const y = nostrilY - Math.sin(Math.PI * t) * width * 0.06;
-      pts.push([x, y, tipZ]);
-    }
-    return pts;
-  };
-  curves.push({ kind: 'feature', closed: false, points: mkNostril(bridgeTop[0] - nostrilHalfX) });
-  curves.push({ kind: 'feature', closed: false, points: mkNostril(bridgeTop[0] + nostrilHalfX) });
+  const nostrilHalfX = half * 0.32;
+  const dashLen = width * 0.11;
+  curves.push({
+    kind: 'feature', closed: false, points: [
+      [cx0 - nostrilHalfX - dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
+      [cx0 - nostrilHalfX + dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
+    ],
+  });
+  curves.push({
+    kind: 'feature', closed: false, points: [
+      [cx0 + nostrilHalfX - dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
+      [cx0 + nostrilHalfX + dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
+    ],
+  });
 
   return curves;
 };
@@ -306,31 +292,35 @@ const buildMouth = (
 
 const buildEar = (attachX: number, attachY: number, height: number, protrusion: number, surfaceZ: number, isLeft: boolean): Curve[] => {
   // Ear outline: a vertical "C" attached to the side of the head.
-  // The outer curve bulges away from the head by `protrusion`; the inner curve hugs the side plane.
+  // attachX is the point along the head's side where the ear's INNER edge joins. The outer
+  // curve bulges away from the head by `protrusion`; the back of the ear curves slightly inward
+  // at top and bottom so it tucks into the cranium silhouette rather than floating.
   const dir = isLeft ? -1 : 1;
-  const top: Vec3 = [attachX, attachY + height / 2, surfaceZ];
-  const bottom: Vec3 = [attachX, attachY - height / 2, surfaceZ];
-  const outerMid: Vec3 = [attachX + dir * protrusion, attachY, surfaceZ - 0.02];
+  // Top and bottom slightly inward (back toward the head) so the ear "tucks" into the silhouette.
+  const tuck = protrusion * 0.25;
+  const top: Vec3 = [attachX - dir * tuck, attachY + height / 2, surfaceZ];
+  const bottom: Vec3 = [attachX - dir * tuck * 0.6, attachY - height / 2, surfaceZ];
+  const outerMid: Vec3 = [attachX + dir * protrusion, attachY + height * 0.05, surfaceZ];
 
-  // Outer C: top → outerMid → bottom
   const samples = 14;
   const outer: Vec3[] = [];
-  const c1Top: Vec3 = [attachX + dir * protrusion * 0.4, attachY + height * 0.42, surfaceZ - 0.01];
-  const c2Top: Vec3 = [attachX + dir * protrusion * 1.0, attachY + height * 0.20, surfaceZ - 0.02];
+  const c1Top: Vec3 = [attachX + dir * protrusion * 0.5, attachY + height * 0.42, surfaceZ];
+  const c2Top: Vec3 = [attachX + dir * protrusion * 1.0, attachY + height * 0.22, surfaceZ];
   outer.push(top);
   outer.push(...cubicBezier(top, c1Top, c2Top, outerMid, samples / 2));
-  const c1Bot: Vec3 = [attachX + dir * protrusion * 1.0, attachY - height * 0.20, surfaceZ - 0.02];
-  const c2Bot: Vec3 = [attachX + dir * protrusion * 0.4, attachY - height * 0.42, surfaceZ - 0.01];
+  const c1Bot: Vec3 = [attachX + dir * protrusion * 1.0, attachY - height * 0.18, surfaceZ];
+  const c2Bot: Vec3 = [attachX + dir * protrusion * 0.45, attachY - height * 0.40, surfaceZ];
   outer.push(...cubicBezier(outerMid, c1Bot, c2Bot, bottom, samples / 2));
 
-  // Inner detail: a small curve inside the ear suggesting the antihelix.
+  // Inner detail: a soft curl suggesting the antihelix — sits inside the ear, parallel to outer.
   const innerCurve: Vec3[] = [];
-  const innerSamples = 8;
+  const innerSamples = 10;
   for (let i = 0; i <= innerSamples; i++) {
     const t = i / innerSamples;
-    const x = attachX + dir * protrusion * 0.45 * Math.sin(Math.PI * t * 0.85);
-    const y = attachY + height * 0.30 - height * 0.45 * t;
-    innerCurve.push([x, y, surfaceZ - 0.015]);
+    const curl = Math.sin(Math.PI * t);
+    const x = attachX + dir * protrusion * 0.35 * curl;
+    const y = attachY + height * 0.28 - height * 0.55 * t;
+    innerCurve.push([x, y, surfaceZ]);
   }
   return [
     { kind: 'feature', closed: false, points: outer },
@@ -341,7 +331,7 @@ const buildEar = (attachX: number, attachY: number, height: number, protrusion: 
 const buildHair = (
   rx: number, ry: number, rz: number, sx: number, browY: number, headHeight: number,
   style: FaceParams['hair']['style'], frontShape: FaceParams['hair']['frontShape'],
-  forehead: number, volume: number,
+  forehead: number, volume: number, fillColor: string | null,
 ): Curve[] => {
   if (style === 'none' || style === 'bald') return [];
 
@@ -352,27 +342,22 @@ const buildHair = (
 
   // Where the cranium silhouette meets the side plane (the temple corner).
   const sideTheta = Math.acos(Math.min(1, sx / rx));
-  // Temple corner Y (where the head curve transitions to the straight side plane).
   const templeY = ry * Math.sin(sideTheta);
 
   // Hair top silhouette: arcs from JUST BELOW the temple corner, up over the cranium with `lift`,
-  // and back down to the other temple corner. So it's bounded by the cranium silhouette on the sides.
+  // and back down to the other temple corner.
   const topSamples = 48;
   const topSil: Vec3[] = [];
-  // Start a touch below the temple corner so the hair line meets the side of the head cleanly.
   const startY = templeY - headHeight * 0.02;
   for (let i = 0; i <= topSamples; i++) {
     const t = i / topSamples;
-    // Parametrize: t=0 right temple, t=1 left temple. Use a half-ellipse from right to left.
-    // x: cosine sweep across the head; y: sine sweep providing the dome.
     const theta = t * Math.PI;
     const baseX = sx * Math.cos(theta);
-    // Y: starts and ends at startY, peaks at ry + lift in the middle
     const domeT = Math.sin(theta);
     const y = startY + (ry - startY) * domeT + effectiveLift * domeT;
     topSil.push([baseX, y, 0]);
   }
-  curves.push({ kind: 'feature', closed: false, points: topSil });
+  curves.push({ kind: 'feature', closed: false, points: topSil, role: 'hair-top' });
 
   // Hairline across the forehead. Reach about 70% of the way to the head edge (so it
   // doesn't visually clip into the side silhouette) and arc downward toward the temples
@@ -405,6 +390,16 @@ const buildHair = (
   }
   curves.push({ kind: 'feature', closed: false, points: hairline });
 
+  // Closed hair fill region: top silhouette over the top, then back along the hairline.
+  // Drawn fill-only (the visible strokes are the topSil + hairline above).
+  if (fillColor) {
+    const cap: Vec3[] = [...topSil, ...hairline];
+    curves.push({
+      kind: 'feature', closed: true, points: cap,
+      role: 'hair-top', fill: fillColor,
+    });
+  }
+
   // Side strands for medium/long.
   if (style === 'medium' || style === 'long') {
     const fallLen = style === 'long' ? headHeight * 0.55 : headHeight * 0.22;
@@ -427,13 +422,30 @@ const buildHair = (
   return curves;
 };
 
-const buildNeck = (jawL: Vec3, jawR: Vec3, neckWidth: number, neckLength: number): Curve[] => {
-  const widthAt = neckWidth / 2;
-  // Two short curves descending from each jaw side, slightly angled outward then in.
-  const left: Vec3 = [-widthAt, jawL[1] - neckLength, 0];
-  const right: Vec3 = [widthAt, jawR[1] - neckLength, 0];
-  const leftCurve = [jawL, [jawL[0] * 0.8, jawL[1] - neckLength * 0.3, jawL[2] * 0.5], left] as Vec3[];
-  const rightCurve = [jawR, [jawR[0] * 0.8, jawR[1] - neckLength * 0.3, jawR[2] * 0.5], right] as Vec3[];
+const buildNeck = (anchorL: Vec3, anchorR: Vec3, baseHalfWidth: number, neckLength: number): Curve[] => {
+  // Two curves descending from jaw anchors, smoothly easing outward toward the trapezius.
+  // anchor positions sit on the under-jaw; the curve drops mostly straight then bows out.
+  const bottomY = anchorL[1] - neckLength;
+  const bottomL: Vec3 = [-baseHalfWidth, bottomY, anchorL[2]];
+  const bottomR: Vec3 = [baseHalfWidth, bottomY, anchorR[2]];
+  const samples = 14;
+
+  // For the left side, start straight down and ease outward in the last third.
+  const leftCurve: Vec3[] = [anchorL, ...cubicBezier(
+    anchorL,
+    [anchorL[0] + (anchorL[0] - 0) * 0.02, anchorL[1] - neckLength * 0.45, anchorL[2]],
+    [bottomL[0] - (bottomL[0] - anchorL[0]) * 0.25, anchorL[1] - neckLength * 0.80, anchorL[2]],
+    bottomL,
+    samples, 1,
+  )];
+  const rightCurve: Vec3[] = [anchorR, ...cubicBezier(
+    anchorR,
+    [anchorR[0] - (anchorR[0] - 0) * 0.02, anchorR[1] - neckLength * 0.45, anchorR[2]],
+    [bottomR[0] - (bottomR[0] - anchorR[0]) * 0.25, anchorR[1] - neckLength * 0.80, anchorR[2]],
+    bottomR,
+    samples, 1,
+  )];
+
   return [
     { kind: 'feature', closed: false, points: leftCurve },
     { kind: 'feature', closed: false, points: rightCurve },
@@ -495,7 +507,10 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   silhouettePoints.push(...jaw.slice(1));
   silhouettePoints.push(...sideR.slice(0, -1).reverse());
 
-  const silhouette: Curve = { kind: 'feature', closed: true, points: silhouettePoints };
+  const silhouette: Curve = {
+    kind: 'feature', closed: true, points: silhouettePoints,
+    role: 'silhouette', fill: p.style.skinFill,
+  };
 
   // ---- construction guides
   const centerline: Curve = {
@@ -523,14 +538,20 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const features: Curve[] = [];
 
   // Hair (drawn first so other features can overlap it slightly via Z-order — painter actually sorts later)
-  features.push(...buildHair(rx, ry, rz, sx, browY, p.head.height, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume));
+  features.push(...buildHair(rx, ry, rz, sx, browY, p.head.height, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill));
 
-  // Ears
+  // Ears — anchored so their inner edge is INSIDE the head silhouette (overlap by ~30% of width)
+  // so they read as attached, not floating next to the head.
   if (p.ears.visible) {
+    // Ear sits between eyeline and nose-base (classic Loomis placement).
     const earY = ((eyeY + noseBaseY) / 2) + p.ears.yOffset * p.head.height;
     const earH = p.ears.size * p.head.height;
-    features.push(...buildEar(-sx, earY, earH, p.ears.protrusion, 0, true));
-    features.push(...buildEar(sx, earY, earH, p.ears.protrusion, 0, false));
+    // The head's side at this Y. For our model the side plane is at ±sx; use that as the join point
+    // but shift the ear's anchor INWARD by ~25% of the ear's protrusion so the inner curve overlaps the head.
+    const earInset = p.ears.protrusion * 0.25;
+    const earZ = p.head.depth * 0.10;
+    features.push(...buildEar(-sx + earInset, earY, earH, p.ears.protrusion, earZ, true));
+    features.push(...buildEar(sx - earInset, earY, earH, p.ears.protrusion, earZ, false));
   }
 
   // Eyes
@@ -565,12 +586,16 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     p.mouth.upperCurve, p.mouth.lipFullness, p.mouth.cornerMarks, frontZ(0, mouthY),
   ));
 
-  // Neck
+  // Neck — anchor on the under-jaw between the chin pad and the cheek; widens slightly at the base.
   if (p.neck.visible) {
-    // Anchor to the jaw at points slightly inside the cheek width
-    const jawL_anchor: Vec3 = [cheekL[0] * 0.55, chinY + (cheekY - chinY) * 0.25, chinZ * 0.5];
-    const jawR_anchor: Vec3 = [cheekR[0] * 0.55, chinY + (cheekY - chinY) * 0.25, chinZ * 0.5];
-    features.push(...buildNeck(jawL_anchor, jawR_anchor, p.neck.width * p.head.width, p.neck.length * p.head.height));
+    const jawAnchorX = p.head.width * 0.28;
+    // Anchor Y: just above the chin (so the neck appears to emerge from under the jaw, not from the chin tip).
+    const jawAnchorY = chinY + p.head.chinDrop * 0.4;
+    const jawAnchorZ = chinZ * 0.5;
+    const anchorL: Vec3 = [-jawAnchorX, jawAnchorY, jawAnchorZ];
+    const anchorR: Vec3 = [jawAnchorX, jawAnchorY, jawAnchorZ];
+    const baseHalfWidth = (p.neck.width * p.head.width) / 2;
+    features.push(...buildNeck(anchorL, anchorR, baseHalfWidth, p.neck.length * p.head.height));
   }
 
   return {

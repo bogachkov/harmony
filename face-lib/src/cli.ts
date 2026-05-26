@@ -76,6 +76,9 @@ GENERATE OPTIONS
   --jitter <amount>         hand-drawn jitter amplitude in px (default 0)
   --color <hex>             primary line color
   --background <hex|null>   background fill or "null" for transparent
+  --skin <hex|null>         skin fill color (null = no fill)
+  --hair-color <hex|null>   hair fill color (null = outline only)
+  --hair-style <name>       none | short | medium | long | bald
   --set path=value          fine-grained override (e.g. --set eyes.openness=0.5)
   -o <file>                 write to file (default: stdout). Extension .png implies PNG.
 
@@ -105,6 +108,15 @@ const cmdGenerate = (args: Args, sets: Array<[string, string]>): void => {
     const v = String(args.get('background'));
     setOverride('style.background', v === 'null' ? null : v);
   }
+  if (args.has('skin')) {
+    const v = String(args.get('skin'));
+    setOverride('style.skinFill', v === 'null' ? null : v);
+  }
+  if (args.has('hair-color')) {
+    const v = String(args.get('hair-color'));
+    setOverride('style.hairFill', v === 'null' ? null : v);
+  }
+  if (args.has('hair-style')) setOverride('hair.style', String(args.get('hair-style')));
   for (const [path, raw] of sets) setOverride(path, parseValue(raw));
 
   if (Object.keys(overrides).length) compose.overrides = overrides;

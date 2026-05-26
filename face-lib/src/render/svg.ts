@@ -85,21 +85,46 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   const rng = mulberry32(p.style.jitterSeed);
   const jitter = p.style.jitter;
 
-  const paths: string[] = [];
+  // Pre-compute pixel-space paths (with wobble) once per curve, since we paint
+  // them twice — once as fills, once as strokes.
+  type Prepped = {
+    c: Projected;
+    pxPath: string;
+    fill: string | null;   // null = no fill pass
+    isConstruction: boolean;
+    sw: number;
+  };
+  const prepped: Prepped[] = [];
   for (const c of ordered) {
     const isConstruction = c.kind === 'construction';
     const px: Array<readonly [number, number]> = c.points.map(([x, y]) => [tx(x), ty(y)] as const);
     if (px.length === 0) continue;
-    // Apply wobble only to feature lines (not construction guides), and only when jitter > 0.
     const wobbled = isConstruction ? px : wobble(px, jitter, rng);
-    const d = pointsToPath(wobbled, c.closed);
-    const stroke = isConstruction ? p.style.constructionColor : p.style.color;
-    // Tiny per-stroke weight variation so the drawing doesn't feel mechanical.
     const swVar = jitter > 0 ? (rng() - 0.5) * 0.4 : 0;
     const sw = isConstruction ? p.style.constructionWeight : Math.max(0.5, p.style.lineWeight + swVar);
-    const dash = isConstruction ? ' stroke-dasharray="4 3"' : '';
+    prepped.push({
+      c,
+      pxPath: pointsToPath(wobbled, c.closed),
+      fill: c.fill ?? null,
+      isConstruction,
+      sw,
+    });
+  }
+
+  // Pass 1: fills only (no stroke). Painted in painter's order so later layers cover earlier ones.
+  const paths: string[] = [];
+  for (const item of prepped) {
+    if (!item.fill) continue;
     paths.push(
-      `<path d="${d}" fill="none" stroke="${xmlEscape(stroke)}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`,
+      `<path d="${item.pxPath}" fill="${xmlEscape(item.fill)}" stroke="none"/>`,
+    );
+  }
+  // Pass 2: strokes for every curve. No fill on this pass.
+  for (const item of prepped) {
+    const stroke = item.isConstruction ? p.style.constructionColor : p.style.color;
+    const dash = item.isConstruction ? ' stroke-dasharray="4 3"' : '';
+    paths.push(
+      `<path d="${item.pxPath}" fill="none" stroke="${xmlEscape(stroke)}" stroke-width="${item.sw.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`,
     );
   }
 

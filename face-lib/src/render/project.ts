@@ -9,6 +9,8 @@ export type Projected = {
   points: Vec2[];
   // Average Z after rotation, used for trivial painter-ordering (back-to-front).
   avgZ: number;
+  role?: Curve['role'];
+  fill?: Curve['fill'];
 };
 
 // Orthographic projection. Rotate around camera yaw (Y) and pitch (X), then drop Z.
@@ -25,6 +27,8 @@ export const projectCurve = (curve: Curve, p: FaceParams): Projected => {
     closed: curve.closed,
     points: pts,
     avgZ: curve.points.length ? sumZ / curve.points.length : 0,
+    role: curve.role,
+    fill: curve.fill,
   };
 };
 
