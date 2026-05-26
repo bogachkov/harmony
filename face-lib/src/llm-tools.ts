@@ -1,7 +1,7 @@
 // LLM tool surface. Exposes JSON-Schema tool definitions compatible with
 // OpenAI / Anthropic tool calling, plus a small invoker that dispatches them.
 
-import { composeFace, expressionNames, ageNames, presentationNames } from './api.ts';
+import { composeFace, expressionNames, ageNames, presentationNames, styleNames } from './api.ts';
 import type { ComposeArgs } from './api.ts';
 
 export type ToolDefinition = {
@@ -105,6 +105,10 @@ export const tools: ToolDefinition[] = [
           type: 'string', enum: presentationNames,
           description: 'Stylized presentation bundle (proportions only, not biology).',
         },
+        style: {
+          type: 'string', enum: styleNames,
+          description: 'Art-style filter applied last in the parameter cascade.',
+        },
         overrides: overridesSchema,
       },
     },
@@ -131,6 +135,7 @@ export const invokeTool = (name: string, args: Record<string, unknown>): ToolRes
           expressions: expressionNames,
           ages: ageNames,
           presentations: presentationNames,
+          styles: styleNames,
         },
       };
     }

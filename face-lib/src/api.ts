@@ -21,12 +21,19 @@ import {
   type AgeName,
   type PresentationName,
 } from './presets/demographics.ts';
+import {
+  styles,
+  stylePreset,
+  styleNames,
+  type StyleName,
+} from './presets/styles.ts';
 
 export type { FaceParams, DeepPartial };
-export type { ExpressionName, AgeName, PresentationName };
+export type { ExpressionName, AgeName, PresentationName, StyleName };
 export { defaults, mergeParams };
 export { expressions, expressionPreset, expressionNames };
 export { ages, presentations, agePreset, presentationPreset, ageNames, presentationNames };
+export { styles, stylePreset, styleNames };
 
 // One-shot: build, project, render. Accepts a fully-resolved FaceParams.
 export const generateFace = (params: FaceParams): string => {
@@ -37,11 +44,13 @@ export const generateFace = (params: FaceParams): string => {
 };
 
 // Convenience: compose presets + overrides and render in one call.
-// `expression`, `age`, `presentation` are looked up by name; `overrides` is a deep-partial patch.
+// Order matters: style is applied LAST (after age/presentation/expression) so it can
+// override anything the others set without being overridden in turn.
 export type ComposeArgs = {
   expression?: ExpressionName;
   age?: AgeName;
   presentation?: PresentationName;
+  style?: StyleName;
   overrides?: DeepPartial<FaceParams>;
 };
 
@@ -50,6 +59,7 @@ export const composeFace = (args: ComposeArgs): string => {
     args.age ? agePreset(args.age) : undefined,
     args.presentation ? presentationPreset(args.presentation) : undefined,
     args.expression ? expressionPreset(args.expression) : undefined,
+    args.style ? stylePreset(args.style) : undefined,
     args.overrides,
   );
   return generateFace(params);
