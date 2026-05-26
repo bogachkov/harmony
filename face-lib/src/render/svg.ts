@@ -125,8 +125,11 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
       `<path d="${item.pxPath}" fill="${xmlEscape(item.fill)}" stroke="none"/>`,
     );
   }
-  // Pass 2: strokes for every curve. No fill on this pass.
+  // Pass 2: strokes for every curve. Skipped for curves marked noStroke (used for
+  // hidden-edge fills like the receding-hairline cap, where the colored mass should
+  // bleed into the skin without a visible boundary line).
   for (const item of prepped) {
+    if (item.c.noStroke) continue;
     const stroke = item.isConstruction ? p.style.constructionColor : p.style.color;
     const dash = item.isConstruction ? ' stroke-dasharray="4 3"' : '';
     paths.push(

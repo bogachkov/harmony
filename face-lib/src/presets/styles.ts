@@ -1,16 +1,38 @@
 import type { DeepPartial, FaceParams } from '../model/params.ts';
 
-// Art-style presets. Applied as the last layer of the parameter cascade — they
-// override style/feature settings to produce a recognized rendering style on top
-// of the same abstract Loomis scaffold + Faigin expression knobs.
+// Art-style presets — RENDERING-ONLY layer.
+//
+// A style preset describes HOW a face is drawn (line weight, jitter, colors, which
+// feature-style enum to pick) but NOT WHO they are (proportions, sizes, positions).
+// Proportions are owned by demographic presets (age × presentation) and character
+// data files. This keeps characters distinguishable: every "Tintin child" must look
+// different from "Tintin elder" must look different from "Tintin feminine adult."
+//
+// What's allowed here:
+//   - style.* (line weight, jitter, color, fills, background)
+//   - eyes.style, nose.style, brows.style (discrete enum choices)
+//   - mouth.lipFullness / cornerMarks (rendering toggles, not proportions)
+//   - hair.style 'short'/'medium'/'long' (length category)
+//
+// What is FORBIDDEN here (will collapse all characters to one face):
+//   - head.width / head.height / head.jawWidth / head.chinSharpness / head.chinDrop
+//   - eyes.spacing / eyes.size  (these are character/demographic proportions)
+//   - nose.width / nose.length
+//   - brows.fullness / brows.length
+//   - mouth.width
+//   - ears.size / ears.protrusion
+//   - neck.width / neck.length
+//
+// These rules were added after a brutal review revealed every Tintin-styled face
+// was structurally identical — only hair color/length varied.
 
 export const styles = {
   // The default rendering style: generic stylized-line-art with subtle hand-drawn wobble.
-  // Roughly what the engine produces without a style preset applied.
   default: {} as DeepPartial<FaceParams>,
 
-  // The actual Tintin face: dot eyes (no eye shape), tiny button nose, single-curve mouth,
-  // round head, minimal interior detail. The visual language of Hergé's characters.
+  // Tintin / Hergé rendering: dot eyes, button nose, single confident brow stroke,
+  // zero jitter, cream page. Proportion settings deliberately omitted so demographic
+  // presets retain their per-character variation.
   tintin: {
     style: {
       lineWeight: 2.4,
@@ -20,101 +42,46 @@ export const styles = {
       hairFill: '#3a200f',
       background: '#fff8e8',
     },
-    head: {
-      width: 0.82,                // rounder, less elongated
-      height: 0.92,
-      sidePlaneInset: 0.06,       // very round cranium
-      jawWidth: 0.58,
-      chinDrop: 0.10,
-      chinSharpness: 0.10,        // very rounded chin
-    },
     eyes: {
-      style: 'dots',              // the Tintin signature: just two black dots
-      spacing: 0.30,
+      style: 'dots',              // Tintin signature
       dotSize: 0.020,
     },
     brows: {
-      style: 'single',
-      fullness: 0.010,
-      arch: 0.4,
-      length: 0.18,
-      ridgeY: 0.07,
+      style: 'single',            // one confident stroke, not split pair
     },
     nose: {
       style: 'button',            // tiny upturned curve only
-      width: 0.08,
-      length: 0.18,
       showNostrils: false,
       bridgeVisible: false,
     },
     mouth: {
-      width: 0.18,
-      lipFullness: 0,
-      cornerMarks: false,
+      lipFullness: 0,             // single seam line only
+      cornerMarks: false,         // no corner ticks
       upperCurve: 0,
-    },
-    ears: {
-      visible: true,
-      size: 0.16,
-      protrusion: 0.022,
-    },
-    hair: {
-      style: 'short',
-      forehead: 0.35,
-      volume: 0.08,
-    },
-    neck: {
-      width: 0.45,
-      length: 0.18,
     },
   } satisfies DeepPartial<FaceParams>,
 
-  // Hergé / Tintin / Asterix tradition. Confident uniform-weight lines, zero wobble,
-  // simplified single-stroke features, flat saturated color fills, strong closed silhouette,
-  // no shading. The most-shipped comic style in history.
+  // Ligne-claire (Tintin/Asterix/Spirou tradition) generic: confident uniform lines,
+  // zero wobble, flat saturated fills, almond eyes, minimalist features. Same rules:
+  // no proportion overrides here.
   ligneClaire: {
     style: {
       lineWeight: 2.6,
-      jitter: 0,                  // confident "clear line" — no wobble
-      color: '#1a1410',           // warm near-black, not pure black
-      skinFill: '#f5cea2',        // warm flat skin
-      hairFill: '#3a1f10',        // saturated dark brown
-      background: '#fff8e8',      // cream page background instead of stark white
-    },
-    head: {
-      sidePlaneInset: 0.10,       // slightly rounder cranium
-      chinSharpness: 0.25,        // softer chin
-    },
-    eyes: {
-      size: 0.13,                 // smaller, simpler than default
-      openness: 1.0,
+      jitter: 0,
+      color: '#1a1410',
+      skinFill: '#f5cea2',
+      hairFill: '#3a1f10',
+      background: '#fff8e8',
     },
     brows: {
-      fullness: 0.012,           // thinner so the doubled stroke reads as a single confident line
-      arch: 0.5,
+      style: 'single',
     },
     nose: {
-      width: 0.12,
-      length: 0.24,
+      style: 'minimal',
     },
     mouth: {
-      width: 0.22,
-      lipFullness: 0,             // single seam line only — no separate upper/lower lip lines
-      cornerMarks: false,         // remove corner ticks (clean line)
-      upperCurve: 0,
-    },
-    ears: {
-      size: 0.18,
-      protrusion: 0.025,
-    },
-    hair: {
-      style: 'short',
-      forehead: 0.40,
-      volume: 0.04,
-    },
-    neck: {
-      width: 0.50,
-      length: 0.20,
+      lipFullness: 0,
+      cornerMarks: false,
     },
   } satisfies DeepPartial<FaceParams>,
 } as const;

@@ -52,9 +52,14 @@ export const generateFace = (params: FaceParams): string => {
 
 // Convenience: compose presets + overrides and render in one call.
 // Cascade order (each layer overrides previous):
-//   defaults → age → presentation → expression → style → character → overrides
-// Character is applied AFTER style so identity wins over rendering style for
-// fields the character cares about. User overrides win over everything.
+//   defaults → STYLE → age → presentation → expression → character → overrides
+// Style is FIRST so it acts as a rendering base. Demographics (age × presentation)
+// then own proportions; if a demographic doesn't override a field, the style's
+// default for that field stays. Expression then layers emotion. Character is
+// the most specific identity. User overrides always win.
+//
+// (Previous order had style LAST, which collapsed all demographic variation —
+// every Tintin face had the same skull. Fixed.)
 export type ComposeArgs = {
   expression?: ExpressionName;
   age?: AgeName;
@@ -66,10 +71,10 @@ export type ComposeArgs = {
 
 export const composeFace = (args: ComposeArgs): string => {
   const params = mergeParams(
+    args.style ? stylePreset(args.style) : undefined,
     args.age ? agePreset(args.age) : undefined,
     args.presentation ? presentationPreset(args.presentation) : undefined,
     args.expression ? expressionPreset(args.expression) : undefined,
-    args.style ? stylePreset(args.style) : undefined,
     args.character ? characterPreset(args.character) : undefined,
     args.overrides,
   );

@@ -20,6 +20,11 @@ export type FaceParams = {
     yOffset: number;        // shift from default eyeline (head-height units)
     style: 'almond' | 'dots';  // 'dots' = no eye-shape, just a pupil dot (Tintin-style)
     dotSize: number;        // for 'dots' style: radius as fraction of head.width
+    // Within-style modifiers — turn a pure dot eye into varied supporting-character looks
+    // without leaving the dots aesthetic. Each is independent.
+    lidLine: number;        // 0..1: short upper-lid arc above the dot. 0 = bare dot, 1 = full lid.
+    lashes: number;         // 0..1: tiny eyelash ticks at the outer corner (feminine convention).
+    underlineHint: number;  // 0..1: a short under-eye line (elder/tired conventions).
   };
   // Brows — Faigin's three DoF: inner-end lift, outer-end lift, overall arch.
   // (Pedagogy-rooted names; see research/primitives-nose-ears-neck-brows.md.)
@@ -133,6 +138,9 @@ export const defaults: FaceParams = {
     yOffset: 0,
     style: 'almond',
     dotSize: 0.018,
+    lidLine: 0,
+    lashes: 0,
+    underlineHint: 0,
   },
   brows: {
     ridgeY: 0.08,
