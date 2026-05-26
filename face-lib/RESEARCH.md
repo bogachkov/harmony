@@ -1,5 +1,45 @@
 # Research notes — constructive drawing as a programmatic system
 
+## 0. Discipline (added late in the session, the governing principle)
+
+Every non-trivial change to a primitive — adding a new feature type, fixing a
+visibly-wrong primitive, supporting a new character — goes through this chain
+before code is written:
+
+1. **Need** — state the concrete problem.
+2. **Pedagogy** (from weights + research) — what's the documented art-school /
+   comic-artist approach for this thing? Cite the source. Use the artist's
+   vocabulary in parameter names (e.g. for nose: `keel`, `alarWings`,
+   `basePlane`, `septum` — not `tipBulge`, `wingyThing1`, etc.).
+3. **Existing approaches** (weights + research) — who's already built this in
+   code? **Read the source**, not just READMEs. For each candidate decide:
+   - **Import** — license-compatible + good fit; bring the dep in.
+   - **Emulate** — port the idea, write our own.
+   - **Learn-from** — note the technique only; don't use the code.
+4. **Code / test / iterate.**
+
+What this is reacting to: in the first session pass, several primitives
+(nose, beard topology, ear placement) were "vibed" — geometry invented from
+scratch using magic numbers tuned by render-loop iteration until the output
+looked OK. That works for one or two faces and falls apart at scale:
+- Magic numbers in engine code mean every new character requires engine edits.
+- Without pedagogy-named parameters, an LLM director or a story-pack author
+  can't address the knobs by name.
+- Without reviewing prior art, we re-invent solutions that already exist in
+  better form (DiceBear, faces.js, anime face research, etc.).
+
+The discipline is reflected in two places:
+- This RESEARCH.md grows a section per primitive recording pedagogy + reviewed
+  implementations + the decision (import/emulate/learn-from) **before** the
+  code lands.
+- Characters live in `face-lib/src/characters/*.ts` as **data only** — a
+  partial parameter object composed of primitives. If a character needs
+  something the engine can't express parametrically, the right response is
+  "add the primitive to the engine generally" not "tweak an existing primitive
+  to look more like X."
+
+---
+
 Background reading for extending `face-lib` (heads, today) to the rest of the
 visual world (bodies, objects, environments). The unifying frame is
 **constructive / volumetric drawing**: build the subject in 3D from primitives

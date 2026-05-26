@@ -27,13 +27,20 @@ import {
   styleNames,
   type StyleName,
 } from './presets/styles.ts';
+import {
+  characters,
+  characterPreset,
+  characterNames,
+  type CharacterName,
+} from './characters/index.ts';
 
 export type { FaceParams, DeepPartial };
-export type { ExpressionName, AgeName, PresentationName, StyleName };
+export type { ExpressionName, AgeName, PresentationName, StyleName, CharacterName };
 export { defaults, mergeParams };
 export { expressions, expressionPreset, expressionNames };
 export { ages, presentations, agePreset, presentationPreset, ageNames, presentationNames };
 export { styles, stylePreset, styleNames };
+export { characters, characterPreset, characterNames };
 
 // One-shot: build, project, render. Accepts a fully-resolved FaceParams.
 export const generateFace = (params: FaceParams): string => {
@@ -44,13 +51,16 @@ export const generateFace = (params: FaceParams): string => {
 };
 
 // Convenience: compose presets + overrides and render in one call.
-// Order matters: style is applied LAST (after age/presentation/expression) so it can
-// override anything the others set without being overridden in turn.
+// Cascade order (each layer overrides previous):
+//   defaults → age → presentation → expression → style → character → overrides
+// Character is applied AFTER style so identity wins over rendering style for
+// fields the character cares about. User overrides win over everything.
 export type ComposeArgs = {
   expression?: ExpressionName;
   age?: AgeName;
   presentation?: PresentationName;
   style?: StyleName;
+  character?: CharacterName;
   overrides?: DeepPartial<FaceParams>;
 };
 
@@ -60,6 +70,7 @@ export const composeFace = (args: ComposeArgs): string => {
     args.presentation ? presentationPreset(args.presentation) : undefined,
     args.expression ? expressionPreset(args.expression) : undefined,
     args.style ? stylePreset(args.style) : undefined,
+    args.character ? characterPreset(args.character) : undefined,
     args.overrides,
   );
   return generateFace(params);

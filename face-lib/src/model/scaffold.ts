@@ -457,12 +457,21 @@ const buildHair = (
   return curves;
 };
 
+type MustacheShape = {
+  baseOffset: number;
+  rise: number;
+  width: number;        // bell-curve coefficient (smaller = wider hump)
+  philtrumWidth: number;
+  philtrumDepth: number;
+};
+
 const buildFacialHair = (
   jawCurvePts: Vec3[],         // the jaw silhouette as a list of 3D points (cheekL → chin → cheekR)
   cheekL: Vec3, cheekR: Vec3,  // jaw endpoints
   mouthY: number,              // where the mouth sits (for mustache placement)
   style: FaceParams['facialHair']['style'],
   length: number, fullness: number, color: string,
+  mustache: MustacheShape,
 ): Curve[] => {
   if (style === 'none') return [];
 
@@ -501,19 +510,20 @@ const buildFacialHair = (
     // jaw line back so the mouth stays exposed.
     const topEdge: Vec3[] = [];
     if (style === 'beardWithMustache' || style === 'fullRound') {
-      // Single continuous beard-with-mustache: top edge sits just above the mouth at the corners
-      // and bulges UP in the middle to form the mustache curl (so beard + mustache read as one shape).
-      const baseY = mouthY + 0.018;
-      const mustacheRise = style === 'fullRound' ? 0.07 : 0.05;
+      // Single continuous beard-with-mustache: top edge sits at `mustache.baseOffset` above the
+      // mouth at the corners and bulges UP in the middle (a bell curve controlled by
+      // `mustache.width`) by `mustache.rise`, with a narrower central dip (controlled by
+      // `mustache.philtrumWidth` and `philtrumDepth`) at the philtrum.
+      const baseY = mouthY + mustache.baseOffset;
+      // 'fullRound' is the same shape with a higher rise by convention.
+      const rise = style === 'fullRound' ? mustache.rise * 1.4 : mustache.rise;
       const samples = 28;
       for (let i = 0; i <= samples; i++) {
         const t = i / samples;
         const x = cheekR[0] + (cheekL[0] - cheekR[0]) * t;
-        // Bell curve at the center for the mustache rise; corners stay low.
-        const centerWeight = Math.exp(-Math.pow((t - 0.5) * 3.2, 2));
-        // Slight dip at the philtrum (very center) gives a Haddock-style double-curl mustache.
-        const philtrumDip = Math.exp(-Math.pow((t - 0.5) * 14, 2)) * mustacheRise * 0.25;
-        const y = baseY + mustacheRise * centerWeight - philtrumDip;
+        const centerWeight = Math.exp(-Math.pow((t - 0.5) * mustache.width, 2));
+        const philtrumDip = Math.exp(-Math.pow((t - 0.5) * mustache.philtrumWidth, 2)) * rise * mustache.philtrumDepth;
+        const y = baseY + rise * centerWeight - philtrumDip;
         topEdge.push([x, y, cheekL[2]]);
       }
     } else {
@@ -1020,6 +1030,13 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
       p.facialHair.length * p.head.height,
       p.facialHair.fullness * p.head.width,
       hairColor,
+      {
+        baseOffset: p.facialHair.mustacheBaseOffset,
+        rise: p.facialHair.mustacheRise,
+        width: p.facialHair.mustacheWidth,
+        philtrumWidth: p.facialHair.philtrumWidth,
+        philtrumDepth: p.facialHair.philtrumDepth,
+      },
     ));
   }
 

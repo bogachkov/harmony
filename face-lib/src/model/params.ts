@@ -69,6 +69,13 @@ export type FaceParams = {
     length: number;         // how far past the chin (head-height units)
     fullness: number;       // how far past the jaw silhouette (head-width units)
     coversMouth: boolean;   // when true, mouth is rendered as a line through the mustache
+    // Mustache shape controls (apply to beardWithMustache + fullRound integrated top-edge).
+    // PROVISIONAL pedagogy-rooted names — may be refined when research returns.
+    mustacheBaseOffset: number;  // top-edge baseline above the mouth (head-height units)
+    mustacheRise: number;        // how far the mustache hump rises above baseline at center
+    mustacheWidth: number;       // controls how wide the bell-curve hump is (smaller = wider)
+    philtrumWidth: number;       // controls how narrow the central dip is (larger = narrower dip)
+    philtrumDepth: number;       // fraction of mustacheRise that the philtrum dip removes
   };
   hat: {
     style: 'none' | 'navalCap' | 'beanie' | 'fedora' | 'bowler' | 'topHat';
@@ -171,6 +178,11 @@ export const defaults: FaceParams = {
     length: 0.10,
     fullness: 0.04,
     coversMouth: false,
+    mustacheBaseOffset: 0.018,
+    mustacheRise: 0.05,
+    mustacheWidth: 3.2,
+    philtrumWidth: 14,
+    philtrumDepth: 0.25,
   },
   hat: {
     style: 'none',
