@@ -1,0 +1,17 @@
+{
+  "name": "face-lib",
+  "version": "0.0.1",
+  "description": "Parametric Loomis-style 3D face scaffold rendered to SVG, with an LLM tool-call surface.",
+  "type": "module",
+  "bin": {
+    "face": "./bin/face.mjs"
+  },
+  "scripts": {
+    "face": "node --experimental-strip-types --no-warnings src/cli.ts",
+    "demo": "node --experimental-strip-types --no-warnings examples/demo.ts"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "license": "MPL-2.0"
+}
