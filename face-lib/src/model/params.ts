@@ -18,6 +18,8 @@ export type FaceParams = {
     openness: number;       // 0 = closed, 1 = wide open, can exceed 1 for surprise
     tilt: number;           // outer-corner tilt; positive = corners up
     yOffset: number;        // shift from default eyeline (head-height units)
+    style: 'almond' | 'dots';  // 'dots' = no eye-shape, just a pupil dot (Tintin-style)
+    dotSize: number;        // for 'dots' style: radius as fraction of head.width
   };
   brows: {
     yOffset: number;        // height above eyeline (head-height units)
@@ -32,6 +34,8 @@ export type FaceParams = {
     length: number;         // nose length from brow-bridge to base (head-height units)
     width: number;          // base width (fraction of head.width)
     bridgeVisible: boolean; // draw bridge construction line
+    style: 'detailed' | 'minimal' | 'button';  // 'button' = a single short curve (Tintin)
+    showNostrils: boolean;  // toggle nostril dashes
   };
   mouth: {
     width: number;          // fraction of head.width
@@ -100,6 +104,8 @@ export const defaults: FaceParams = {
     openness: 1.0,
     tilt: 0,
     yOffset: 0,
+    style: 'almond',
+    dotSize: 0.018,
   },
   brows: {
     yOffset: 0.08,
@@ -114,6 +120,8 @@ export const defaults: FaceParams = {
     length: 0.28,
     width: 0.14,
     bridgeVisible: false,
+    style: 'detailed',
+    showNostrils: true,
   },
   mouth: {
     width: 0.28,

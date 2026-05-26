@@ -89,6 +89,22 @@ const jawCurve = (cheekL: Vec3, cheekR: Vec3, chinY: number, chinZ: number, shar
 
 // ---- features ----
 
+const buildEyeDots = (anchor: Vec3, dotR: number, openness: number, surfaceZ: number): Curve[] => {
+  // Tintin-style eye: a single filled pupil dot, no eye-shape outline. Since there's no
+  // eyelid to widen, surprise/fear is expressed by SCALING the dot — bigger dot reads as
+  // "wider eyes" in the Hergé visual language. Closed/squinted (openness < 0.3) hides the dot.
+  if (openness < 0.3) return [];
+  // openness=1 → base radius; >1 grows the dot (caps at ~1.8x); <1 shrinks it for squinting.
+  const scale = openness < 1 ? 0.6 + 0.4 * openness : Math.min(1.8, 1 + (openness - 1) * 1.5);
+  const r = dotR * scale;
+  const pupil: Vec3[] = [];
+  for (let i = 0; i <= 18; i++) {
+    const a = (i / 18) * TAU;
+    pupil.push([anchor[0] + Math.cos(a) * r, anchor[1] + Math.sin(a) * r, surfaceZ + 0.012]);
+  }
+  return [{ kind: 'feature', closed: true, points: pupil, fill: '#1a1a1a' }];
+};
+
 const buildEye = (anchor: Vec3, halfWidth: number, openness: number, tilt: number, surfaceZ: number): Curve[] => {
   const samples = 18;
   const upper: Vec3[] = [];
@@ -150,28 +166,46 @@ const buildBrow = (
 };
 
 const buildNose = (
-  bridgeTop: Vec3, length: number, width: number, surfaceZ: number, bridgeVisible: boolean,
+  bridgeTop: Vec3, length: number, width: number, surfaceZ: number,
+  bridgeVisible: boolean, style: 'detailed' | 'minimal' | 'button', showNostrils: boolean,
 ): Curve[] => {
-  // Minimalist stylized nose: one short shadow-side bridge stroke, a single hook curve at the tip
-  // suggesting the underside, and two small angled nostril dashes. No symmetric "wings" — those
-  // were reading as a face/ghost shape.
   const curves: Curve[] = [];
   const tipY = bridgeTop[1] - length;
   const tipZ = surfaceZ + 0.05;
   const half = width / 2;
   const cx0 = bridgeTop[0];
 
+  // 'button' style: just a tiny upturned curve at the tip — pure Tintin/Hergé. No bridge, no nostrils.
+  if (style === 'button') {
+    const samples = 10;
+    const buttonPts: Vec3[] = [];
+    const buttonHalf = Math.max(width * 0.18, 0.012);
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = cx0 - buttonHalf + buttonHalf * 2 * t;
+      // Shallow curve open upward — like a small smile shape at the nose tip.
+      const y = tipY - Math.sin(Math.PI * t) * buttonHalf * 0.55;
+      buttonPts.push([x, y, tipZ]);
+    }
+    curves.push({ kind: 'feature', closed: false, points: buttonPts });
+    return curves;
+  }
+
+  // 'minimal' and 'detailed' share the J-hook + (optional) bridge + (optional) nostrils.
   // Bridge: short stroke on the shadow side (left by convention). Longer when bridgeVisible.
-  const bridgeXOffset = -half * 0.55;
-  const bridgeStartY = bridgeVisible ? bridgeTop[1] - length * 0.18 : tipY + length * 0.32;
-  const bridgeEndY = tipY + length * 0.06;
-  curves.push({
-    kind: 'feature', closed: false,
-    points: [
-      [cx0 + bridgeXOffset, bridgeStartY, surfaceZ + 0.02],
-      [cx0 + bridgeXOffset * 0.85, bridgeEndY, tipZ - 0.01],
-    ],
-  });
+  // Skipped entirely for 'minimal' unless bridgeVisible is explicitly true.
+  if (style === 'detailed' || bridgeVisible) {
+    const bridgeXOffset = -half * 0.55;
+    const bridgeStartY = bridgeVisible ? bridgeTop[1] - length * 0.18 : tipY + length * 0.32;
+    const bridgeEndY = tipY + length * 0.06;
+    curves.push({
+      kind: 'feature', closed: false,
+      points: [
+        [cx0 + bridgeXOffset, bridgeStartY, surfaceZ + 0.02],
+        [cx0 + bridgeXOffset * 0.85, bridgeEndY, tipZ - 0.01],
+      ],
+    });
+  }
 
   // Tip hook: a single "J"-shaped underside curve. Starts on the shadow-side, dips gently under
   // the tip, then lifts at the right end to suggest the opposite nostril wing without closing
@@ -188,22 +222,23 @@ const buildNose = (
   }
   curves.push({ kind: 'feature', closed: false, points: hook });
 
-  // Two nostril dashes, angled outward like "\ /" — small marks, no holes drawn as ovals.
-  const nostrilY = tipY - width * 0.05;
-  const nostrilHalfX = half * 0.32;
-  const dashLen = width * 0.11;
-  curves.push({
-    kind: 'feature', closed: false, points: [
-      [cx0 - nostrilHalfX - dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
-      [cx0 - nostrilHalfX + dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
-    ],
-  });
-  curves.push({
-    kind: 'feature', closed: false, points: [
-      [cx0 + nostrilHalfX - dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
-      [cx0 + nostrilHalfX + dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
-    ],
-  });
+  if (showNostrils) {
+    const nostrilY = tipY - width * 0.05;
+    const nostrilHalfX = half * 0.32;
+    const dashLen = width * 0.11;
+    curves.push({
+      kind: 'feature', closed: false, points: [
+        [cx0 - nostrilHalfX - dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
+        [cx0 - nostrilHalfX + dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
+      ],
+    });
+    curves.push({
+      kind: 'feature', closed: false, points: [
+        [cx0 + nostrilHalfX - dashLen * 0.4, nostrilY - dashLen * 0.25, tipZ],
+        [cx0 + nostrilHalfX + dashLen * 0.4, nostrilY + dashLen * 0.25, tipZ],
+      ],
+    });
+  }
 
   return curves;
 };
@@ -558,8 +593,14 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const halfEye = (p.eyes.size * p.head.width) / 2;
   const eyeAnchorX = (p.eyes.spacing * p.head.width) / 2;
   const eyeSurfaceZ = frontZ(eyeAnchorX, eyeY);
-  features.push(...buildEye([-eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, p.eyes.tilt, eyeSurfaceZ));
-  features.push(...buildEye([eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, -p.eyes.tilt, eyeSurfaceZ));
+  if (p.eyes.style === 'dots') {
+    const dotR = p.eyes.dotSize * p.head.width;
+    features.push(...buildEyeDots([-eyeAnchorX, eyeY, eyeSurfaceZ], dotR, p.eyes.openness, eyeSurfaceZ));
+    features.push(...buildEyeDots([eyeAnchorX, eyeY, eyeSurfaceZ], dotR, p.eyes.openness, eyeSurfaceZ));
+  } else {
+    features.push(...buildEye([-eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, p.eyes.tilt, eyeSurfaceZ));
+    features.push(...buildEye([eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, -p.eyes.tilt, eyeSurfaceZ));
+  }
 
   // Brows
   const browLen = p.brows.length * p.head.width;
@@ -577,7 +618,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
 
   // Nose (bridge top sits just below brow line)
   const bridgeTop: Vec3 = [0, browY - p.head.height * 0.02, frontZ(0, browY)];
-  features.push(...buildNose(bridgeTop, p.nose.length * p.head.height, p.nose.width * p.head.width, frontZ(0, browY), p.nose.bridgeVisible));
+  features.push(...buildNose(bridgeTop, p.nose.length * p.head.height, p.nose.width * p.head.width, frontZ(0, browY), p.nose.bridgeVisible, p.nose.style, p.nose.showNostrils));
 
   // Mouth
   const mouthCenter: Vec3 = [0, mouthY, frontZ(0, mouthY)];

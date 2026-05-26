@@ -9,6 +9,65 @@ export const styles = {
   // Roughly what the engine produces without a style preset applied.
   default: {} as DeepPartial<FaceParams>,
 
+  // The actual Tintin face: dot eyes (no eye shape), tiny button nose, single-curve mouth,
+  // round head, minimal interior detail. The visual language of Hergé's characters.
+  tintin: {
+    style: {
+      lineWeight: 2.4,
+      jitter: 0,
+      color: '#1a1410',
+      skinFill: '#f6d2a6',
+      hairFill: '#3a200f',
+      background: '#fff8e8',
+    },
+    head: {
+      width: 0.82,                // rounder, less elongated
+      height: 0.92,
+      sidePlaneInset: 0.06,       // very round cranium
+      jawWidth: 0.58,
+      chinDrop: 0.10,
+      chinSharpness: 0.10,        // very rounded chin
+    },
+    eyes: {
+      style: 'dots',              // the Tintin signature: just two black dots
+      spacing: 0.30,
+      dotSize: 0.020,
+    },
+    brows: {
+      thickness: 0.011,
+      arch: 0.4,
+      length: 0.18,
+      yOffset: 0.07,
+    },
+    nose: {
+      style: 'button',            // tiny upturned curve only
+      width: 0.08,
+      length: 0.18,
+      showNostrils: false,
+      bridgeVisible: false,
+    },
+    mouth: {
+      width: 0.18,
+      lipFullness: 0,
+      cornerMarks: false,
+      upperCurve: 0,
+    },
+    ears: {
+      visible: true,
+      size: 0.16,
+      protrusion: 0.022,
+    },
+    hair: {
+      style: 'short',
+      forehead: 0.35,
+      volume: 0.08,
+    },
+    neck: {
+      width: 0.45,
+      length: 0.18,
+    },
+  } satisfies DeepPartial<FaceParams>,
+
   // Hergé / Tintin / Asterix tradition. Confident uniform-weight lines, zero wobble,
   // simplified single-stroke features, flat saturated color fills, strong closed silhouette,
   // no shading. The most-shipped comic style in history.
