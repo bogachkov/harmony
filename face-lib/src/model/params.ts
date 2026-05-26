@@ -39,6 +39,25 @@ export type FaceParams = {
     openness: number;       // 0 = closed line, >0 = open
     cornerLift: number;     // smile (+) / frown (-) at the corners (head-height units)
     upperCurve: number;     // additional curvature of upper-lip line
+    lipFullness: number;    // 0 = thin line, 1 = full lips with separate upper/lower lines even when closed
+    cornerMarks: boolean;   // draw small tick marks at the corners
+  };
+  ears: {
+    visible: boolean;
+    size: number;           // ear height (head-height units)
+    yOffset: number;        // shift from default attach (eyeline → nose-base span)
+    protrusion: number;     // how far the ear sticks out from side plane (head-width units)
+  };
+  hair: {
+    style: 'none' | 'short' | 'medium' | 'long' | 'bald';
+    frontShape: 'straight' | 'widows-peak' | 'parted' | 'receding';
+    forehead: number;       // visible forehead height (0 = hair starts at brows, 1 = full forehead)
+    volume: number;         // hair puffiness above the cranium (head-height units)
+  };
+  neck: {
+    visible: boolean;
+    width: number;          // fraction of head.width
+    length: number;         // visible neck length (head-height units)
   };
   style: {
     lineWeight: number;     // SVG stroke-width in px
@@ -100,11 +119,30 @@ export const defaults: FaceParams = {
     openness: 0,
     cornerLift: 0,
     upperCurve: 0,
+    lipFullness: 0.35,
+    cornerMarks: true,
+  },
+  ears: {
+    visible: true,
+    size: 0.22,
+    yOffset: 0,
+    protrusion: 0.03,
+  },
+  hair: {
+    style: 'short',
+    frontShape: 'straight',
+    forehead: 0.45,
+    volume: 0.05,
+  },
+  neck: {
+    visible: true,
+    width: 0.42,
+    length: 0.18,
   },
   style: {
     lineWeight: 2,
     constructionWeight: 0.8,
-    jitter: 0,
+    jitter: 1.8,
     jitterSeed: 1,
     color: '#1a1a1a',
     constructionColor: '#c8c8c8',

@@ -2,7 +2,7 @@ import type { FaceParams } from '../model/params.ts';
 import type { Projected } from './project.ts';
 import { bounds } from './project.ts';
 
-// Deterministic jitter so identical params produce identical SVG.
+// Deterministic seeded RNG so identical params produce identical SVG.
 const mulberry32 = (seed: number): (() => number) => {
   let a = seed >>> 0;
   return () => {
@@ -29,6 +29,40 @@ const pointsToPath = (pts: ReadonlyArray<readonly [number, number]>, closed: boo
   return d;
 };
 
+// Apply a low-frequency perpendicular wobble to a polyline (in pixel coords).
+// Produces a "hand-drawn" wandering line rather than per-point noise.
+const wobble = (
+  pts: Array<readonly [number, number]>,
+  amplitude: number,
+  rng: () => number,
+): Array<readonly [number, number]> => {
+  if (amplitude <= 0 || pts.length < 2) return pts;
+  // Pick 2-3 random low-frequency phases for the wobble. Each phase rotates a sine envelope.
+  const phaseA = rng() * Math.PI * 2;
+  const phaseB = rng() * Math.PI * 2;
+  const freqA = 1 + rng() * 1.5;   // cycles across the whole line
+  const freqB = 2 + rng() * 2.5;
+  const ampB = amplitude * 0.4;
+  const out: Array<readonly [number, number]> = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i] as readonly [number, number];
+    const t = pts.length === 1 ? 0 : i / (pts.length - 1);
+    // Tangent for perpendicular direction
+    const prev = pts[Math.max(0, i - 1)] as readonly [number, number];
+    const next = pts[Math.min(pts.length - 1, i + 1)] as readonly [number, number];
+    const dx = next[0] - prev[0];
+    const dy = next[1] - prev[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    // Envelope so the wobble fades to zero at the endpoints (line stays connected).
+    const env = Math.sin(Math.PI * t);
+    const w = env * (amplitude * Math.sin(freqA * Math.PI * t + phaseA) + ampB * Math.sin(freqB * Math.PI * t + phaseB));
+    out.push([p[0] + nx * w, p[1] + ny * w]);
+  }
+  return out;
+};
+
 export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   const b = bounds(curves);
   const modelW = b.maxX - b.minX;
@@ -45,26 +79,27 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   const tx = (x: number) => margin + (x - b.minX) * scale;
   const ty = (y: number) => margin + (b.maxY - y) * scale;
 
-  // Painter's order: back to front by avgZ ascending (more negative Z is further away after rotation).
+  // Painter's order: back to front by avgZ ascending.
   const ordered = [...curves].sort((a, c) => a.avgZ - c.avgZ);
 
-  // Optional jitter
   const rng = mulberry32(p.style.jitterSeed);
   const jitter = p.style.jitter;
-  const jx = () => (jitter > 0 ? (rng() - 0.5) * 2 * jitter : 0);
-  const jy = () => (jitter > 0 ? (rng() - 0.5) * 2 * jitter : 0);
 
   const paths: string[] = [];
   for (const c of ordered) {
     const isConstruction = c.kind === 'construction';
-    const px: Array<readonly [number, number]> = c.points.map(([x, y]) => [tx(x) + jx(), ty(y) + jy()] as const);
+    const px: Array<readonly [number, number]> = c.points.map(([x, y]) => [tx(x), ty(y)] as const);
     if (px.length === 0) continue;
-    const d = pointsToPath(px, c.closed);
+    // Apply wobble only to feature lines (not construction guides), and only when jitter > 0.
+    const wobbled = isConstruction ? px : wobble(px, jitter, rng);
+    const d = pointsToPath(wobbled, c.closed);
     const stroke = isConstruction ? p.style.constructionColor : p.style.color;
-    const sw = isConstruction ? p.style.constructionWeight : p.style.lineWeight;
+    // Tiny per-stroke weight variation so the drawing doesn't feel mechanical.
+    const swVar = jitter > 0 ? (rng() - 0.5) * 0.4 : 0;
+    const sw = isConstruction ? p.style.constructionWeight : Math.max(0.5, p.style.lineWeight + swVar);
     const dash = isConstruction ? ' stroke-dasharray="4 3"' : '';
     paths.push(
-      `<path d="${d}" fill="none" stroke="${xmlEscape(stroke)}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`,
+      `<path d="${d}" fill="none" stroke="${xmlEscape(stroke)}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`,
     );
   }
 
