@@ -39,11 +39,13 @@ const overridesSchema = {
     brows: {
       type: 'object', additionalProperties: false,
       properties: {
-        yOffset: { type: 'number', description: 'Height above eyeline.' },
-        innerHeight: { type: 'number', description: 'Inner-end vertical offset (positive=up).' },
-        outerHeight: { type: 'number', description: 'Outer-end vertical offset.' },
-        arch: { type: 'number', description: 'Curve amount.' },
-        thickness: { type: 'number' },
+        ridgeY: { type: 'number', description: 'Brow ridge height above eyeline (was yOffset).' },
+        innerLift: { type: 'number', description: 'Inner-end Δy: positive = sad/pleading, negative = angry.' },
+        outerLift: { type: 'number', description: 'Outer-end Δy: positive = surprised.' },
+        arch: { type: 'number', description: 'Mid-stroke curvature.' },
+        fullness: { type: 'number', description: 'Stroke weight (>0.5 reads natural; <0.3 plucked).' },
+        unibrow: { type: 'number', description: '0..1, fraction inner ends meet across centerline.' },
+        style: { type: 'string', enum: ['split', 'single'], description: '"single" = one confident stroke (Hergé). "split" = two parallel strokes.' },
       },
     },
     nose: {

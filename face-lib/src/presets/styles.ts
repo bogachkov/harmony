@@ -34,10 +34,11 @@ export const styles = {
       dotSize: 0.020,
     },
     brows: {
-      thickness: 0.011,
+      style: 'single',
+      fullness: 0.010,
       arch: 0.4,
       length: 0.18,
-      yOffset: 0.07,
+      ridgeY: 0.07,
     },
     nose: {
       style: 'button',            // tiny upturned curve only
@@ -89,7 +90,7 @@ export const styles = {
       openness: 1.0,
     },
     brows: {
-      thickness: 0.012,           // thinner so the doubled stroke reads as a single confident line
+      fullness: 0.012,           // thinner so the doubled stroke reads as a single confident line
       arch: 0.5,
     },
     nose: {

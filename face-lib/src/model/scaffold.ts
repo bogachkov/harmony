@@ -142,8 +142,9 @@ const buildEye = (anchor: Vec3, halfWidth: number, openness: number, tilt: numbe
 };
 
 const buildBrow = (
-  innerAnchor: Vec3, length: number, innerOffsetY: number, outerOffsetY: number,
-  arch: number, thickness: number, surfaceZ: number, isLeft: boolean,
+  innerAnchor: Vec3, length: number, innerLift: number, outerLift: number,
+  arch: number, fullness: number, surfaceZ: number, isLeft: boolean,
+  style: 'split' | 'single',
 ): Curve[] => {
   const samples = 14;
   const dir = isLeft ? -1 : 1;
@@ -152,16 +153,28 @@ const buildBrow = (
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const x = innerAnchor[0] + dir * length * t;
-      const baseY = innerAnchor[1] + (innerOffsetY * (1 - t) + outerOffsetY * t);
+      const baseY = innerAnchor[1] + (innerLift * (1 - t) + outerLift * t);
       const archY = arch * length * 0.16 * Math.sin(Math.PI * t);
       pts.push([x, baseY + archY + yShift, surfaceZ]);
     }
     return pts;
   };
-  // Two slightly-offset parallel strokes give brows visible thickness in line art.
+  if (style === 'single') {
+    // Single confident stroke (Hergé / ligne claire). Render as a closed filled shape with
+    // a tapered profile rather than two parallel strokes; the stroke width is controlled
+    // by `fullness`.
+    const lineWidth = Math.max(0.006, fullness * 1.2);
+    const top: Vec3[] = points(lineWidth / 2);
+    const bot: Vec3[] = points(-lineWidth / 2);
+    // For supporting-character variety, the stroke tapers slightly to outer end.
+    // We close the shape so the renderer can fill it as a single confident dark mark.
+    const poly: Vec3[] = [...top, ...bot.reverse()];
+    return [{ kind: 'feature', closed: true, points: poly, fill: '#1a1410' }];
+  }
+  // 'split' = two slightly-offset parallel strokes (heavier, sketchier look).
   return [
     { kind: 'feature', closed: false, points: points(0) },
-    { kind: 'feature', closed: false, points: points(-thickness * 4) },
+    { kind: 'feature', closed: false, points: points(-fullness * 4) },
   ];
 };
 
@@ -435,6 +448,75 @@ const buildHair = (
     });
   }
 
+  // Interior detail — what the research called the "single biggest missing piece":
+  // a parting line emerging from the crown plus a few flow strokes inside the silhouette
+  // following the radial-grow direction. This is what makes hair read as drawn, not blocked.
+  // Crown sits near top-rear of cranium. For now place it slightly off-center and back.
+  const crownX = 0;
+  const crownY = ry * 0.78;
+  const crownZ = rz * 0.55;
+  // Parting curve from the crown forward and down to the hairline (center). One smooth arc.
+  // Skip for very short / receding so we don't draw lines that have nothing to part.
+  if (style !== 'bald' && style !== 'none') {
+    const parting: Vec3[] = [];
+    const partSamples = 14;
+    for (let i = 0; i <= partSamples; i++) {
+      const t = i / partSamples;
+      const x = crownX + (0 - crownX) * t * 0.4;  // bend slightly to one side
+      // Y interpolates from crown to hairline; z follows the cranium surface
+      const y = crownY + (hairlineY + headHeight * 0.02 - crownY) * t;
+      const u = x / rx, v = y / ry;
+      const k = 1 - u * u - v * v;
+      const z = k > 0 ? rz * Math.sqrt(k) + 0.025 : crownZ + 0.025;
+      parting.push([x, y, z]);
+    }
+    curves.push({ kind: 'feature', closed: false, points: parting });
+  }
+
+  // Interior flow strokes — short, asymmetric arcs from points OFFSET from the crown,
+  // sweeping toward the hairline. These read as a few hair clumps catching shadow.
+  // Hand-tuned to feel scattered, not geometric.
+  if (style !== 'bald' && style !== 'none') {
+    // A small set of stroke "seeds": each has a start (relative to crown) and a curved direction.
+    type Seed = { dx: number; sweep: number; length: number };
+    const seeds: Seed[] = style === 'short'
+      ? [
+          { dx: -0.08, sweep: -0.6, length: 0.13 },
+          { dx:  0.10, sweep:  0.5, length: 0.11 },
+        ]
+      : style === 'medium'
+      ? [
+          { dx: -0.10, sweep: -0.7, length: 0.16 },
+          { dx: -0.02, sweep: -0.3, length: 0.12 },
+          { dx:  0.08, sweep:  0.4, length: 0.14 },
+          { dx:  0.14, sweep:  0.8, length: 0.17 },
+        ]
+      : [  // long
+          { dx: -0.14, sweep: -0.9, length: 0.22 },
+          { dx: -0.06, sweep: -0.4, length: 0.16 },
+          { dx:  0.04, sweep:  0.2, length: 0.14 },
+          { dx:  0.12, sweep:  0.6, length: 0.19 },
+          { dx:  0.18, sweep:  0.95, length: 0.24 },
+        ];
+    for (const seed of seeds) {
+      const startX = crownX + seed.dx;
+      const startY = crownY - headHeight * 0.02;
+      const stroke: Vec3[] = [];
+      const strokeSamples = 12;
+      for (let i = 0; i <= strokeSamples; i++) {
+        const t = i / strokeSamples;
+        // Stroke sweeps from start toward hairline, with a slight horizontal sweep
+        const x = startX + Math.sin(seed.sweep * Math.PI * 0.45) * seed.length * t;
+        const y = startY - seed.length * headHeight * t * 0.65;
+        const u = x / rx, v = y / ry;
+        const k = 1 - u * u - v * v;
+        const z = k > 0 ? rz * Math.sqrt(k) + 0.022 : 0;
+        stroke.push([x, y, z]);
+      }
+      curves.push({ kind: 'feature', closed: false, points: stroke });
+    }
+  }
+
   // Side strands for medium/long.
   if (style === 'medium' || style === 'long') {
     const fallLen = style === 'long' ? headHeight * 0.55 : headHeight * 0.22;
@@ -545,28 +627,61 @@ const buildFacialHair = (
   // so they're intentionally excluded from this separate draw.
   const wantsMustache = style === 'mustache' || style === 'handlebar' || style === 'vanDyke';
   if (wantsMustache) {
-    const mustacheY = mouthY + 0.06;
+    // The mustache is built as a HEAVY ELLIPSE under the nose (covering the philtrum and upper
+    // lip) plus, for handlebar, two SEPARATE curling tail shapes at the ends. This avoids the
+    // single-horizontal-band shape that read as a "smile."
+    const mustacheY = mouthY + 0.045;
     const isHandlebar = style === 'handlebar';
-    const halfW = isHandlebar
-      ? Math.max(0.14, fullness * 5 + 0.10)
-      : Math.max(0.10, fullness * 4 + 0.06);
-    const samples = 20;
+    const bodyHalfW = 0.085;
+    const bodyHeightTop = 0.020;
+    const bodyHeightBot = 0.030;
+    // Body ellipse: thicker in the center, tapering at the corners — but never pinching to
+    // zero thickness (otherwise the polygon collapses at the ends and the fill becomes invisible).
+    const samples = 24;
     const top: Vec3[] = [];
     const bot: Vec3[] = [];
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
-      const x = -halfW + halfW * 2 * t;
-      const dipShape = Math.sin(Math.PI * t);
-      // Handlebar: ends curl UP; mustache base: flat ends.
-      const endCurl = isHandlebar ? Math.pow(Math.abs(t - 0.5) * 2, 2.2) * 0.045 : 0;
-      const yTop = mustacheY + 0.018 * dipShape + endCurl;
-      const yBot = mustacheY - 0.012 - 0.028 * dipShape + endCurl;
+      const x = -bodyHalfW + bodyHalfW * 2 * t;
+      const dipShape = Math.sin(Math.PI * t);   // 0 at ends, 1 at center
+      // Keep 40% baseline thickness at ends; 100% at center.
+      const taper = 0.4 + 0.6 * dipShape;
+      const yTop = mustacheY + bodyHeightTop * taper;
+      const yBot = mustacheY - bodyHeightBot * taper;
       top.push([x, yTop, 0.1]);
       bot.push([x, yBot, 0.1]);
     }
     const stachePoly: Vec3[] = [...top, ...bot.reverse()];
     curves.push({ kind: 'feature', closed: true, points: stachePoly, fill: color });
     curves.push({ kind: 'feature', closed: true, points: stachePoly });
+
+    // Handlebar tails: small curl shapes at each end, going UP and outward.
+    if (isHandlebar) {
+      const mkCurl = (sign: number): Vec3[] => {
+        const startX = sign * bodyHalfW;
+        const startY = mustacheY;
+        // Curl reaches outward and up; thin teardrop shape.
+        const tipX = sign * (bodyHalfW + 0.035);
+        const tipY = startY + 0.040;
+        const ctrlBackX = sign * (bodyHalfW + 0.015);
+        const ctrlBackY = startY + 0.045;
+        // Outline: start → outer-back-of-curl (top) → tip → back to start (bottom)
+        const pts: Vec3[] = [
+          [startX, startY, 0.1],
+          [sign * (bodyHalfW + 0.025), startY + 0.020, 0.1],
+          [ctrlBackX, ctrlBackY, 0.1],
+          [tipX, tipY, 0.1],
+          [sign * (bodyHalfW + 0.020), startY + 0.005, 0.1],
+        ];
+        return pts;
+      };
+      const leftCurl = mkCurl(-1);
+      const rightCurl = mkCurl(1);
+      curves.push({ kind: 'feature', closed: true, points: leftCurl, fill: color });
+      curves.push({ kind: 'feature', closed: true, points: leftCurl });
+      curves.push({ kind: 'feature', closed: true, points: rightCurl, fill: color });
+      curves.push({ kind: 'feature', closed: true, points: rightCurl });
+    }
   }
 
   // CHINSTRAP: thin beard following just the lower jaw (no mustache, no chin extension).
@@ -896,7 +1011,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const cheekHalfWidth = sx * (0.80 + 0.15 * (1 - p.head.chinSharpness));
 
   const eyeY = (ry + chinY) / 2 + p.eyes.yOffset * p.head.height;
-  const browY = eyeY + p.brows.yOffset * p.head.height;
+  const browY = eyeY + p.brows.ridgeY * p.head.height;
   const noseBaseY = eyeY - p.nose.length * p.head.height;
   const mouthY = noseBaseY + (chinY - noseBaseY) * 0.40 + p.mouth.yOffset * p.head.height;
 
@@ -1004,16 +1119,19 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
 
   // Brows
   const browLen = p.brows.length * p.head.width;
-  const browInnerX = p.brows.spacing * p.head.width;
-  const innerOffset = p.brows.innerHeight * p.head.height;
-  const outerOffset = p.brows.outerHeight * p.head.height;
+  // Unibrow pulls the inner anchors toward the centerline (0 = normal spacing, 1 = inner ends touch).
+  const browInnerX = Math.max(0, p.brows.spacing * p.head.width * (1 - p.brows.unibrow));
+  const innerLiftY = p.brows.innerLift * p.head.height;
+  const outerLiftY = p.brows.outerLift * p.head.height;
   features.push(...buildBrow(
-    [-browInnerX, browY + innerOffset, frontZ(-browInnerX, browY)],
-    browLen, 0, outerOffset - innerOffset, p.brows.arch, p.brows.thickness, frontZ(-browInnerX, browY), true,
+    [-browInnerX, browY + innerLiftY, frontZ(-browInnerX, browY)],
+    browLen, 0, outerLiftY - innerLiftY, p.brows.arch, p.brows.fullness, frontZ(-browInnerX, browY), true,
+    p.brows.style,
   ));
   features.push(...buildBrow(
-    [browInnerX, browY + innerOffset, frontZ(browInnerX, browY)],
-    browLen, 0, outerOffset - innerOffset, p.brows.arch, p.brows.thickness, frontZ(browInnerX, browY), false,
+    [browInnerX, browY + innerLiftY, frontZ(browInnerX, browY)],
+    browLen, 0, outerLiftY - innerLiftY, p.brows.arch, p.brows.fullness, frontZ(browInnerX, browY), false,
+    p.brows.style,
   ));
 
   // Nose (bridge top sits just below brow line)

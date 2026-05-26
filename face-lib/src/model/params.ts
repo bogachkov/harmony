@@ -21,14 +21,18 @@ export type FaceParams = {
     style: 'almond' | 'dots';  // 'dots' = no eye-shape, just a pupil dot (Tintin-style)
     dotSize: number;        // for 'dots' style: radius as fraction of head.width
   };
+  // Brows — Faigin's three DoF: inner-end lift, outer-end lift, overall arch.
+  // (Pedagogy-rooted names; see research/primitives-nose-ears-neck-brows.md.)
   brows: {
-    yOffset: number;        // height above eyeline (head-height units)
-    innerHeight: number;    // additional vertical offset of inner end (positive = inner-up = sad/concerned)
-    outerHeight: number;    // additional vertical offset of outer end
-    thickness: number;
-    arch: number;           // curve amount of the brow stroke
+    ridgeY: number;         // height above eyeline (head-height units; was `yOffset`)
+    innerLift: number;      // inner-end Δy: positive = sad/pleading, negative = angry (was `innerHeight`)
+    outerLift: number;      // outer-end Δy: positive = surprised (was `outerHeight`)
+    fullness: number;       // stroke weight; >0.5 reads "natural"/un-plucked, <0.3 plucked (was `thickness`)
+    arch: number;           // mid-stroke curvature
     spacing: number;        // distance from centerline at inner end (fraction of head.width)
     length: number;         // brow length (fraction of head.width)
+    unibrow: number;        // 0..1, fraction by which inner ends meet across centerline
+    style: 'split' | 'single';  // 'split' = two parallel strokes (heavy); 'single' = one stroke (Hergé)
   };
   nose: {
     length: number;         // nose length from brow-bridge to base (head-height units)
@@ -131,13 +135,15 @@ export const defaults: FaceParams = {
     dotSize: 0.018,
   },
   brows: {
-    yOffset: 0.08,
-    innerHeight: 0,
-    outerHeight: 0,
-    thickness: 0.018,
+    ridgeY: 0.08,
+    innerLift: 0,
+    outerLift: 0,
+    fullness: 0.018,
     arch: 0.5,
     spacing: 0.07,
     length: 0.22,
+    unibrow: 0,
+    style: 'split',
   },
   nose: {
     length: 0.28,

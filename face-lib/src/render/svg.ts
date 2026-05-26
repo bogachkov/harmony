@@ -101,7 +101,13 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
     if (px.length === 0) continue;
     const wobbled = isConstruction ? px : wobble(px, jitter, rng);
     const swVar = jitter > 0 ? (rng() - 0.5) * 0.4 : 0;
-    const sw = isConstruction ? p.style.constructionWeight : Math.max(0.5, p.style.lineWeight + swVar);
+    // Silhouette gets a slightly heavier stroke than interior features — standard comic-art
+    // figure-ground separation. Interior features keep the base weight.
+    const isSilhouette = c.role === 'silhouette';
+    const weightMul = isSilhouette ? 1.35 : 1;
+    const sw = isConstruction
+      ? p.style.constructionWeight
+      : Math.max(0.5, p.style.lineWeight * weightMul + swVar);
     prepped.push({
       c,
       pxPath: pointsToPath(wobbled, c.closed),

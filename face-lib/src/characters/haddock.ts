@@ -45,7 +45,7 @@ const haddock: DeepPartial<FaceParams> = {
     dotSize: 0.020,
   },
   brows: {
-    thickness: 0.024,
+    fullness: 0.024,
     arch: 0.20,
     length: 0.21,
   },
