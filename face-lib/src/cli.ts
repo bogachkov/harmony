@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { composeFace, expressionNames, ageNames, presentationNames } from './api.ts';
 import type { ComposeArgs, ExpressionName, AgeName, PresentationName, DeepPartial, FaceParams } from './api.ts';
 import { tools } from './llm-tools.ts';
+import { svgToPng } from './render/raster.ts';
 
 type Args = Map<string, string | true>;
 
@@ -68,14 +69,15 @@ GENERATE OPTIONS
   --presentation <name>     ${presentationNames.join(' | ')}
   --yaw <radians>           camera yaw (default 0 = front)
   --pitch <radians>         camera pitch (default 0)
-  --height <px>             output SVG height (default 600)
+  --height <px>             output height in px (default 600)
+  --format <svg|png>        output format (default: svg, or inferred from -o extension)
   --construction            show Loomis construction guide lines
   --side-planes             show side-plane edges
   --jitter <amount>         hand-drawn jitter amplitude in px (default 0)
   --color <hex>             primary line color
   --background <hex|null>   background fill or "null" for transparent
   --set path=value          fine-grained override (e.g. --set eyes.openness=0.5)
-  -o <file>                 write SVG to file (default: stdout)
+  -o <file>                 write to file (default: stdout). Extension .png implies PNG.
 
 EXAMPLES
   face generate --expression angry --age adult --presentation masculine
@@ -109,11 +111,31 @@ const cmdGenerate = (args: Args, sets: Array<[string, string]>): void => {
 
   const svg = composeFace(compose);
   const out = args.get('o');
-  if (typeof out === 'string' && out) {
-    writeFileSync(out, svg);
-    process.stderr.write(`wrote ${out}\n`);
+  const outPath = typeof out === 'string' ? out : '';
+  const explicitFormat = args.has('format') ? String(args.get('format')).toLowerCase() : '';
+  const inferredFormat = outPath.toLowerCase().endsWith('.png') ? 'png' : 'svg';
+  const format = explicitFormat || inferredFormat;
+
+  if (format !== 'svg' && format !== 'png') {
+    process.stderr.write(`unknown format: ${format} (expected svg or png)\n`);
+    process.exit(2);
+  }
+
+  if (format === 'png') {
+    const png = svgToPng(svg);
+    if (outPath) {
+      writeFileSync(outPath, png);
+      process.stderr.write(`wrote ${outPath} (${png.length} bytes)\n`);
+    } else {
+      process.stdout.write(png);
+    }
   } else {
-    process.stdout.write(svg);
+    if (outPath) {
+      writeFileSync(outPath, svg);
+      process.stderr.write(`wrote ${outPath}\n`);
+    } else {
+      process.stdout.write(svg);
+    }
   }
 };
 
