@@ -63,6 +63,22 @@ export type FaceParams = {
     width: number;          // fraction of head.width
     length: number;         // visible neck length (head-height units)
   };
+  facialHair: {
+    style: 'none' | 'mustache' | 'handlebar' | 'goatee' | 'vanDyke' | 'chinstrap' | 'sideburns' | 'beard' | 'beardWithMustache' | 'fullRound';
+    color: string | null;   // null = inherit hairFill
+    length: number;         // how far past the chin (head-height units)
+    fullness: number;       // how far past the jaw silhouette (head-width units)
+    coversMouth: boolean;   // when true, mouth is rendered as a line through the mustache
+  };
+  hat: {
+    style: 'none' | 'navalCap' | 'beanie' | 'fedora' | 'bowler' | 'topHat';
+    color: string;
+    bandColor: string;      // for naval cap white band, fedora ribbon, etc.
+    emblem: 'none' | 'anchor';
+    emblemColor: string;
+    size: number;           // overall scale multiplier (1.0 = default)
+    tilt: number;           // small rotation in radians
+  };
   style: {
     lineWeight: number;     // SVG stroke-width in px
     constructionWeight: number; // weight for guide lines (lighter)
@@ -148,6 +164,22 @@ export const defaults: FaceParams = {
     visible: true,
     width: 0.55,        // trapezius width at the base (fraction of head.width)
     length: 0.22,
+  },
+  facialHair: {
+    style: 'none',
+    color: null,
+    length: 0.10,
+    fullness: 0.04,
+    coversMouth: false,
+  },
+  hat: {
+    style: 'none',
+    color: '#181410',
+    bandColor: '#ffffff',
+    emblem: 'none',
+    emblemColor: '#ffffff',
+    size: 1.0,
+    tilt: 0,
   },
   style: {
     lineWeight: 2,

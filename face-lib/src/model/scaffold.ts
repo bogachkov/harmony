@@ -457,6 +457,393 @@ const buildHair = (
   return curves;
 };
 
+const buildFacialHair = (
+  jawCurvePts: Vec3[],         // the jaw silhouette as a list of 3D points (cheekL → chin → cheekR)
+  cheekL: Vec3, cheekR: Vec3,  // jaw endpoints
+  mouthY: number,              // where the mouth sits (for mustache placement)
+  style: FaceParams['facialHair']['style'],
+  length: number, fullness: number, color: string,
+): Curve[] => {
+  if (style === 'none') return [];
+
+  const curves: Curve[] = [];
+
+  // FULL BEARD / BEARD-WITH-MUSTACHE / FULL-ROUND: closed polygon hugging the outside of the jaw.
+  if (style === 'beard' || style === 'beardWithMustache' || style === 'fullRound') {
+    // Build offset curve outside the jaw line. For each jaw point, push outward perpendicular to
+    // the local jaw direction by `fullness`, scaled by proximity to chin (so it hugs the jaw at
+    // the cheeks and only puffs out near the chin), and downward by `length`.
+    // fullRound: more uniform outward push (Haddock-style rounded beard).
+    // beard/beardWithMustache: outward push tapered near cheeks (cleaner silhouette).
+    const isRound = style === 'fullRound';
+    const beardOuter: Vec3[] = [];
+    for (let i = 0; i < jawCurvePts.length; i++) {
+      const p = jawCurvePts[i] as Vec3;
+      const prev = jawCurvePts[Math.max(0, i - 1)] as Vec3;
+      const next = jawCurvePts[Math.min(jawCurvePts.length - 1, i + 1)] as Vec3;
+      const dx = next[0] - prev[0];
+      const dy = next[1] - prev[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = dy / len;
+      const ny = -dx / len;
+      const raw = 1 - Math.abs(i / (jawCurvePts.length - 1) - 0.5) * 2;
+      const tFromCenter = Math.pow(raw, isRound ? 0.4 : 0.7);
+      const outwardScale = isRound ? Math.max(0.5, tFromCenter) : tFromCenter;
+      beardOuter.push([
+        p[0] + nx * fullness * outwardScale,
+        p[1] + ny * fullness * outwardScale - length * tFromCenter,
+        p[2],
+      ]);
+    }
+
+    // The top edge of the beard polygon. For 'beardWithMustache'/'fullRound' (covers mouth) draw straight
+    // across just above mouthY through the mustache region. For 'beard' (no mustache) follow the
+    // jaw line back so the mouth stays exposed.
+    const topEdge: Vec3[] = [];
+    if (style === 'beardWithMustache' || style === 'fullRound') {
+      // Single continuous beard-with-mustache: top edge sits just above the mouth at the corners
+      // and bulges UP in the middle to form the mustache curl (so beard + mustache read as one shape).
+      const baseY = mouthY + 0.018;
+      const mustacheRise = style === 'fullRound' ? 0.07 : 0.05;
+      const samples = 28;
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const x = cheekR[0] + (cheekL[0] - cheekR[0]) * t;
+        // Bell curve at the center for the mustache rise; corners stay low.
+        const centerWeight = Math.exp(-Math.pow((t - 0.5) * 3.2, 2));
+        // Slight dip at the philtrum (very center) gives a Haddock-style double-curl mustache.
+        const philtrumDip = Math.exp(-Math.pow((t - 0.5) * 14, 2)) * mustacheRise * 0.25;
+        const y = baseY + mustacheRise * centerWeight - philtrumDip;
+        topEdge.push([x, y, cheekL[2]]);
+      }
+    } else {
+      // 'beard' style: top edge tracks the jaw line itself (right back to left).
+      for (let i = jawCurvePts.length - 1; i >= 0; i--) {
+        topEdge.push(jawCurvePts[i] as Vec3);
+      }
+    }
+
+    // Polygon: beardOuter (left to right) then topEdge (right back to left). Closed.
+    const polygon: Vec3[] = [...beardOuter, ...topEdge];
+    curves.push({ kind: 'feature', closed: true, points: polygon, fill: color });
+    // Also stroke the outline so the beard has a visible edge.
+    curves.push({ kind: 'feature', closed: true, points: polygon });
+  }
+
+  // MUSTACHE shapes — variants share a base shape with different curl/length parameters.
+  // Note: beardWithMustache and fullRound integrate the mustache into the beard's top edge already,
+  // so they're intentionally excluded from this separate draw.
+  const wantsMustache = style === 'mustache' || style === 'handlebar' || style === 'vanDyke';
+  if (wantsMustache) {
+    const mustacheY = mouthY + 0.06;
+    const isHandlebar = style === 'handlebar';
+    const halfW = isHandlebar
+      ? Math.max(0.14, fullness * 5 + 0.10)
+      : Math.max(0.10, fullness * 4 + 0.06);
+    const samples = 20;
+    const top: Vec3[] = [];
+    const bot: Vec3[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = -halfW + halfW * 2 * t;
+      const dipShape = Math.sin(Math.PI * t);
+      // Handlebar: ends curl UP; mustache base: flat ends.
+      const endCurl = isHandlebar ? Math.pow(Math.abs(t - 0.5) * 2, 2.2) * 0.045 : 0;
+      const yTop = mustacheY + 0.018 * dipShape + endCurl;
+      const yBot = mustacheY - 0.012 - 0.028 * dipShape + endCurl;
+      top.push([x, yTop, 0.1]);
+      bot.push([x, yBot, 0.1]);
+    }
+    const stachePoly: Vec3[] = [...top, ...bot.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: stachePoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: stachePoly });
+  }
+
+  // CHINSTRAP: thin beard following just the lower jaw (no mustache, no chin extension).
+  if (style === 'chinstrap') {
+    const strapInner = jawCurvePts;
+    const strapOuter: Vec3[] = [];
+    const strapInnerOffset: Vec3[] = [];
+    const offset = Math.max(0.020, fullness * 0.7);
+    for (let i = 0; i < strapInner.length; i++) {
+      const p = strapInner[i] as Vec3;
+      const prev = strapInner[Math.max(0, i - 1)] as Vec3;
+      const next = strapInner[Math.min(strapInner.length - 1, i + 1)] as Vec3;
+      const dx = next[0] - prev[0];
+      const dy = next[1] - prev[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = dy / len;
+      const ny = -dx / len;
+      strapOuter.push([p[0] + nx * offset, p[1] + ny * offset, p[2]]);
+      strapInnerOffset.push([p[0] - nx * 0.005, p[1] - ny * 0.005, p[2]]);  // slight inward bleed
+    }
+    const poly: Vec3[] = [...strapOuter, ...strapInnerOffset.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: poly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: poly });
+  }
+
+  // SIDEBURNS: two short strips down from the temple area along the upper jaw on each side.
+  if (style === 'sideburns') {
+    const burnLen = length * 1.4 + 0.06;
+    const burnW = fullness + 0.012;
+    const mkBurn = (cheek: Vec3, sign: number): Vec3[] => {
+      return [
+        [cheek[0] + sign * 0.01, cheek[1] + 0.06, cheek[2]],
+        [cheek[0] + sign * (0.01 + burnW), cheek[1] + 0.06, cheek[2]],
+        [cheek[0] + sign * (0.01 + burnW * 0.8), cheek[1] - burnLen, cheek[2]],
+        [cheek[0] + sign * 0.005, cheek[1] - burnLen * 0.9, cheek[2]],
+      ];
+    };
+    const left = mkBurn(cheekL, -1);
+    const right = mkBurn(cheekR, 1);
+    curves.push({ kind: 'feature', closed: true, points: left, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: left });
+    curves.push({ kind: 'feature', closed: true, points: right, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: right });
+  }
+
+  // GOATEE / VANDYKE: a smaller patch on the chin (vanDyke also adds the mustache, handled above).
+  if (style === 'goatee' || style === 'vanDyke') {
+    const chinPt = jawCurvePts[Math.floor(jawCurvePts.length / 2)] as Vec3;
+    const w = fullness * 4 + 0.06;
+    const h = length + 0.06;
+    const samples = 14;
+    const poly: Vec3[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = chinPt[0] - w + w * 2 * t;
+      const y = chinPt[1] - h * Math.sin(Math.PI * t);
+      poly.push([x, y, chinPt[2]]);
+    }
+    // Close along the top with a slight arc
+    for (let i = samples; i >= 0; i--) {
+      const t = i / samples;
+      const x = chinPt[0] - w * 0.8 + w * 1.6 * t;
+      const y = chinPt[1] + 0.02 * Math.sin(Math.PI * t);
+      poly.push([x, y, chinPt[2]]);
+    }
+    curves.push({ kind: 'feature', closed: true, points: poly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: poly });
+  }
+
+  return curves;
+};
+
+const buildHat = (
+  rx: number, ry: number, sx: number, headHeight: number,
+  style: FaceParams['hat']['style'],
+  color: string, bandColor: string,
+  emblem: FaceParams['hat']['emblem'], emblemColor: string,
+  size: number, tilt: number,
+): Curve[] => {
+  if (style === 'none') return [];
+
+  const curves: Curve[] = [];
+  // Where the head silhouette meets the side plane (temple corner).
+  const sideTheta = Math.acos(Math.min(1, sx / rx));
+  const templeY = ry * Math.sin(sideTheta);
+
+  // NAVAL CAP — peaked-style: white headband + dark crown + optional anchor emblem.
+  if (style === 'navalCap') {
+    const capW = sx * 1.10 * size;            // slightly wider than the cranium
+    const bandH = headHeight * 0.07 * size;
+    const crownH = headHeight * 0.16 * size;
+    const baseY = templeY + headHeight * 0.03;  // sit just above the temple corner
+
+    // Headband: a slightly bulged rectangle wrapping the lower brim.
+    const bandSamples = 16;
+    const bandTop: Vec3[] = [];
+    const bandBot: Vec3[] = [];
+    for (let i = 0; i <= bandSamples; i++) {
+      const t = i / bandSamples;
+      const x = -capW + capW * 2 * t;
+      // Bulge slightly downward in the middle (the front of the cap).
+      const yBot = baseY - 0.005 * Math.sin(Math.PI * t);
+      const yTop = baseY + bandH;
+      bandBot.push([x, yBot, 0]);
+      bandTop.push([x, yTop, 0]);
+    }
+    const bandPoly: Vec3[] = [...bandBot, ...bandTop.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: bandPoly, fill: bandColor });
+    curves.push({ kind: 'feature', closed: true, points: bandPoly });
+
+    // Crown: a dome above the band, slightly wider than the band.
+    const crownW = capW * 1.05;
+    const crownTop: Vec3[] = [];
+    const crownSamples = 28;
+    for (let i = 0; i <= crownSamples; i++) {
+      const t = i / crownSamples;
+      const theta = t * Math.PI;
+      const x = crownW * Math.cos(theta);
+      const y = (baseY + bandH) + crownH * Math.sin(theta) * 0.95;
+      crownTop.push([x, y, 0]);
+    }
+    // Close along the band's top edge
+    const crownPoly: Vec3[] = [
+      [crownW, baseY + bandH, 0],
+      ...crownTop,
+      [-crownW, baseY + bandH, 0],
+    ];
+    curves.push({ kind: 'feature', closed: true, points: crownPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: crownPoly });
+
+    // Anchor emblem on the front of the crown.
+    if (emblem === 'anchor') {
+      const aCx = 0;
+      const aCy = baseY + bandH + crownH * 0.45;
+      const aSize = headHeight * 0.07 * size;
+      // Anchor: vertical stem + crossbar + bottom arc
+      const stem: Vec3[] = [
+        [aCx, aCy + aSize * 0.45, 0.01],
+        [aCx, aCy - aSize * 0.50, 0.01],
+      ];
+      const crossbar: Vec3[] = [
+        [aCx - aSize * 0.35, aCy + aSize * 0.25, 0.01],
+        [aCx + aSize * 0.35, aCy + aSize * 0.25, 0.01],
+      ];
+      // Bottom arc (U-shape that hooks up on both ends)
+      const arcPts: Vec3[] = [];
+      const arcSamples = 14;
+      for (let i = 0; i <= arcSamples; i++) {
+        const t = i / arcSamples;
+        const x = aCx - aSize * 0.55 + aSize * 1.10 * t;
+        const y = aCy - aSize * 0.40 - aSize * 0.18 * Math.sin(Math.PI * t);
+        arcPts.push([x, y, 0.01]);
+      }
+      // Render as strokes (single-pixel-ish lines) in the emblem color
+      for (const pts of [stem, crossbar, arcPts]) {
+        curves.push({ kind: 'feature', closed: false, points: pts, fill: emblemColor });
+      }
+    }
+  }
+
+  // BEANIE — fitted dome cap, single color, no band.
+  if (style === 'beanie') {
+    const capW = sx * 1.05 * size;
+    const baseY = templeY + headHeight * 0.04;
+    const crownH = headHeight * 0.16 * size;
+    const crownSamples = 28;
+    const top: Vec3[] = [];
+    for (let i = 0; i <= crownSamples; i++) {
+      const t = i / crownSamples;
+      const theta = t * Math.PI;
+      top.push([capW * Math.cos(theta), baseY + crownH * Math.sin(theta), 0]);
+    }
+    const poly: Vec3[] = [[capW, baseY, 0], ...top, [-capW, baseY, 0]];
+    curves.push({ kind: 'feature', closed: true, points: poly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: poly });
+  }
+
+  // FEDORA — flat brim + crown.
+  if (style === 'fedora') {
+    const brimW = sx * 1.65 * size;
+    const brimH = headHeight * 0.025 * size;
+    const crownW = sx * 0.95 * size;
+    const crownH = headHeight * 0.18 * size;
+    const baseY = templeY + headHeight * 0.02;
+    // Brim ellipse
+    const brimTop: Vec3[] = [];
+    const brimBot: Vec3[] = [];
+    const samples = 28;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = -brimW + brimW * 2 * t;
+      brimTop.push([x, baseY + brimH, 0]);
+      brimBot.push([x, baseY - brimH, 0]);
+    }
+    const brimPoly: Vec3[] = [...brimTop, ...brimBot.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: brimPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: brimPoly });
+    // Crown
+    const cTop: Vec3[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = -crownW + crownW * 2 * t;
+      cTop.push([x, baseY + brimH + crownH, 0]);
+    }
+    const crownPoly: Vec3[] = [
+      [crownW, baseY + brimH, 0],
+      ...cTop.reverse(),
+      [-crownW, baseY + brimH, 0],
+    ];
+    curves.push({ kind: 'feature', closed: true, points: crownPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: crownPoly });
+    // Band ribbon
+    const bandY = baseY + brimH + headHeight * 0.025;
+    const bandPoly: Vec3[] = [
+      [-crownW * 0.95, bandY, 0.005],
+      [crownW * 0.95, bandY, 0.005],
+      [crownW * 0.95, bandY + headHeight * 0.015, 0.005],
+      [-crownW * 0.95, bandY + headHeight * 0.015, 0.005],
+    ];
+    curves.push({ kind: 'feature', closed: true, points: bandPoly, fill: bandColor });
+  }
+
+  // BOWLER — domed crown + small curled brim.
+  if (style === 'bowler') {
+    const brimW = sx * 1.30 * size;
+    const baseY = templeY + headHeight * 0.02;
+    const crownH = headHeight * 0.15 * size;
+    const crownW = sx * 1.0 * size;
+    // Brim (thin ellipse)
+    const brimTop: Vec3[] = [];
+    const brimBot: Vec3[] = [];
+    const bh = headHeight * 0.015;
+    const samples = 24;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = -brimW + brimW * 2 * t;
+      brimTop.push([x, baseY + bh, 0]);
+      brimBot.push([x, baseY - bh, 0]);
+    }
+    const brimPoly: Vec3[] = [...brimTop, ...brimBot.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: brimPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: brimPoly });
+    // Domed crown
+    const cTop: Vec3[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const theta = t * Math.PI;
+      cTop.push([crownW * Math.cos(theta), baseY + bh + crownH * Math.sin(theta), 0]);
+    }
+    const crownPoly: Vec3[] = [[crownW, baseY + bh, 0], ...cTop, [-crownW, baseY + bh, 0]];
+    curves.push({ kind: 'feature', closed: true, points: crownPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: crownPoly });
+  }
+
+  // TOP HAT — tall cylinder + brim.
+  if (style === 'topHat') {
+    const brimW = sx * 1.35 * size;
+    const baseY = templeY + headHeight * 0.02;
+    const crownH = headHeight * 0.30 * size;
+    const crownW = sx * 1.0 * size;
+    const bh = headHeight * 0.018;
+    const samples = 24;
+    const brimTop: Vec3[] = [];
+    const brimBot: Vec3[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const x = -brimW + brimW * 2 * t;
+      brimTop.push([x, baseY + bh, 0]);
+      brimBot.push([x, baseY - bh, 0]);
+    }
+    const brimPoly: Vec3[] = [...brimTop, ...brimBot.reverse()];
+    curves.push({ kind: 'feature', closed: true, points: brimPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: brimPoly });
+    const crownPoly: Vec3[] = [
+      [-crownW, baseY + bh, 0],
+      [crownW, baseY + bh, 0],
+      [crownW * 1.02, baseY + bh + crownH, 0],
+      [-crownW * 1.02, baseY + bh + crownH, 0],
+    ];
+    curves.push({ kind: 'feature', closed: true, points: crownPoly, fill: color });
+    curves.push({ kind: 'feature', closed: true, points: crownPoly });
+  }
+
+  void tilt;  // tilt rotation not yet implemented; param reserved
+  return curves;
+};
+
 const buildNeck = (anchorL: Vec3, anchorR: Vec3, baseHalfWidth: number, neckLength: number): Curve[] => {
   // Two curves descending from jaw anchors, smoothly easing outward toward the trapezius.
   // anchor positions sit on the under-jaw; the curve drops mostly straight then bows out.
@@ -575,6 +962,9 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   // Hair (drawn first so other features can overlap it slightly via Z-order — painter actually sorts later)
   features.push(...buildHair(rx, ry, rz, sx, browY, p.head.height, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill));
 
+  // Hat (sits on top of head; opt-in via p.hat.style)
+  features.push(...buildHat(rx, ry, sx, p.head.height, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));
+
   // Ears — anchored so their inner edge is INSIDE the head silhouette (overlap by ~30% of width)
   // so they read as attached, not floating next to the head.
   if (p.ears.visible) {
@@ -619,6 +1009,19 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   // Nose (bridge top sits just below brow line)
   const bridgeTop: Vec3 = [0, browY - p.head.height * 0.02, frontZ(0, browY)];
   features.push(...buildNose(bridgeTop, p.nose.length * p.head.height, p.nose.width * p.head.width, frontZ(0, browY), p.nose.bridgeVisible, p.nose.style, p.nose.showNostrils));
+
+  // Facial hair — emitted BEFORE the mouth so the mustache covers the mouth line when beardWithMustache
+  // is requested (painter's order is by avgZ; both sit at similar Z, so emit order is the tiebreaker).
+  if (p.facialHair.style !== 'none') {
+    const hairColor = p.facialHair.color ?? p.style.hairFill ?? '#1a1a1a';
+    features.push(...buildFacialHair(
+      jaw, cheekL, cheekR, mouthY,
+      p.facialHair.style,
+      p.facialHair.length * p.head.height,
+      p.facialHair.fullness * p.head.width,
+      hairColor,
+    ));
+  }
 
   // Mouth
   const mouthCenter: Vec3 = [0, mouthY, frontZ(0, mouthY)];
