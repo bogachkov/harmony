@@ -961,34 +961,53 @@ const buildHair = (
       const y = partingTopY + (partingBottomY - partingTopY) * t;
       partingPts.push([x, y, surfZ(x, y)]);
     }
+    // Parting CHANNEL: a slightly-darker stroke that reads as a visible groove in the
+    // hair mass. Pascal feedback (4/10 round): the parting line was there but dark-on-dark
+    // and disappeared. Render it at 2× the normal line weight and very confident so it
+    // reads as a structural break, not a stray scratch.
     curves.push({
       kind: 'feature-ink', closed: false, points: partingPts,
-      ink: { size: 2.2, taperStart: 0.30, taperEnd: 0.45, pressureMid: 1.0 },
+      ink: { size: 3.0, taperStart: 0.20, taperEnd: 0.35, pressureMid: 1.0, color: '#000000' },
     });
   }
 
-  // ---- INTERIOR characterization: ONE flow stroke sweeping from near the crown forward
-  // and to the LEFT temple. Leo's pass-3 §3 — Tintin's "single flick of asymmetry at the
-  // silhouette edge." Hand-built so we control direction precisely. Suppressed for
-  // 'receding' (would read as a scratch on bald scalp) and 'straight' (no parted feel).
+  // ---- INTERIOR characterization: TWO flow strokes, one on each side of the parting,
+  // following the hair-fall direction. Pascal feedback (4/10 round): interior was flat
+  // dead fill. Adding a deliberate flow-separator on EACH side of the parting suggests
+  // mass + volume without dropping into "draw individual strands" (Leo STOP #2). Total
+  // interior strokes: parting + 2 separators = 3 — the maximum Leo allowed.
+  // Suppressed for 'receding' (bald scalp) and 'straight' (no parting context).
   if (drawInteriorStrokes && frontShape !== 'straight') {
-    const flickStartX = rx * 0.06;     // just to the right of center top (the parting)
-    const flickStartY = ry * 0.85;
-    const flickEndX = rx * 0.40;       // sweep out toward right temple
-    const flickEndY = hairlineY + headHeight * 0.08;
     const flickSamples = 14;
-    const flickPts: Vec3[] = [];
-    for (let i = 0; i <= flickSamples; i++) {
-      const t = i / flickSamples;
-      // Cubic ease so the stroke curves through the middle, not a straight line.
-      const ease = t * t * (3 - 2 * t);
-      const x = flickStartX + (flickEndX - flickStartX) * ease;
-      const y = flickStartY + (flickEndY - flickStartY) * t;
-      flickPts.push([x, y, surfZ(x, y)]);
-    }
+    const mkSeparator = (sx: number, ex: number, sy: number, ey: number): Vec3[] => {
+      const pts: Vec3[] = [];
+      for (let i = 0; i <= flickSamples; i++) {
+        const t = i / flickSamples;
+        const ease = t * t * (3 - 2 * t);
+        const x = sx + (ex - sx) * ease;
+        const y = sy + (ey - sy) * t;
+        pts.push([x, y, surfZ(x, y)]);
+      }
+      return pts;
+    };
+    // RIGHT-side flow: from near the parting top, sweep out and down to the right temple.
+    const rightFlow = mkSeparator(
+      rx * 0.04, rx * 0.42,
+      ry * 0.86, hairlineY + headHeight * 0.08,
+    );
     curves.push({
-      kind: 'feature-ink', closed: false, points: flickPts,
-      ink: { size: 1.6, taperStart: 0.55, taperEnd: 0.45, pressureMid: 0.95 },
+      kind: 'feature-ink', closed: false, points: rightFlow,
+      ink: { size: 1.8, taperStart: 0.55, taperEnd: 0.45, pressureMid: 0.95, color: '#000000' },
+    });
+    // LEFT-side flow: from below the parting, sweep down and slightly leftward.
+    // Shorter than the right flow — the left side of a Hergé part is the heavy side.
+    const leftFlow = mkSeparator(
+      -rx * 0.18, -rx * 0.32,
+      ry * 0.70, hairlineY + headHeight * 0.10,
+    );
+    curves.push({
+      kind: 'feature-ink', closed: false, points: leftFlow,
+      ink: { size: 1.4, taperStart: 0.60, taperEnd: 0.55, pressureMid: 0.80, color: '#000000' },
     });
   }
 

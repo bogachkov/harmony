@@ -44,22 +44,27 @@ export const ages = {
     head: {
       cranium: { diameter: 1.0 },
       jaw: {
-        topology: 'oval',           // adult shape arriving
+        topology: 'oval',           // adult shape arriving, still slightly soft
         ramusHeight: 0.34,
-        gonialAngle: 0.70,
-        bigonialWidth: 0.65,
+        gonialAngle: 0.78,           // softer than adult, not as sharp as child
+        bigonialWidth: 0.62,
         mentalWidth: 0.42,
       },
       face: { upperThirdRatio: 0.36, middleThirdRatio: 0.34, lowerThirdRatio: 0.30 },
     },
-    eyes: { size: 0.17, lidLine: 0.4 },
-    brows: { ridgeY: 0.06 },
-    nose: { length: 0.24 },
-    mouth: { upperCurve: 0.1 },
+    // Teens have visibly LARGER eyes than adults (adolescent eye proportion). Per Leo
+    // §8.3 the demographic axis must be legible at thumbnail — bump eye size hard so
+    // teen-feminine doesn't collapse into adult-feminine.
+    eyes: { size: 0.22, openness: 1.10, dotSize: 0.024, lidLine: 0.4 },
+    brows: { ridgeY: 0.06, fullness: 0.014 },
+    nose: { length: 0.22 },
+    mouth: { upperCurve: 0.15 },
     hair: {
-      frontShape: 'parted', forehead: 0.36, volume: 0.11,
-      templeRecession: 0, sideFall: 0.50, crownPeakX: 0.05,
-      napeExtension: 0.45, edgeKind: 'smooth',
+      frontShape: 'parted', forehead: 0.34, volume: 0.13,
+      // Teen hair is LONGER + bouncier than adult fem's bob — visibly more mass past
+      // the temples + slight forward flick at the fringe.
+      templeRecession: 0, sideFall: 0.75, crownPeakX: 0.08,
+      napeExtension: 0.55, edgeKind: 'flicked',
     },
   } satisfies DeepPartial<FaceParams>,
 
