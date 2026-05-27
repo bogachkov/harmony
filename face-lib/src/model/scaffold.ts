@@ -367,16 +367,18 @@ const buildEyeDots = (
     }
   }
 
-  // 4. Under-eye line — a short faint line slightly below the dot. Reads as tired/elder/jaded.
+  // 4. Under-eye tick — a short faint line BELOW THE PUPIL DOT, narrower than the dot.
+  // Reads as a Hergé-style eye-bag tick (Castafiore, Tournesol). MUST be narrower than
+  // the dot or it reads as a separate object (an earring).
   if (underlineHint > 0.1) {
-    const ulHalfW = r * (1.2 + 0.4 * underlineHint);
-    const ulY = anchor[1] - r * (1.0 + 0.4 * underlineHint);
-    const samples = 8;
+    const ulHalfW = r * (0.6 + 0.3 * underlineHint);   // STAYS NARROWER than the dot's r
+    const ulY = anchor[1] - r * (1.6 + 0.3 * underlineHint);
+    const samples = 6;
     const ul: Vec3[] = [];
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const x = anchor[0] - ulHalfW + 2 * ulHalfW * t;
-      const y = ulY + r * 0.15 * Math.sin(Math.PI * t);    // very slight downward curve
+      const y = ulY + r * 0.08 * Math.sin(Math.PI * t);
       ul.push([x, y, surfaceZ + 0.010]);
     }
     curves.push({ kind: 'feature', closed: false, points: ul });
@@ -644,11 +646,14 @@ const buildMouth = (
 
 // Per Leo §7 — Bridgman/Loomis ear: helix + antihelix Y-fork + tragus + lobe + tilt.
 // Top of helix aligns with brow line, bottom of helix at nose-base line; lobe extends below.
+// `skinFill` (when not null) is used to paint the ear blob as opaque skin so the C-arc
+// reads as a bulge of the head silhouette rather than a thin line floating beside it.
 const buildEar = (
   attachX: number, attachTopY: number, attachBottomY: number,
   protrusion: number, lobeDrop: number, antihelixShow: number,
   tragusShow: number, conchaShow: number, tilt: number,
   surfaceZ: number, isLeft: boolean,
+  skinFill: string | null,
 ): Curve[] => {
   const dir = isLeft ? -1 : 1;
   const height = attachTopY - attachBottomY;
@@ -685,6 +690,16 @@ const buildEar = (
     outer.push(...cubicBezier(helixBottom, lobeC1, lobeC2, lobeBottom, 8));
     // Bring it back up the inside to the attach point (closing the silhouette internally)
     outer.push([lobeAttachX - dir * 0.005, lobeBottomY + 0.005, surfaceZ]);
+  }
+  // Ear-blob fill: SAME outer path closed back to start, painted with skin so the bulge
+  // visually merges with the head silhouette skin fill (the ear reads as an attached lobe,
+  // not a thin line dangling beside the head). noStroke avoids drawing the inner closing
+  // line, which would otherwise show as a vertical mark across the temple.
+  if (skinFill) {
+    curves.push({
+      kind: 'feature', closed: true, points: outer,
+      fill: skinFill, noStroke: true,
+    });
   }
   curves.push({ kind: 'feature', closed: false, points: outer });
 
@@ -1644,13 +1659,13 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
       -sx + earInset, earTopY, earBottomY,
       protrusion, p.ears.lobeDrop, p.ears.antihelixShow,
       p.ears.tragusShow, p.ears.conchaShow, p.ears.tilt,
-      earZ, true,
+      earZ, true, p.style.skinFill,
     ));
     features.push(...buildEar(
       sx - earInset, earTopY, earBottomY,
       protrusion, p.ears.lobeDrop, p.ears.antihelixShow,
       p.ears.tragusShow, p.ears.conchaShow, p.ears.tilt,
-      earZ, false,
+      earZ, false, p.style.skinFill,
     ));
   }
 

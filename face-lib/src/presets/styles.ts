@@ -59,13 +59,15 @@ export const styles = {
       cornerMarks: false,
       upperCurve: 0,
     },
-    // Ligne claire = minimal interior anatomy. The Bridgman/Loomis substructure is still
-    // computed but rendered subtly; the cap is the silhouette.
+    // Ligne claire = minimal interior anatomy. Hergé's front-view ears are a small
+    // "C" tucked against the temple — no Y-fork, no tragus, no concha, and the lobe
+    // is integrated into the C rather than dangling. lobeDrop=0 → no comma.
     ears: {
-      antihelixShow: 0,     // Hergé ear = C + lobe + maybe one inner tick. No Y-fork.
+      helixProtrusion: 0.030,  // smaller bulge — past silhouette is a tick, not a flare
+      antihelixShow: 0,
       tragusShow: 0,
       conchaShow: 0,
-      lobeDrop: 0.15,
+      lobeDrop: 0,             // no dangling comma; lobe is the C's terminus
     },
     neck: {
       scmShow: 0,                  // Hergé doesn't draw SCM
