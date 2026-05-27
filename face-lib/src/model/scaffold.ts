@@ -53,40 +53,258 @@ const cubicBezier = (a: Vec3, c1: Vec3, c2: Vec3, b: Vec3, samples: number, star
   return pts;
 };
 
-// Jaw curve from cheekL → chin-pad-left → chin-pad-right → cheekR.
-// chinPad makes the bottom of the chin a short flat segment instead of a sharp V.
-// sharpness=0 → wide flat chin (rounded), sharpness=1 → nearly a point.
-const jawCurve = (cheekL: Vec3, cheekR: Vec3, chinY: number, chinZ: number, sharpness: number, samples: number): Vec3[] => {
+// Jaw construction — DISPATCHER per Leo §3 (research/leo-jaw.md).
+// Six topologies, each its own builder. The cubic-Bezier-everywhere approach was
+// fundamentally C2-smooth and couldn't grow a gonial cusp; Loomis/Bridgman/Hergé all
+// treat jaw block type as a categorical choice made before any smooth parameter.
+
+type JawTopology = 'square' | 'oval' | 'pointed' | 'pear' | 'jowled' | 'round';
+type JawSpec = {
+  cheekL: Vec3; cheekR: Vec3;
+  chinY: number; chinZ: number;
+  bigonialHalf: number;
+  mentalHalf: number;
+  gonialAngle: number;          // 0..1, 0=square cusp, 1=fully soft
+  jowl: number;                 // 0..1
+  topology: JawTopology;
+};
+
+// Helper: straight-line interpolation between two Vec3 points (used for cusp-bearing topologies).
+const lineSeg = (a: Vec3, b: Vec3, samples: number): Vec3[] => {
   const out: Vec3[] = [];
-  const cheekW = Math.abs(cheekL[0]); // assumed symmetric
-  // Pad width: at sharpness=0 the pad is ~35% of cheek width; at sharpness=1 it's ~3%.
-  const padHalf = cheekW * (0.04 + 0.30 * (1 - sharpness));
-  const chinL: Vec3 = [-padHalf, chinY, chinZ];
-  const chinR: Vec3 = [padHalf, chinY, chinZ];
+  for (let i = 1; i <= samples; i++) {
+    const t = i / samples;
+    out.push([
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t,
+    ]);
+  }
+  return out;
+};
 
-  out.push(cheekL);
+// SQUARE — Haddock / Bruce Timm villain. Two straight obliques per side meeting at a
+// CUSP at the gonial corner. Bridgman 1920.
+const buildSquareJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const seg = Math.max(2, Math.floor(samples / 5));
+  // Gonial vertex sits at bigonialHalf; high gonialAngle softens slightly inward.
+  const gonialVertexX = s.bigonialHalf * (1 - 0.08 * s.gonialAngle);
+  // Gonial Y is below the cheek by a fraction of the ramus span. For our scaffold
+  // the cheek IS the gonial corner (it's where the side curve hands off to jawCurve).
+  // So the cusp is right at cheekL[1] and we proceed obliquely toward the chin.
+  const gonialL: Vec3 = [-gonialVertexX, s.cheekL[1], s.chinZ * 0.6];
+  const gonialR: Vec3 = [ gonialVertexX, s.cheekR[1], s.chinZ * 0.6];
+  const chinL: Vec3 = [-s.mentalHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ s.mentalHalf, s.chinY, s.chinZ];
+  return [
+    s.cheekL,
+    ...lineSeg(s.cheekL, gonialL, 2),    // tiny ramus segment (cheek = gonial here)
+    ...lineSeg(gonialL, chinL, seg * 2), // oblique side-of-jaw, sharp cusp at gonialL
+    ...lineSeg(chinL, chinR, seg),       // flat chin pad
+    ...lineSeg(chinR, gonialR, seg * 2),
+    ...lineSeg(gonialR, s.cheekR, 2),
+  ];
+};
 
-  // Left side: cheekL → chinL with smooth tangent (curve drops mostly vertically near cheek, then turns in).
-  const cL_c1: Vec3 = [cheekL[0] * 0.95, cheekL[1] - (cheekL[1] - chinY) * 0.55, cheekL[2] * 0.7 + chinZ * 0.3];
-  const cL_c2: Vec3 = [chinL[0] - padHalf * 0.6, chinY + (cheekL[1] - chinY) * 0.05, chinZ];
-  out.push(...cubicBezier(cheekL, cL_c1, cL_c2, chinL, samples));
+// POINTED — Wronzoff / mooks. Sharp triangular taper to a narrow chin. Cusp at gonial,
+// narrow rounded chin pad. Faigin 2012 "pointed" archetype.
+const buildPointedJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const seg = Math.max(2, Math.floor(samples / 5));
+  const gonialVertexX = s.bigonialHalf * (1 - 0.04 * s.gonialAngle);
+  // Narrow chin — clamp mental width to at most 18% of bigonial.
+  const chinHalf = Math.min(s.mentalHalf, s.bigonialHalf * 0.18);
+  const gonialL: Vec3 = [-gonialVertexX, s.cheekL[1], s.chinZ * 0.6];
+  const gonialR: Vec3 = [ gonialVertexX, s.cheekR[1], s.chinZ * 0.6];
+  const chinL: Vec3 = [-chinHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ chinHalf, s.chinY, s.chinZ];
+  // Small chin-tip arc rounds the bottom (3 samples) instead of a flat pad.
+  const chinArc: Vec3[] = [];
+  const arcSamples = 4;
+  for (let i = 1; i < arcSamples; i++) {
+    const t = i / arcSamples;
+    const x = -chinHalf + 2 * chinHalf * t;
+    const y = s.chinY - chinHalf * 0.2 * Math.sin(Math.PI * t);
+    chinArc.push([x, y, s.chinZ]);
+  }
+  return [
+    s.cheekL,
+    ...lineSeg(s.cheekL, gonialL, 2),
+    ...lineSeg(gonialL, chinL, seg * 2),
+    ...chinArc,
+    chinR,
+    ...lineSeg(chinR, gonialR, seg * 2),
+    ...lineSeg(gonialR, s.cheekR, 2),
+  ];
+};
 
-  // Chin pad bottom: very slight curve (basically flat with a tiny rounding) from chinL to chinR.
+// OVAL — Calculus / classic feminine. Smooth single cubic Bezier, no visible gonial corner.
+// gonialAngle controls how rounded the soft turn is. Faigin "oval".
+const buildOvalJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const out: Vec3[] = [];
+  const padHalf = s.mentalHalf;
+  const chinL: Vec3 = [-padHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ padHalf, s.chinY, s.chinZ];
+  out.push(s.cheekL);
+  const cL_c1: Vec3 = [s.cheekL[0] * 0.95, s.cheekL[1] - (s.cheekL[1] - s.chinY) * 0.55, s.cheekL[2] * 0.7 + s.chinZ * 0.3];
+  const cL_c2: Vec3 = [chinL[0] - padHalf * 0.6, s.chinY + (s.cheekL[1] - s.chinY) * 0.05, s.chinZ];
+  out.push(...cubicBezier(s.cheekL, cL_c1, cL_c2, chinL, samples));
   const padSamples = Math.max(2, Math.floor(samples * 0.3));
   for (let i = 1; i <= padSamples; i++) {
     const t = i / padSamples;
     const x = -padHalf + 2 * padHalf * t;
-    // Subtle downward bulge at the center of the pad
     const dy = -padHalf * 0.10 * Math.sin(Math.PI * t);
-    out.push([x, chinY + dy, chinZ]);
+    out.push([x, s.chinY + dy, s.chinZ]);
   }
-
-  // Right side: chinR → cheekR (mirror of left).
-  const cR_c1: Vec3 = [chinR[0] + padHalf * 0.6, chinY + (cheekR[1] - chinY) * 0.05, chinZ];
-  const cR_c2: Vec3 = [cheekR[0] * 0.95, cheekR[1] - (cheekR[1] - chinY) * 0.55, cheekR[2] * 0.7 + chinZ * 0.3];
-  out.push(...cubicBezier(chinR, cR_c1, cR_c2, cheekR, samples));
-
+  const cR_c1: Vec3 = [chinR[0] + padHalf * 0.6, s.chinY + (s.cheekR[1] - s.chinY) * 0.05, s.chinZ];
+  const cR_c2: Vec3 = [s.cheekR[0] * 0.95, s.cheekR[1] - (s.cheekR[1] - s.chinY) * 0.55, s.cheekR[2] * 0.7 + s.chinZ * 0.3];
+  out.push(...cubicBezier(chinR, cR_c1, cR_c2, s.cheekR, samples));
   return out;
+};
+
+// ROUND — child / juvenile. Oval with bigonialHalf ≈ cheek width and wide round chin pad,
+// so there's no narrowing — just a soft U. Loomis 1956 child-proportions diagram.
+const buildRoundJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const out: Vec3[] = [];
+  // Chin pad almost as wide as the cheek — the soft U.
+  const padHalf = Math.max(s.mentalHalf, Math.abs(s.cheekL[0]) * 0.75);
+  const chinL: Vec3 = [-padHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ padHalf, s.chinY, s.chinZ];
+  out.push(s.cheekL);
+  // Soft U: cubic with control points pulling slightly outward then in.
+  const cL_c1: Vec3 = [s.cheekL[0], s.cheekL[1] - (s.cheekL[1] - s.chinY) * 0.6, s.cheekL[2] * 0.5];
+  const cL_c2: Vec3 = [chinL[0] - 0.005, s.chinY + (s.cheekL[1] - s.chinY) * 0.1, s.chinZ];
+  out.push(...cubicBezier(s.cheekL, cL_c1, cL_c2, chinL, samples));
+  // Round chin pad arc (deeper than oval).
+  const padSamples = Math.max(4, Math.floor(samples * 0.5));
+  for (let i = 1; i <= padSamples; i++) {
+    const t = i / padSamples;
+    const x = -padHalf + 2 * padHalf * t;
+    const dy = -padHalf * 0.15 * Math.sin(Math.PI * t);
+    out.push([x, s.chinY + dy, s.chinZ]);
+  }
+  const cR_c1: Vec3 = [chinR[0] + 0.005, s.chinY + (s.cheekR[1] - s.chinY) * 0.1, s.chinZ];
+  const cR_c2: Vec3 = [s.cheekR[0], s.cheekR[1] - (s.cheekR[1] - s.chinY) * 0.6, s.cheekR[2] * 0.5];
+  out.push(...cubicBezier(chinR, cR_c1, cR_c2, s.cheekR, samples));
+  return out;
+};
+
+// PEAR — Wagg / dowager. Jaw flares OUTWARD below the cheek to a wider belly position,
+// then tapers inward to chin. The widest X is NOT at the gonial corner. Hogarth 1965.
+const buildPearJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const out: Vec3[] = [];
+  // Belly Y between cheek and chin, biased toward the chin (mid-low).
+  const bellyY = s.cheekL[1] + (s.chinY - s.cheekL[1]) * 0.55;
+  const bellyHalfX = s.bigonialHalf * 1.20 * (1 + 0.3 * s.jowl);
+  const bellyL: Vec3 = [-bellyHalfX, bellyY, s.chinZ * 0.7];
+  const bellyR: Vec3 = [ bellyHalfX, bellyY, s.chinZ * 0.7];
+  const chinL: Vec3 = [-s.mentalHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ s.mentalHalf, s.chinY, s.chinZ];
+  out.push(s.cheekL);
+  // Left side: cheek → belly (flaring outward).
+  out.push(...cubicBezier(
+    s.cheekL,
+    [s.cheekL[0] * 1.05, (s.cheekL[1] + bellyY) / 2, s.cheekL[2] * 0.5 + bellyL[2] * 0.5],
+    [bellyL[0] * 0.97, bellyY + 0.005, bellyL[2]],
+    bellyL,
+    Math.floor(samples / 2),
+  ));
+  // Left side: belly → chin (tapering inward).
+  out.push(...cubicBezier(
+    bellyL,
+    [bellyL[0] * 0.80, bellyY - (bellyY - s.chinY) * 0.4, bellyL[2] * 0.5 + s.chinZ * 0.5],
+    [chinL[0] - s.mentalHalf * 0.3, s.chinY + (bellyY - s.chinY) * 0.05, s.chinZ],
+    chinL,
+    Math.floor(samples / 2),
+  ));
+  // Flat chin pad.
+  const padSamples = Math.max(2, Math.floor(samples * 0.25));
+  for (let i = 1; i <= padSamples; i++) {
+    const t = i / padSamples;
+    const x = -s.mentalHalf + 2 * s.mentalHalf * t;
+    out.push([x, s.chinY, s.chinZ]);
+  }
+  // Right side: chin → belly → cheek (mirror).
+  out.push(...cubicBezier(
+    chinR,
+    [chinR[0] + s.mentalHalf * 0.3, s.chinY + (bellyY - s.chinY) * 0.05, s.chinZ],
+    [bellyR[0] * 0.80, bellyY - (bellyY - s.chinY) * 0.4, bellyR[2] * 0.5 + s.chinZ * 0.5],
+    bellyR,
+    Math.floor(samples / 2),
+  ));
+  out.push(...cubicBezier(
+    bellyR,
+    [bellyR[0] * 0.97, bellyY + 0.005, bellyR[2]],
+    [s.cheekR[0] * 1.05, (s.cheekR[1] + bellyY) / 2, s.cheekR[2] * 0.5 + bellyR[2] * 0.5],
+    s.cheekR,
+    Math.floor(samples / 2),
+  ));
+  return out;
+};
+
+// JOWLED — elder / heavy character. Cheek and bigonial are similar; the silhouette
+// BULGES outward AT the gonial Y (the jowl itself), then tapers fast. Faigin 1990 §"Age".
+// Distinct from pear: bulge is HIGHER (at gonial) and chin pad is normal width — the signal
+// is the gonial sag, not whole-jaw widening.
+const buildJowledJaw = (s: JawSpec, samples: number): Vec3[] => {
+  const out: Vec3[] = [];
+  // Jowl bulge sits just below the cheek (at gonial level).
+  const jowlY = s.cheekL[1] - (s.cheekL[1] - s.chinY) * 0.18;
+  const jowlHalfX = s.bigonialHalf * (1.08 + 0.18 * s.jowl);
+  const jowlL: Vec3 = [-jowlHalfX, jowlY, s.chinZ * 0.6];
+  const jowlR: Vec3 = [ jowlHalfX, jowlY, s.chinZ * 0.6];
+  const chinL: Vec3 = [-s.mentalHalf, s.chinY, s.chinZ];
+  const chinR: Vec3 = [ s.mentalHalf, s.chinY, s.chinZ];
+  out.push(s.cheekL);
+  // Cheek → jowl bulge (short outward curve).
+  out.push(...cubicBezier(
+    s.cheekL,
+    [s.cheekL[0] * 1.04, (s.cheekL[1] + jowlY) / 2, 0],
+    [jowlL[0] * 0.95, jowlY + 0.003, 0],
+    jowlL,
+    Math.floor(samples / 3),
+  ));
+  // Jowl → chin (taper inward, mostly straight then easing).
+  out.push(...cubicBezier(
+    jowlL,
+    [jowlL[0] * 0.70, jowlY - (jowlY - s.chinY) * 0.45, 0],
+    [chinL[0] - s.mentalHalf * 0.2, s.chinY + (jowlY - s.chinY) * 0.05, s.chinZ],
+    chinL,
+    Math.floor(samples / 2),
+  ));
+  // Chin pad with slight downward curve.
+  const padSamples = Math.max(2, Math.floor(samples * 0.25));
+  for (let i = 1; i <= padSamples; i++) {
+    const t = i / padSamples;
+    const x = -s.mentalHalf + 2 * s.mentalHalf * t;
+    out.push([x, s.chinY - s.mentalHalf * 0.05 * Math.sin(Math.PI * t), s.chinZ]);
+  }
+  out.push(...cubicBezier(
+    chinR,
+    [chinR[0] + s.mentalHalf * 0.2, s.chinY + (jowlY - s.chinY) * 0.05, s.chinZ],
+    [jowlR[0] * 0.70, jowlY - (jowlY - s.chinY) * 0.45, 0],
+    jowlR,
+    Math.floor(samples / 2),
+  ));
+  out.push(...cubicBezier(
+    jowlR,
+    [jowlR[0] * 0.95, jowlY + 0.003, 0],
+    [s.cheekR[0] * 1.04, (s.cheekR[1] + jowlY) / 2, 0],
+    s.cheekR,
+    Math.floor(samples / 3),
+  ));
+  return out;
+};
+
+// Dispatcher.
+const jawCurve = (s: JawSpec, samples: number): Vec3[] => {
+  switch (s.topology) {
+    case 'square':  return buildSquareJaw(s, samples);
+    case 'pointed': return buildPointedJaw(s, samples);
+    case 'oval':    return buildOvalJaw(s, samples);
+    case 'round':   return buildRoundJaw(s, samples);
+    case 'pear':    return buildPearJaw(s, samples);
+    case 'jowled':  return buildJowledJaw(s, samples);
+  }
 };
 
 // ---- features ----
@@ -320,22 +538,21 @@ const buildNose = (
 
 const buildMouth = (
   center: Vec3, width: number, openness: number, cornerLift: number,
-  upperCurve: number, lipFullness: number, cornerMarks: boolean, surfaceZ: number,
+  upperCurve: number, lipFullness: number, cornerMarks: boolean,
+  labiomentalShow: number, surfaceZ: number,
 ): Curve[] => {
   const samples = 24;
   const half = width / 2;
   const curves: Curve[] = [];
 
-  // Main mouth-seam line. Even when closed it should have a cupid's bow + slight smile/frown.
+  // Main mouth-seam line.
   const seam: Vec3[] = [];
   for (let i = 0; i <= samples; i++) {
     const t = i / samples;
     const x = -half + width * t;
-    // Corner weight: 0 at center, 1 at corners (smooth easing)
     const cw = Math.pow(Math.abs(t - 0.5) * 2, 1.6);
     const cornerY = cornerLift * cw;
-    // Cupid's-bow shape: two small dips on either side of center, slight central peak between them.
-    const bowPhase = (t - 0.5) * 6; // ~one full wavelength across the central third
+    const bowPhase = (t - 0.5) * 6;
     const bow = Math.abs(t - 0.5) < 0.18
       ? -Math.cos(bowPhase) * width * 0.018 - width * 0.012
       : 0;
@@ -345,17 +562,25 @@ const buildMouth = (
   }
   curves.push({ kind: 'feature', closed: false, points: seam });
 
-  // Lower lip line — a faint parallel curve below the seam, only when lips are full enough.
+  // LOWER LIP shadow — vermilion-skin transition. Per Leo §5 (Faigin 2012 §"The Lower Lip"):
+  // the bottom edge of the lower lip BULGES DOWN in the centre and is nearly straight at
+  // the corners. Previous code had the dip SIGN INVERTED (curving UP toward the seam),
+  // which read as a "shelf" — Pascal's complaint.
   if (lipFullness > 0.1) {
     const lower: Vec3[] = [];
     const drop = width * (0.05 + 0.15 * lipFullness);
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const x = -half * 0.85 + width * 0.85 * t;
-      // Hangs lower in the middle, lifts to meet corners
-      const dip = -drop * Math.sin(Math.PI * t);
+      // CORRECTED: dip is POSITIVE downward — centre hangs lower than corners.
+      const dip = drop * Math.sin(Math.PI * t);
       const cornerY = cornerLift * Math.pow(Math.abs(t - 0.5) * 2, 1.6);
-      lower.push([center[0] + x, center[1] + dip + cornerY - openness * width * 0.22 * Math.sin(Math.PI * t), surfaceZ + 0.003]);
+      // The lower lip baseline starts ~drop * 0.5 below the seam and dips further at centre.
+      lower.push([
+        center[0] + x,
+        center[1] - drop * 0.5 - dip + cornerY - openness * width * 0.22 * Math.sin(Math.PI * t),
+        surfaceZ + 0.003,
+      ]);
     }
     curves.push({ kind: 'feature', closed: false, points: lower });
   }
@@ -376,6 +601,23 @@ const buildMouth = (
       upperTop.push([center[0] + x, center[1] + arc + peaks + cornerY, surfaceZ + 0.004]);
     }
     curves.push({ kind: 'feature', closed: false, points: upperTop });
+  }
+
+  // LABIOMENTAL SULCUS — Faigin 2012 fig 5-12: a faint sulcus hint between the lower lip mound
+  // and the chin button. Drawn as a SHORT slight smile-arc, NEVER a full parallel band.
+  // Per Leo §5, this replaces the old `upperCurve = -0.15` "firmness" cheat on masc faces.
+  if (labiomentalShow > 0.05) {
+    const sulcusY = center[1] - width * (0.18 + 0.06 * labiomentalShow);
+    const sulcusHalfW = width * 0.18 * labiomentalShow;
+    const sulcusSamples = 8;
+    const sulcus: Vec3[] = [];
+    for (let i = 0; i <= sulcusSamples; i++) {
+      const t = i / sulcusSamples;
+      const x = -sulcusHalfW + 2 * sulcusHalfW * t;
+      const y = sulcusY + width * 0.012 * Math.sin(Math.PI * t);   // very faint upward arc
+      sulcus.push([center[0] + x, y, surfaceZ + 0.002]);
+    }
+    curves.push({ kind: 'feature', closed: false, points: sulcus });
   }
 
   // Corner marks: small tick angled toward the cheek.
@@ -1277,7 +1519,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const bigonialHalfW = (p.head.jaw.bigonialWidth * diameter) / 2;
   // mentalWidth is the chin pad as a fraction of bigonial — independent of gonialAngle now.
   // (Previously `chinSharpness` collapsed these two anatomically distinct levers.)
-  const mentalHalfW = bigonialHalfW * p.head.jaw.mentalWidth;
+  // (mentalHalf is computed at the jawCurve call site below, after chinZ.)
   // gonialAngle 0 = sharp 90° (square jaw), 1 = soft 135° (round). Drives jaw-curve sharpness.
   const gonialAngle = p.head.jaw.gonialAngle;
 
@@ -1335,11 +1577,17 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const sideR: Vec3[] = sideCurve(rightTempleTop, cheekR, 1);
 
   const chinZ = diameter * 0.30 + p.head.jaw.mentalProtrusion * diameter;
-  // gonialAngle (0..1) and mentalWidth jointly shape the jaw curve.
-  // For jawCurve's `sharpness` parameter: 0=round chin pad, 1=pointed. Derive from mentalWidth
-  // — narrow mental width = pointed chin; wide = round. (jawCurve will read this as the chin pad width.)
-  const jawSharpness = 1 - p.head.jaw.mentalWidth * 2.5;   // 0.38 default → 0.05 (essentially round); 0.10 → 0.75 (pointed)
-  const jaw = jawCurve(cheekL, cheekR, chinY, chinZ, Math.max(0, Math.min(1, jawSharpness)), 18);
+  // Mental half-width: chin pad as fraction of bigonial.
+  const mentalHalf = bigonialHalfW * p.head.jaw.mentalWidth;
+  // Per Leo §3 — jaw dispatcher takes a JawSpec, topology selects the builder.
+  const jaw = jawCurve({
+    cheekL, cheekR, chinY, chinZ,
+    bigonialHalf: bigonialHalfW,
+    mentalHalf,
+    gonialAngle: p.head.jaw.gonialAngle,
+    jowl: p.head.jaw.jowl,
+    topology: p.head.jaw.topology,
+  }, 18);
 
   const silhouettePoints: Vec3[] = [];
   silhouettePoints.push(...topArc);
@@ -1470,7 +1718,8 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const mouthCenter: Vec3 = [0, mouthY, frontZ(0, mouthY)];
   features.push(...buildMouth(
     mouthCenter, p.mouth.width * diameter, p.mouth.openness, p.mouth.cornerLift * totalH,
-    p.mouth.upperCurve, p.mouth.lipFullness, p.mouth.cornerMarks, frontZ(0, mouthY),
+    p.mouth.upperCurve, p.mouth.lipFullness, p.mouth.cornerMarks,
+    p.mouth.labiomentalShow, frontZ(0, mouthY),
   ));
 
   // Neck — anchor on the under-jaw between the chin pad and the cheek; widens slightly at the base.

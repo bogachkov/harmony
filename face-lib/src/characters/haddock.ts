@@ -39,10 +39,11 @@ const haddock: DeepPartial<FaceParams> = {
   head: {
     cranium: { diameter: 1.0, sidePlaneOffset: 0.40 },
     jaw: {
+      topology: 'square',           // Haddock = box jaw per Leo §4
       ramusHeight: 0.46,
-      gonialAngle: 0.30,          // somewhat square
-      bigonialWidth: 0.78,
-      mentalWidth: 0.42,
+      gonialAngle: 0.05,             // very sharp cusp
+      bigonialWidth: 0.92,            // wide jaw
+      mentalWidth: 0.55,              // wide chin pad (Haddock has a square chin)
       mentalProtrusion: 0.02,
       jowl: 0.2,
     },

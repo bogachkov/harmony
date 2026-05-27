@@ -19,6 +19,10 @@ export type FaceParams = {
       broughtForward: number;       // forward tilt of cranium over jaw (Loomis); 0 = neutral
     };
     jaw: {
+      // Per Leo §2: jaw silhouette TYPE is a CATEGORICAL decision (Loomis archetypes,
+      // Hergé side-character convention). One cubic-Bezier topology can't grow a gonial
+      // cusp — different topologies are different builders.
+      topology: 'square' | 'oval' | 'pointed' | 'pear' | 'jowled' | 'round';
       ramusHeight: number;          // TMJ→gonial corner, ratio of cranium.diameter (Bridgman)
       gonialAngle: number;          // mandible corner: 0=90° square, 1=135° soft (Bridgman 90-130°)
       bigonialWidth: number;        // distance between gonial corners, ratio of cranium.diameter
@@ -72,6 +76,10 @@ export type FaceParams = {
     upperCurve: number;
     lipFullness: number;
     cornerMarks: boolean;
+    // Per Leo §5: a faint sulcus tick between lower lip and chin button (Faigin 2012 fig 5-12).
+    // Default 0 = invisible (ligne claire). Masculine/elder presets raise to ~0.3 for "firm mouth"
+    // reading without the old upperCurve=-0.15 cheat.
+    labiomentalShow: number;
   };
   ears: {
     visible: boolean;
@@ -160,10 +168,11 @@ export const defaults: FaceParams = {
       broughtForward: 0,
     },
     jaw: {
-      ramusHeight: 0.42,            // TMJ→corner: jaw mass roughly 42% of cranium diameter for adult
-      gonialAngle: 0.55,            // moderately soft adult jaw (~115°)
-      bigonialWidth: 0.78,          // jaw narrower than cranium (~78% of diameter)
-      mentalWidth: 0.38,            // chin pad ~38% of bigonial
+      topology: 'oval',             // default smooth taper (Faigin oval / Calculus)
+      ramusHeight: 0.42,
+      gonialAngle: 0.55,
+      bigonialWidth: 0.78,
+      mentalWidth: 0.38,
       mentalProtrusion: 0,
       jowl: 0,
     },
@@ -213,6 +222,7 @@ export const defaults: FaceParams = {
     upperCurve: 0,
     lipFullness: 0,
     cornerMarks: false,
+    labiomentalShow: 0,
   },
   ears: {
     visible: true,
