@@ -75,9 +75,16 @@ export type FaceParams = {
   };
   ears: {
     visible: boolean;
-    size: number;           // ear height (ratio of cranium.diameter)
-    yOffset: number;        // shift from default attach
-    protrusion: number;     // how far ear bulges from side plane (ratio of cranium.diameter)
+    // Per Leo §7: ears need helix/antihelix/lobe/tragus substructure. Loomis attaches the
+    // ear so its TOP aligns with the brow and BOTTOM aligns with the nose-base.
+    helixLength: number;       // ratio of cranium.diameter (brow→nose-base span typically)
+    helixProtrusion: number;   // how far helix bulges from side plane (ratio of cranium.diameter)
+    lobeDrop: number;          // 0..1: extension below helix bottom (Bridgman "comma")
+    antihelixShow: number;     // 0..1: inner Y-fork strength
+    tragusShow: number;        // 0..1: small front-flap tick
+    conchaShow: number;        // 0..1: visibility of inner bowl shadow line
+    tilt: number;              // backward slope in radians (~0.26 = 15°)
+    yOffset: number;           // shift from default attach
   };
   hair: {
     style: 'none' | 'short' | 'medium' | 'long' | 'bald';
@@ -86,9 +93,16 @@ export type FaceParams = {
     volume: number;
   };
   neck: {
+    // Per Leo §5: Bridgman cylinder + SCM V + trapezius wedge. SCM origin is the
+    // mastoid (behind/below the ear), not the chin corner.
     visible: boolean;
-    width: number;
-    length: number;
+    cylinderRadius: number;        // ratio of cranium.diameter (typical 0.30 = neck slightly narrower than head)
+    trapWidthAtBase: number;       // trapezius flare at shoulder, ratio of cranium.diameter
+    trapFlareStart: number;        // 0..1 along neck length where trap starts flaring
+    length: number;                // visible neck length, ratio of cranium.diameter
+    scmShow: number;               // 0..1 visibility of front V notch (Bridgman SCM)
+    trapShow: number;              // 0..1 visibility of side/back wedges
+    laryngealProminence: number;   // Adam's apple tick size (head-height units; 0 = none)
   };
   facialHair: {
     style: 'none' | 'mustache' | 'handlebar' | 'goatee' | 'vanDyke' | 'chinstrap' | 'sideburns' | 'beard' | 'beardWithMustache' | 'fullRound';
@@ -202,9 +216,14 @@ export const defaults: FaceParams = {
   },
   ears: {
     visible: true,
-    size: 0.22,
+    helixLength: 0.30,         // span from brow to nose-base
+    helixProtrusion: 0.045,
+    lobeDrop: 0.25,            // lobe hangs ~25% past helix bottom
+    antihelixShow: 0.7,
+    tragusShow: 0.5,
+    conchaShow: 0.3,
+    tilt: 0.22,                // ~13° backward slope
     yOffset: 0,
-    protrusion: 0.03,
   },
   hair: {
     style: 'short',
@@ -214,8 +233,13 @@ export const defaults: FaceParams = {
   },
   neck: {
     visible: true,
-    width: 0.55,
-    length: 0.22,
+    cylinderRadius: 0.30,
+    trapWidthAtBase: 0.55,
+    trapFlareStart: 0.45,
+    length: 0.30,
+    scmShow: 0.35,
+    trapShow: 0.5,
+    laryngealProminence: 0,
   },
   facialHair: {
     style: 'none',

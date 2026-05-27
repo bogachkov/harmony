@@ -43,21 +43,34 @@ export const styles = {
       background: '#fff8e8',
     },
     eyes: {
-      style: 'dots',              // Tintin signature
+      style: 'dots',
       dotSize: 0.020,
     },
     brows: {
-      style: 'single',            // one confident stroke, not split pair
+      style: 'single',
     },
     nose: {
-      style: 'button',            // tiny upturned curve only
+      style: 'button',
       showNostrils: false,
       bridgeVisible: false,
     },
     mouth: {
-      lipFullness: 0,             // single seam line only
-      cornerMarks: false,         // no corner ticks
+      lipFullness: 0,
+      cornerMarks: false,
       upperCurve: 0,
+    },
+    // Ligne claire = minimal interior anatomy. The Bridgman/Loomis substructure is still
+    // computed but rendered subtly; the cap is the silhouette.
+    ears: {
+      antihelixShow: 0,     // Hergé ear = C + lobe + maybe one inner tick. No Y-fork.
+      tragusShow: 0,
+      conchaShow: 0,
+      lobeDrop: 0.15,
+    },
+    neck: {
+      scmShow: 0,                  // Hergé doesn't draw SCM
+      trapShow: 0,                 // Hergé doesn't draw trapezius
+      laryngealProminence: 0,
     },
   } satisfies DeepPartial<FaceParams>,
 

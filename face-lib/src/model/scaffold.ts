@@ -400,42 +400,111 @@ const buildMouth = (
   return curves;
 };
 
-const buildEar = (attachX: number, attachY: number, height: number, protrusion: number, surfaceZ: number, isLeft: boolean): Curve[] => {
-  // Ear outline: a vertical "C" attached to the side of the head.
-  // attachX is the point along the head's side where the ear's INNER edge joins. The outer
-  // curve bulges away from the head by `protrusion`; the back of the ear curves slightly inward
-  // at top and bottom so it tucks into the cranium silhouette rather than floating.
+// Per Leo §7 — Bridgman/Loomis ear: helix + antihelix Y-fork + tragus + lobe + tilt.
+// Top of helix aligns with brow line, bottom of helix at nose-base line; lobe extends below.
+const buildEar = (
+  attachX: number, attachTopY: number, attachBottomY: number,
+  protrusion: number, lobeDrop: number, antihelixShow: number,
+  tragusShow: number, conchaShow: number, tilt: number,
+  surfaceZ: number, isLeft: boolean,
+): Curve[] => {
   const dir = isLeft ? -1 : 1;
-  // Top and bottom slightly inward (back toward the head) so the ear "tucks" into the silhouette.
-  const tuck = protrusion * 0.25;
-  const top: Vec3 = [attachX - dir * tuck, attachY + height / 2, surfaceZ];
-  const bottom: Vec3 = [attachX - dir * tuck * 0.6, attachY - height / 2, surfaceZ];
-  const outerMid: Vec3 = [attachX + dir * protrusion, attachY + height * 0.05, surfaceZ];
+  const height = attachTopY - attachBottomY;
+  const midY = (attachTopY + attachBottomY) / 2;
+  // Backward tilt: tilt is the angle in radians the ear leans BACK (away from face front).
+  // For our front view, "back" is +Z, but visually a backward tilt on a front-view face shows
+  // the ear's top pushed slightly toward the rear-of-head (no x shift) AND a slight rotation
+  // around the attach. We approximate with a small X shift: top inward, bottom outward.
+  const tiltShift = height * Math.sin(tilt) * 0.15;
+  const topX = attachX + dir * (-tiltShift);
+  const bottomX = attachX + dir * (tiltShift * 0.6);
 
-  const samples = 14;
-  const outer: Vec3[] = [];
-  const c1Top: Vec3 = [attachX + dir * protrusion * 0.5, attachY + height * 0.42, surfaceZ];
-  const c2Top: Vec3 = [attachX + dir * protrusion * 1.0, attachY + height * 0.22, surfaceZ];
-  outer.push(top);
-  outer.push(...cubicBezier(top, c1Top, c2Top, outerMid, samples / 2));
-  const c1Bot: Vec3 = [attachX + dir * protrusion * 1.0, attachY - height * 0.18, surfaceZ];
-  const c2Bot: Vec3 = [attachX + dir * protrusion * 0.45, attachY - height * 0.40, surfaceZ];
-  outer.push(...cubicBezier(outerMid, c1Bot, c2Bot, bottom, samples / 2));
+  // Outer helix curve: from top, sweeping outward by `protrusion`, around to bottom of helix.
+  const helixTop: Vec3 = [topX, attachTopY, surfaceZ];
+  const helixBottom: Vec3 = [bottomX, attachBottomY, surfaceZ];
+  const outerMid: Vec3 = [attachX + dir * protrusion, midY + height * 0.05, surfaceZ];
+  const c1Top: Vec3 = [attachX + dir * protrusion * 0.5, attachTopY - height * 0.08, surfaceZ];
+  const c2Top: Vec3 = [attachX + dir * protrusion * 1.0, midY + height * 0.22, surfaceZ];
+  const c1Bot: Vec3 = [attachX + dir * protrusion * 1.0, midY - height * 0.18, surfaceZ];
+  const c2Bot: Vec3 = [attachX + dir * protrusion * 0.45, attachBottomY + height * 0.10, surfaceZ];
+  const outer: Vec3[] = [helixTop];
+  outer.push(...cubicBezier(helixTop, c1Top, c2Top, outerMid, 8));
+  outer.push(...cubicBezier(outerMid, c1Bot, c2Bot, helixBottom, 8));
 
-  // Inner detail: a soft curl suggesting the antihelix — sits inside the ear, parallel to outer.
-  const innerCurve: Vec3[] = [];
-  const innerSamples = 10;
-  for (let i = 0; i <= innerSamples; i++) {
-    const t = i / innerSamples;
-    const curl = Math.sin(Math.PI * t);
-    const x = attachX + dir * protrusion * 0.35 * curl;
-    const y = attachY + height * 0.28 - height * 0.55 * t;
-    innerCurve.push([x, y, surfaceZ]);
+  // LOBE — Bridgman's "comma". A pendulous arc continuing from the helix bottom, hanging below.
+  // 0 = no lobe (flat ear bottom); 1 = long lobe.
+  const curves: Curve[] = [];
+  if (lobeDrop > 0.02) {
+    const lobeBottomY = attachBottomY - height * lobeDrop * 0.5;
+    const lobeAttachX = bottomX + dir * 0.005;  // tucks slightly toward the face
+    const lobeBottom: Vec3 = [lobeAttachX, lobeBottomY, surfaceZ];
+    const lobeC1: Vec3 = [bottomX + dir * 0.025, attachBottomY - height * lobeDrop * 0.15, surfaceZ];
+    const lobeC2: Vec3 = [bottomX + dir * 0.020, lobeBottomY + height * lobeDrop * 0.10, surfaceZ];
+    outer.push(...cubicBezier(helixBottom, lobeC1, lobeC2, lobeBottom, 8));
+    // Bring it back up the inside to the attach point (closing the silhouette internally)
+    outer.push([lobeAttachX - dir * 0.005, lobeBottomY + 0.005, surfaceZ]);
   }
-  return [
-    { kind: 'feature', closed: false, points: outer },
-    { kind: 'feature', closed: false, points: innerCurve },
-  ];
+  curves.push({ kind: 'feature', closed: false, points: outer });
+
+  // ANTIHELIX — a Y-fork inside the ear (Bridgman). Single stem rising from mid-ear, branching
+  // into two short prongs near the top. Strength scaled by antihelixShow.
+  if (antihelixShow > 0.05) {
+    const ahHeight = height * (0.35 + 0.20 * antihelixShow);
+    const ahTopY = midY + ahHeight * 0.5;
+    const ahBottomY = midY - ahHeight * 0.5;
+    const ahX = attachX + dir * protrusion * 0.35;
+    // Main stem (bottom to fork point)
+    const forkY = midY + ahHeight * 0.15;
+    const stem: Vec3[] = [
+      [ahX, ahBottomY, surfaceZ + 0.005],
+      [ahX + dir * 0.005, forkY, surfaceZ + 0.005],
+    ];
+    curves.push({ kind: 'feature', closed: false, points: stem });
+    // Y-branches: two short curves up-and-out from the fork
+    const branchLen = ahHeight * 0.35;
+    const leftBranch: Vec3[] = [
+      [ahX + dir * 0.005, forkY, surfaceZ + 0.005],
+      [ahX - dir * 0.005, forkY + branchLen * 0.5, surfaceZ + 0.005],
+      [ahX - dir * 0.010, ahTopY, surfaceZ + 0.005],
+    ];
+    const rightBranch: Vec3[] = [
+      [ahX + dir * 0.005, forkY, surfaceZ + 0.005],
+      [ahX + dir * 0.015, forkY + branchLen * 0.5, surfaceZ + 0.005],
+      [ahX + dir * 0.020, ahTopY - branchLen * 0.10, surfaceZ + 0.005],
+    ];
+    curves.push({ kind: 'feature', closed: false, points: leftBranch });
+    curves.push({ kind: 'feature', closed: false, points: rightBranch });
+  }
+
+  // TRAGUS — small flap covering the ear canal at the front. Tiny tick near the inner-front.
+  if (tragusShow > 0.05) {
+    const tragusY = midY - height * 0.10;
+    const tragusInnerX = attachX + dir * 0.008;
+    const tragusOuterX = attachX + dir * (0.008 + 0.015 * tragusShow);
+    curves.push({
+      kind: 'feature', closed: false, points: [
+        [tragusInnerX, tragusY + height * 0.04, surfaceZ + 0.006],
+        [tragusOuterX, tragusY, surfaceZ + 0.006],
+        [tragusInnerX, tragusY - height * 0.04, surfaceZ + 0.006],
+      ],
+    });
+  }
+
+  // CONCHA — inner bowl shadow. A short curve below the antihelix fork suggesting the depth.
+  if (conchaShow > 0.05) {
+    const conchaY = midY - height * 0.05;
+    const conchaSamples = 8;
+    const concha: Vec3[] = [];
+    for (let i = 0; i <= conchaSamples; i++) {
+      const t = i / conchaSamples;
+      const cx = attachX + dir * (0.020 + 0.015 * Math.sin(Math.PI * t));
+      const cy = conchaY - height * 0.06 * Math.sin(Math.PI * t);
+      concha.push([cx, cy, surfaceZ + 0.004]);
+    }
+    curves.push({ kind: 'feature', closed: false, points: concha });
+  }
+
+  return curves;
 };
 
 const buildHair = (
@@ -1086,34 +1155,110 @@ const buildHat = (
   return curves;
 };
 
-const buildNeck = (anchorL: Vec3, anchorR: Vec3, baseHalfWidth: number, neckLength: number): Curve[] => {
-  // Two curves descending from jaw anchors, smoothly easing outward toward the trapezius.
-  // anchor positions sit on the under-jaw; the curve drops mostly straight then bows out.
-  const bottomY = anchorL[1] - neckLength;
-  const bottomL: Vec3 = [-baseHalfWidth, bottomY, anchorL[2]];
-  const bottomR: Vec3 = [baseHalfWidth, bottomY, anchorR[2]];
+// Per Leo §5 (Bridgman 1920 §"The Neck"): cylinder + SCM V + trapezius wedge + optional Adam's apple.
+// SCM origins are the MASTOID (behind/below ear), not the chin corner — Bridgman is explicit.
+const buildNeck = (
+  mastoidL: Vec3, mastoidR: Vec3,         // SCM origins behind the ear
+  underjawL: Vec3, underjawR: Vec3,       // where cylinder front edge meets jaw underside
+  cylinderRadius: number,
+  trapWidthAtBase: number,
+  trapFlareStart: number,                  // 0..1 along neck length
+  neckLength: number,
+  scmShow: number,
+  trapShow: number,
+  laryngealProminence: number,
+): Curve[] => {
+  const curves: Curve[] = [];
+  const topY = underjawL[1];
+  const bottomY = topY - neckLength;
+  const flareY = topY - trapFlareStart * neckLength;
+  const trapHalfW = trapWidthAtBase / 2;
+
+  // CYLINDER outline — two side curves descending from the underjaw, flaring outward starting at flareY.
+  // Inside cylinderRadius: width constant for top portion, then ramps to trapHalfW at bottom.
   const samples = 14;
+  const sideCurve = (sign: 1 | -1, top: Vec3): Vec3[] => {
+    const cylinderEdgeX = sign * cylinderRadius;
+    const bottomX = sign * trapHalfW;
+    const startTrap: Vec3 = [cylinderEdgeX, flareY, top[2] * 0.5];
+    const end: Vec3 = [bottomX, bottomY, top[2] * 0.3];
+    // Top segment: from underjaw down to start-of-flare, mostly straight.
+    const segA = cubicBezier(
+      top,
+      [cylinderEdgeX * 0.6 + top[0] * 0.4, top[1] - neckLength * 0.20, top[2]],
+      [cylinderEdgeX, top[1] - neckLength * 0.35, top[2] * 0.8],
+      startTrap,
+      samples / 2, 1,
+    );
+    // Bottom segment: flare outward to trap width.
+    const segB = cubicBezier(
+      startTrap,
+      [cylinderEdgeX + (bottomX - cylinderEdgeX) * 0.15, flareY - neckLength * 0.15, startTrap[2] * 0.7],
+      [cylinderEdgeX + (bottomX - cylinderEdgeX) * 0.50, flareY - neckLength * 0.30, startTrap[2] * 0.4],
+      end,
+      samples / 2, 1,
+    );
+    return [top, ...segA, ...segB];
+  };
+  curves.push({ kind: 'feature', closed: false, points: sideCurve(-1, underjawL) });
+  curves.push({ kind: 'feature', closed: false, points: sideCurve(1, underjawR) });
 
-  // For the left side, start straight down and ease outward in the last third.
-  const leftCurve: Vec3[] = [anchorL, ...cubicBezier(
-    anchorL,
-    [anchorL[0] + (anchorL[0] - 0) * 0.02, anchorL[1] - neckLength * 0.45, anchorL[2]],
-    [bottomL[0] - (bottomL[0] - anchorL[0]) * 0.25, anchorL[1] - neckLength * 0.80, anchorL[2]],
-    bottomL,
-    samples, 1,
-  )];
-  const rightCurve: Vec3[] = [anchorR, ...cubicBezier(
-    anchorR,
-    [anchorR[0] - (anchorR[0] - 0) * 0.02, anchorR[1] - neckLength * 0.45, anchorR[2]],
-    [bottomR[0] - (bottomR[0] - anchorR[0]) * 0.25, anchorR[1] - neckLength * 0.80, anchorR[2]],
-    bottomR,
-    samples, 1,
-  )];
+  // SCM V — two short construction-style strokes from each mastoid descending to the sternal
+  // notch (point on the front midline below the cylinder top). Bridgman: "the most important
+  // construction line of the neck." Rendered subtle by default.
+  if (scmShow > 0.05) {
+    const sternalY = flareY + (bottomY - flareY) * 0.10;   // notch sits just above clavicle line
+    const sternalNotch: Vec3 = [0, sternalY, cylinderRadius * 0.5];
+    const scmSamples = 10;
+    const scmCurve = (mastoid: Vec3): Vec3[] => {
+      const pts: Vec3[] = [];
+      for (let i = 0; i <= scmSamples; i++) {
+        const t = i / scmSamples;
+        // Gentle ease toward the notch
+        const x = mastoid[0] + (sternalNotch[0] - mastoid[0]) * t;
+        const y = mastoid[1] + (sternalNotch[1] - mastoid[1]) * t;
+        const z = mastoid[2] + (sternalNotch[2] - mastoid[2]) * t;
+        pts.push([x, y, z]);
+      }
+      return pts;
+    };
+    curves.push({ kind: 'feature', closed: false, points: scmCurve(mastoidL) });
+    curves.push({ kind: 'feature', closed: false, points: scmCurve(mastoidR) });
+  }
 
-  return [
-    { kind: 'feature', closed: false, points: leftCurve },
-    { kind: 'feature', closed: false, points: rightCurve },
-  ];
+  // TRAPEZIUS wedge — diverging from the side cylinder at flareY, descending to acromion
+  // (shoulder corner). Two short curves on either side, slightly outside the cylinder outline.
+  if (trapShow > 0.05) {
+    const acromionL: Vec3 = [-trapHalfW * 1.05, bottomY, 0];
+    const acromionR: Vec3 = [trapHalfW * 1.05, bottomY, 0];
+    const trapStartL: Vec3 = [-cylinderRadius * 1.02, flareY, 0];
+    const trapStartR: Vec3 = [cylinderRadius * 1.02, flareY, 0];
+    const trapCurve = (start: Vec3, end: Vec3): Vec3[] => {
+      return [start, ...cubicBezier(
+        start,
+        [start[0] * 1.05, start[1] - neckLength * 0.20, 0],
+        [end[0] * 0.85, end[1] + neckLength * 0.10, 0],
+        end,
+        10, 1,
+      )];
+    };
+    curves.push({ kind: 'feature', closed: false, points: trapCurve(trapStartL, acromionL) });
+    curves.push({ kind: 'feature', closed: false, points: trapCurve(trapStartR, acromionR) });
+  }
+
+  // Adam's apple tick — small horizontal mark on the front midline, masculine convention.
+  if (laryngealProminence > 0.005) {
+    const adamY = topY - neckLength * 0.30;
+    const adamHalfW = laryngealProminence * 0.5;
+    curves.push({
+      kind: 'feature', closed: false, points: [
+        [-adamHalfW, adamY, cylinderRadius * 0.4],
+        [adamHalfW, adamY, cylinderRadius * 0.4],
+      ],
+    });
+  }
+
+  return curves;
 };
 
 // ---- main scaffold builder ----
@@ -1238,16 +1383,27 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   // Hat (sits on top of head; opt-in via p.hat.style)
   features.push(...buildHat(rx, ry, sx, totalH, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));
 
-  // Ears — inset deep into the head silhouette so they read as ATTACHED, not floating.
-  // Earlier inset was 25% of protrusion (~too little); judge flagged the visible gap.
-  // Now 70% so the inner edge overlaps the cranium silhouette decisively.
+  // Ears — per Loomis: TOP of helix aligns with brow line, BOTTOM of helix aligns with
+  // nose-base line. Lobe extends below. Anchor X is INSIDE the side plane (overlapping
+  // the silhouette) so the ear reads as attached.
   if (p.ears.visible) {
-    const earY = ((eyeY + noseBaseY) / 2) + p.ears.yOffset * totalH;
-    const earH = p.ears.size * totalH;
-    const earInset = p.ears.protrusion * 0.70;
+    const earTopY = browY + p.ears.yOffset * diameter;
+    const earBottomY = noseBaseY + p.ears.yOffset * diameter;
+    const protrusion = p.ears.helixProtrusion * diameter;
+    const earInset = protrusion * 0.65;     // inset deeper to anchor into silhouette
     const earZ = diameter * 0.10;
-    features.push(...buildEar(-sx + earInset, earY, earH, p.ears.protrusion, earZ, true));
-    features.push(...buildEar(sx - earInset, earY, earH, p.ears.protrusion, earZ, false));
+    features.push(...buildEar(
+      -sx + earInset, earTopY, earBottomY,
+      protrusion, p.ears.lobeDrop, p.ears.antihelixShow,
+      p.ears.tragusShow, p.ears.conchaShow, p.ears.tilt,
+      earZ, true,
+    ));
+    features.push(...buildEar(
+      sx - earInset, earTopY, earBottomY,
+      protrusion, p.ears.lobeDrop, p.ears.antihelixShow,
+      p.ears.tragusShow, p.ears.conchaShow, p.ears.tilt,
+      earZ, false,
+    ));
   }
 
   // Eyes
@@ -1319,14 +1475,27 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
 
   // Neck — anchor on the under-jaw between the chin pad and the cheek; widens slightly at the base.
   if (p.neck.visible) {
-    const jawAnchorX = diameter * 0.28;
-    // Anchor Y: just above the chin (so the neck appears to emerge from under the jaw, not from the chin tip).
-    const jawAnchorY = chinY + ramusH * 0.4;
-    const jawAnchorZ = chinZ * 0.5;
-    const anchorL: Vec3 = [-jawAnchorX, jawAnchorY, jawAnchorZ];
-    const anchorR: Vec3 = [jawAnchorX, jawAnchorY, jawAnchorZ];
-    const baseHalfWidth = (p.neck.width * diameter) / 2;
-    features.push(...buildNeck(anchorL, anchorR, baseHalfWidth, p.neck.length * totalH));
+    // Per Leo §5: SCM origins at the MASTOID (behind the ear), not chin corner.
+    // Underjaw anchors are where the neck cylinder front edge meets the jaw underside.
+    const mastoidX = sx + diameter * 0.005;    // just inside the side plane, where the ear sits
+    const mastoidY = noseBaseY;                 // mastoid roughly aligns with nose-base height (ear-bottom level)
+    const mastoidZ = diameter * 0.10;
+    const mastoidL: Vec3 = [-mastoidX, mastoidY, mastoidZ];
+    const mastoidR: Vec3 = [mastoidX, mastoidY, mastoidZ];
+    const underjawX = p.neck.cylinderRadius * diameter;
+    const underjawY = chinY + ramusH * 0.30;    // just under the chin
+    const underjawL: Vec3 = [-underjawX, underjawY, chinZ * 0.5];
+    const underjawR: Vec3 = [underjawX, underjawY, chinZ * 0.5];
+    features.push(...buildNeck(
+      mastoidL, mastoidR, underjawL, underjawR,
+      p.neck.cylinderRadius * diameter,
+      p.neck.trapWidthAtBase * diameter,
+      p.neck.trapFlareStart,
+      p.neck.length * totalH,
+      p.neck.scmShow,
+      p.neck.trapShow,
+      p.neck.laryngealProminence * totalH,
+    ));
   }
 
   return {
