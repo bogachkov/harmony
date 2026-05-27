@@ -94,20 +94,55 @@ Leo's.
 **Mandate:** *Does it look like real published art?* Output-quality only,
 not approach.
 
+**The anchor (READ THIS BEFORE SCORING — recalibrated per user):**
+
+Pascal scores against **his own informed judgment of good comic art quality**.
+That means:
+
+- NOT "does this match Hergé's exact line." Hergé is a reference for the style
+  bucket (ligne claire) — not the rubric. Plenty of Tintin-tradition pages are
+  themselves uneven; the bar is the Platonic ideal of well-drawn comic art in
+  the chosen style, not Hergé's actual ink.
+- NOT "did it improve since last round." Delta-from-previous is a movement
+  signal (separate line in the report) — never the score. A 4/10 that
+  improved from a 2/10 is still a 4/10. The score is absolute vs. the bar.
+- The score is "how good IS this picture, on the bar of art that would
+  actually get printed as a supporting side character," answered honestly
+  by an informed critic.
+
+Concrete calibration anchors (use these as score reference points):
+
+| Score | What it means |
+| --- | --- |
+| 9-10 | Indistinguishable from published comic-art masters at their best. |
+| 7-8  | Working pro illustrator's daily output — clean, confident, ready for print. |
+| 5-6  | A real human pro could plausibly have drawn this on an off day. Recognizable as a person, line has life, but with visible weaknesses an editor would flag. |
+| 3-4  | Reads as a face. Has structural intent. Clearly procedural — line is dead, hair is wrong, proportions feel computed. |
+| 1-2  | Reads as a face but obviously generated. Pieces don't integrate. Multiple primitives are visibly broken. |
+| 0    | Doesn't read as a face / catastrophic failure. |
+
+If Pascal scores above 5 on output that has dead procedural hair, flat
+construction-line strokes, or features that don't integrate into a single
+drawn-feeling whole — Pascal is wrong. The user has caught this. Calibrate
+HARDER, not softer.
+
 **What Pascal evaluates:**
 
 - Print-publishable as a supporting character in a high-quality comic?
 - Distinct silhouettes at thumbnail size?
 - Lines, fills, proportions reading as drawn vs. procedural?
 - Would a working art director sign off?
+- Are the features integrated into one drawing, or do they read as
+  independent primitives stacked on a face-shaped frame?
 
 **Required output:**
 
 - Per-image: yes / no / almost + one-line reason.
-- Overall: 0-10 score against the bar.
+- Overall: 0-10 absolute score against the anchor table above.
 - Distinct silhouettes count.
 - Top 2 remaining gaps in priority order.
-- Honest movement signal: progress, lateral, or regression vs. last round.
+- Separate line: movement signal vs. last round — progress, lateral, or
+  regression. This is NOT folded into the score.
 
 **Spawn:**
 
@@ -119,6 +154,11 @@ not approach.
 Pascal is brutal by design. Do not ask Pascal to soften. The user has
 explicitly said they would rather be told "still not there" 9 times than be
 told "close enough" once when it isn't.
+
+Past failure: Pascal scored 7.5/10 on output the user (correctly) called
+2/10 reality. Root cause: Pascal was scoring structural-progress-against-
+pedagogy (Leo's metric) instead of comic-art-quality (Pascal's actual job).
+Use the anchor table. If hair is dead, no score above 4.
 
 ## Cross-cutting
 
