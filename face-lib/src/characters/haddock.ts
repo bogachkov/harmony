@@ -33,9 +33,20 @@ export const references = [
 // The tintin style preset already supplies dot eyes, cream background, etc.;
 // this character file layers Haddock-specific overrides on top.
 const haddock: DeepPartial<FaceParams> = {
+  // Post-Leo-audit: head is now { cranium, jaw, face } blocks. Haddock is a mature
+  // sea-captain — moderate-square jaw (low gonialAngle), full beard (handled
+  // separately in facialHair), broad nose.
   head: {
-    width: 0.84,
-    height: 0.95,
+    cranium: { diameter: 1.0, sidePlaneOffset: 0.40 },
+    jaw: {
+      ramusHeight: 0.46,
+      gonialAngle: 0.30,          // somewhat square
+      bigonialWidth: 0.78,
+      mentalWidth: 0.42,
+      mentalProtrusion: 0.02,
+      jowl: 0.2,
+    },
+    face: { browRidgeProjection: 0.55, malarProjection: 0.5 },
   },
   hair: {
     style: 'short',

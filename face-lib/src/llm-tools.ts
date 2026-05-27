@@ -20,11 +20,36 @@ const overridesSchema = {
     head: {
       type: 'object', additionalProperties: false,
       properties: {
-        width: { type: 'number', description: 'Cranium width (0.6-1.0 typical).' },
-        height: { type: 'number', description: 'Cranium height (0.85-1.1 typical).' },
-        jawWidth: { type: 'number', description: 'Jaw width as fraction of head width (0.5-0.75).' },
-        chinDrop: { type: 'number', description: 'Chin extension below sphere (0.08-0.25).' },
-        chinSharpness: { type: 'number', description: '0 round, 1 pointed.' },
+        cranium: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            diameter: { type: 'number', description: 'Cranium ball diameter. Base unit (1.0 = normal).' },
+            sidePlaneOffset: { type: 'number', description: 'Side-plane cut distance from centerline; 0.425 ≈ classic Loomis.' },
+            occipitalProjection: { type: 'number', description: 'Back-of-skull bulge.' },
+            broughtForward: { type: 'number', description: 'Forward tilt of cranium over jaw.' },
+          },
+        },
+        jaw: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            ramusHeight: { type: 'number', description: 'Jaw mass length (TMJ→corner) as ratio of cranium. ~0.4 adult, ~0.22 child, ~0.55 elder.' },
+            gonialAngle: { type: 'number', description: '0=sharp 90° (square jaw, masculine), 1=soft 135° (round, feminine).' },
+            bigonialWidth: { type: 'number', description: 'Distance between jaw corners as ratio of cranium. ~0.78 neutral.' },
+            mentalWidth: { type: 'number', description: 'Chin-pad width as ratio of bigonial. 0.5=round, 0.1=pointed.' },
+            mentalProtrusion: { type: 'number', description: 'Chin push-forward in Z.' },
+            jowl: { type: 'number', description: '0..1 soft-tissue cushion (Faigin age).' },
+          },
+        },
+        face: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            upperThirdRatio: { type: 'number', description: 'Loomis thirds — hairline to brows. Sum to 1.' },
+            middleThirdRatio: { type: 'number', description: 'Loomis thirds — brows to nose-base.' },
+            lowerThirdRatio: { type: 'number', description: 'Loomis thirds — nose-base to chin.' },
+            malarProjection: { type: 'number', description: '0..1 cheekbone forward push.' },
+            browRidgeProjection: { type: 'number', description: '0..1 supraorbital prominence.' },
+          },
+        },
       },
     },
     eyes: {

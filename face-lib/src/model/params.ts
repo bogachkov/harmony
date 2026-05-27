@@ -1,118 +1,134 @@
 // FaceParams: the cascading style sheet for a face.
-// Everything is normalized to head_height = 1.0 unit unless noted; the renderer scales to pixels.
+// Geometry is normalized to cranium.diameter = 1.0 unless noted; the renderer scales to pixels.
 // Angles are radians.
+//
+// Pedagogy-rooted structure per Leo's audit (research/leo-audit.md §3):
+// the head is three typed sub-blocks — cranium (the Loomis ball + sliced
+// side planes), jaw (the Bridgman mandible, a SEPARATE mass), and face
+// (Loomis-thirds proportions + cheekbone/brow-ridge projections). Feature
+// anchors are computed as RATIOS of these masses (Loomis 1956), not as
+// additive Y-offsets, so proportion changes self-propagate.
 
 export type FaceParams = {
   head: {
-    width: number;          // x-extent of cranium sphere before side-plane flattening
-    height: number;         // y-extent (top of skull to bottom of jaw line on the sphere)
-    depth: number;          // z-extent
-    sidePlaneInset: number; // fraction of width clipped by side planes (0 = pure sphere, 0.15 ≈ Loomis classic)
-    jawWidth: number;       // jaw width at the mouth line (fraction of head.width)
-    chinDrop: number;       // how far chin extends below the sphere (in head-height units)
-    chinSharpness: number;  // 0 = round chin, 1 = pointed
+    cranium: {
+      diameter: number;             // the Loomis sphere — base unit for everything else
+      sidePlaneOffset: number;      // distance centerline→side-plane cut (ratio of diameter; 0.5=no cut, ~0.425 classic Loomis)
+      occipitalProjection: number;  // back-of-skull bulge (Hampton); 0 = pure sphere
+      facialAngle: number;          // Camper's angle, radians; 0 = vertical face
+      broughtForward: number;       // forward tilt of cranium over jaw (Loomis); 0 = neutral
+    };
+    jaw: {
+      ramusHeight: number;          // TMJ→gonial corner, ratio of cranium.diameter (Bridgman)
+      gonialAngle: number;          // mandible corner: 0=90° square, 1=135° soft (Bridgman 90-130°)
+      bigonialWidth: number;        // distance between gonial corners, ratio of cranium.diameter
+      mentalWidth: number;          // chin-pad width, ratio of bigonialWidth (Hampton "chin button")
+      mentalProtrusion: number;     // chin push-forward in Z, ratio of cranium.diameter
+      jowl: number;                 // soft-tissue cushion along jaw (Faigin age); 0..1
+    };
+    face: {
+      malarProjection: number;      // cheekbone forward push (Bridgman); 0..1
+      browRidgeProjection: number;  // supraorbital prominence; 0..1
+      upperThirdRatio: number;      // hairline→brows (Loomis thirds; default 0.333)
+      middleThirdRatio: number;     // brows→nose-base
+      lowerThirdRatio: number;      // nose-base→chin
+    };
   };
   eyes: {
-    spacing: number;        // pupil-to-pupil distance (fraction of head.width)
-    size: number;           // eye width (fraction of head.width)
-    openness: number;       // 0 = closed, 1 = wide open, can exceed 1 for surprise
+    spacing: number;        // pupil-to-pupil distance (ratio of cranium.diameter)
+    size: number;           // eye width (ratio of cranium.diameter)
+    openness: number;       // 0 = closed, 1 = wide open, >1 = surprise
     tilt: number;           // outer-corner tilt; positive = corners up
-    yOffset: number;        // shift from default eyeline (head-height units)
-    style: 'almond' | 'dots';  // 'dots' = no eye-shape, just a pupil dot (Tintin-style)
-    dotSize: number;        // for 'dots' style: radius as fraction of head.width
-    // Within-style modifiers — turn a pure dot eye into varied supporting-character looks
-    // without leaving the dots aesthetic. Each is independent.
-    lidLine: number;        // 0..1: short upper-lid arc above the dot. 0 = bare dot, 1 = full lid.
-    lashes: number;         // 0..1: tiny eyelash ticks at the outer corner (feminine convention).
-    underlineHint: number;  // 0..1: a short under-eye line (elder/tired conventions).
+    yOffset: number;        // shift from default eyeline (ratio of cranium.diameter)
+    style: 'almond' | 'dots';
+    dotSize: number;        // for 'dots' style: radius as ratio of cranium.diameter
+    lidLine: number;        // 0..1: upper-lid arc above the dot
+    lashes: number;         // 0..1: eyelash ticks at outer corner
+    underlineHint: number;  // 0..1: short under-eye line
   };
-  // Brows — Faigin's three DoF: inner-end lift, outer-end lift, overall arch.
-  // (Pedagogy-rooted names; see research/primitives-nose-ears-neck-brows.md.)
   brows: {
-    ridgeY: number;         // height above eyeline (head-height units; was `yOffset`)
-    innerLift: number;      // inner-end Δy: positive = sad/pleading, negative = angry (was `innerHeight`)
-    outerLift: number;      // outer-end Δy: positive = surprised (was `outerHeight`)
-    fullness: number;       // stroke weight; >0.5 reads "natural"/un-plucked, <0.3 plucked (was `thickness`)
+    ridgeY: number;         // height above eyeline (ratio of cranium.diameter)
+    innerLift: number;      // Faigin inner-end Δy: positive = sad, negative = angry
+    outerLift: number;      // Faigin outer-end Δy: positive = surprised
+    fullness: number;       // stroke weight
     arch: number;           // mid-stroke curvature
-    spacing: number;        // distance from centerline at inner end (fraction of head.width)
-    length: number;         // brow length (fraction of head.width)
-    unibrow: number;        // 0..1, fraction by which inner ends meet across centerline
-    style: 'split' | 'single';  // 'split' = two parallel strokes (heavy); 'single' = one stroke (Hergé)
+    spacing: number;        // distance from centerline at inner end (ratio of cranium.diameter)
+    length: number;         // brow length (ratio of cranium.diameter)
+    unibrow: number;        // 0..1, fraction inner ends meet across centerline
+    style: 'split' | 'single';
   };
   nose: {
-    length: number;         // nose length from brow-bridge to base (head-height units)
-    width: number;          // base width (fraction of head.width)
-    bridgeVisible: boolean; // draw bridge construction line
-    style: 'detailed' | 'minimal' | 'button';  // 'button' = a single short curve (Tintin)
-    showNostrils: boolean;  // toggle nostril dashes
+    length: number;         // ratio of cranium.diameter (will later become 'keel')
+    width: number;          // base width, ratio of cranium.diameter (will become 'alarWidth')
+    bridgeVisible: boolean;
+    style: 'detailed' | 'minimal' | 'button';
+    showNostrils: boolean;
   };
   mouth: {
-    width: number;          // fraction of head.width
-    yOffset: number;        // shift from default mouth line (head-height units)
-    openness: number;       // 0 = closed line, >0 = open
-    cornerLift: number;     // smile (+) / frown (-) at the corners (head-height units)
-    upperCurve: number;     // additional curvature of upper-lip line
-    lipFullness: number;    // 0 = thin line, 1 = full lips with separate upper/lower lines even when closed
-    cornerMarks: boolean;   // draw small tick marks at the corners
+    width: number;          // ratio of cranium.diameter
+    yOffset: number;        // shift from default mouth line (ratio of cranium.diameter)
+    openness: number;
+    cornerLift: number;     // smile (+) / frown (-)
+    upperCurve: number;
+    lipFullness: number;
+    cornerMarks: boolean;
   };
   ears: {
     visible: boolean;
-    size: number;           // ear height (head-height units)
-    yOffset: number;        // shift from default attach (eyeline → nose-base span)
-    protrusion: number;     // how far the ear sticks out from side plane (head-width units)
+    size: number;           // ear height (ratio of cranium.diameter)
+    yOffset: number;        // shift from default attach
+    protrusion: number;     // how far ear bulges from side plane (ratio of cranium.diameter)
   };
   hair: {
     style: 'none' | 'short' | 'medium' | 'long' | 'bald';
     frontShape: 'straight' | 'widows-peak' | 'parted' | 'receding';
-    forehead: number;       // visible forehead height (0 = hair starts at brows, 1 = full forehead)
-    volume: number;         // hair puffiness above the cranium (head-height units)
+    forehead: number;
+    volume: number;
   };
   neck: {
     visible: boolean;
-    width: number;          // fraction of head.width
-    length: number;         // visible neck length (head-height units)
+    width: number;
+    length: number;
   };
   facialHair: {
     style: 'none' | 'mustache' | 'handlebar' | 'goatee' | 'vanDyke' | 'chinstrap' | 'sideburns' | 'beard' | 'beardWithMustache' | 'fullRound';
-    color: string | null;   // null = inherit hairFill
-    length: number;         // how far past the chin (head-height units)
-    fullness: number;       // how far past the jaw silhouette (head-width units)
-    coversMouth: boolean;   // when true, mouth is rendered as a line through the mustache
-    // Mustache shape controls (apply to beardWithMustache + fullRound integrated top-edge).
-    // PROVISIONAL pedagogy-rooted names — may be refined when research returns.
-    mustacheBaseOffset: number;  // top-edge baseline above the mouth (head-height units)
-    mustacheRise: number;        // how far the mustache hump rises above baseline at center
-    mustacheWidth: number;       // controls how wide the bell-curve hump is (smaller = wider)
-    philtrumWidth: number;       // controls how narrow the central dip is (larger = narrower dip)
-    philtrumDepth: number;       // fraction of mustacheRise that the philtrum dip removes
+    color: string | null;
+    length: number;
+    fullness: number;
+    coversMouth: boolean;
+    mustacheBaseOffset: number;
+    mustacheRise: number;
+    mustacheWidth: number;
+    philtrumWidth: number;
+    philtrumDepth: number;
   };
   hat: {
     style: 'none' | 'navalCap' | 'beanie' | 'fedora' | 'bowler' | 'topHat';
     color: string;
-    bandColor: string;      // for naval cap white band, fedora ribbon, etc.
+    bandColor: string;
     emblem: 'none' | 'anchor';
     emblemColor: string;
-    size: number;           // overall scale multiplier (1.0 = default)
-    tilt: number;           // small rotation in radians
+    size: number;
+    tilt: number;
   };
   style: {
-    lineWeight: number;     // SVG stroke-width in px
-    constructionWeight: number; // weight for guide lines (lighter)
-    jitter: number;         // 0 = clean, >0 = hand-drawn variation amplitude (px)
-    jitterSeed: number;     // deterministic seed for jitter
-    color: string;          // primary line color
+    lineWeight: number;
+    constructionWeight: number;
+    jitter: number;
+    jitterSeed: number;
+    color: string;
     constructionColor: string;
     background: string | null;
-    skinFill: string | null;   // fill color for the head silhouette (null = no fill)
-    hairFill: string | null;   // fill color for the hair (null = outline only)
+    skinFill: string | null;
+    hairFill: string | null;
     showConstruction: boolean;
     showSidePlanes: boolean;
   };
   camera: {
-    yaw: number;            // horizontal head rotation (radians); 0 = front
-    pitch: number;          // vertical tilt; positive = looking up at the face
-    pixelHeight: number;    // rendered SVG height in px (width derived from aspect)
-    margin: number;         // fraction of pixelHeight as padding around the head
+    yaw: number;
+    pitch: number;
+    pixelHeight: number;
+    margin: number;
   };
 };
 
@@ -122,13 +138,28 @@ export type DeepPartial<T> = {
 
 export const defaults: FaceParams = {
   head: {
-    width: 0.78,
-    height: 1.0,
-    depth: 0.95,
-    sidePlaneInset: 0.12,
-    jawWidth: 0.62,
-    chinDrop: 0.18,
-    chinSharpness: 0.4,
+    cranium: {
+      diameter: 1.0,                // base unit. Everything else is in diameter-ratios.
+      sidePlaneOffset: 0.425,       // Loomis classic — side planes at ~85% of equator radius
+      occipitalProjection: 0.05,    // slight back-of-skull bulge
+      facialAngle: 0,
+      broughtForward: 0,
+    },
+    jaw: {
+      ramusHeight: 0.42,            // TMJ→corner: jaw mass roughly 42% of cranium diameter for adult
+      gonialAngle: 0.55,            // moderately soft adult jaw (~115°)
+      bigonialWidth: 0.78,          // jaw narrower than cranium (~78% of diameter)
+      mentalWidth: 0.38,            // chin pad ~38% of bigonial
+      mentalProtrusion: 0,
+      jowl: 0,
+    },
+    face: {
+      malarProjection: 0.5,
+      browRidgeProjection: 0.3,
+      upperThirdRatio: 0.333,       // Loomis thirds — must sum to 1 with middle + lower
+      middleThirdRatio: 0.333,
+      lowerThirdRatio: 0.334,
+    },
   },
   eyes: {
     spacing: 0.34,
@@ -143,7 +174,7 @@ export const defaults: FaceParams = {
     underlineHint: 0,
   },
   brows: {
-    ridgeY: 0.08,
+    ridgeY: 0.06,
     innerLift: 0,
     outerLift: 0,
     fullness: 0.018,
@@ -166,8 +197,8 @@ export const defaults: FaceParams = {
     openness: 0,
     cornerLift: 0,
     upperCurve: 0,
-    lipFullness: 0.35,
-    cornerMarks: true,
+    lipFullness: 0,
+    cornerMarks: false,
   },
   ears: {
     visible: true,
@@ -183,7 +214,7 @@ export const defaults: FaceParams = {
   },
   neck: {
     visible: true,
-    width: 0.55,        // trapezius width at the base (fraction of head.width)
+    width: 0.55,
     length: 0.22,
   },
   facialHair: {
@@ -215,8 +246,8 @@ export const defaults: FaceParams = {
     color: '#1a1a1a',
     constructionColor: '#c8c8c8',
     background: '#ffffff',
-    skinFill: '#f4d8c0',     // warm light skin default; override per-character
-    hairFill: '#3a2a1f',     // dark brown default
+    skinFill: '#f4d8c0',
+    hairFill: '#3a2a1f',
     showConstruction: false,
     showSidePlanes: false,
   },

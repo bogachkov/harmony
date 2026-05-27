@@ -1119,18 +1119,45 @@ const buildNeck = (anchorL: Vec3, anchorR: Vec3, baseHalfWidth: number, neckLeng
 // ---- main scaffold builder ----
 
 export const buildScaffold = (p: FaceParams): Scaffold => {
-  const rx = p.head.width / 2;
-  const ry = p.head.height / 2;
-  const rz = p.head.depth / 2;
-  const sx = rx * (1 - p.head.sidePlaneInset);
-  const chinY = -ry - p.head.chinDrop;
-  const cheekY = -ry * 0.35;
-  const cheekHalfWidth = sx * (0.80 + 0.15 * (1 - p.head.chinSharpness));
+  // CRANIUM — Loomis ball. The base unit for everything else is cranium.diameter.
+  // It's a SPHERE (not an ellipsoid), per Loomis 1956 §I.
+  const diameter = p.head.cranium.diameter;
+  const cranR = diameter / 2;
+  const rx = cranR, ry = cranR, rz = cranR;
+  const sx = p.head.cranium.sidePlaneOffset * diameter;   // distance from centerline to side-plane cut
 
-  const eyeY = (ry + chinY) / 2 + p.eyes.yOffset * p.head.height;
-  const browY = eyeY + p.brows.ridgeY * p.head.height;
-  const noseBaseY = eyeY - p.nose.length * p.head.height;
-  const mouthY = noseBaseY + (chinY - noseBaseY) * 0.40 + p.mouth.yOffset * p.head.height;
+  // JAW — Bridgman mandible, SEPARATE mass attached below the cranium.
+  // ramusHeight is TMJ→gonial-corner; the jaw mass hangs `ramusHeight*diameter` below the sphere bottom.
+  const ramusH = p.head.jaw.ramusHeight * diameter;
+  const bigonialHalfW = (p.head.jaw.bigonialWidth * diameter) / 2;
+  // mentalWidth is the chin pad as a fraction of bigonial — independent of gonialAngle now.
+  // (Previously `chinSharpness` collapsed these two anatomically distinct levers.)
+  const mentalHalfW = bigonialHalfW * p.head.jaw.mentalWidth;
+  // gonialAngle 0 = sharp 90° (square jaw), 1 = soft 135° (round). Drives jaw-curve sharpness.
+  const gonialAngle = p.head.jaw.gonialAngle;
+
+  // Vertical landmarks — Loomis thirds, as RATIOS of total head height (top-of-cranium → chin).
+  const topY = cranR;
+  const chinY = -cranR - ramusH;
+  const totalH = topY - chinY;
+  const upperT = p.head.face.upperThirdRatio;
+  const middleT = p.head.face.middleThirdRatio;
+  // lowerT is implied (= 1 - upperT - middleT) but we read it for explicit Loomis-thirds intent.
+  const browY = topY - upperT * totalH;
+  const noseBaseY = browY - middleT * totalH;
+  // Eye line is HALF of total head height (Loomis's "eyes at half-head" rule — p.18).
+  const eyeY = topY - 0.5 * totalH + p.eyes.yOffset * diameter;
+  // Mouth line: 1/3 down from nose-base to chin (Loomis).
+  const mouthY = noseBaseY - (noseBaseY - chinY) * 0.333 + p.mouth.yOffset * diameter;
+
+  // Gonial-corner Y — where the jaw begins curving toward the chin. Loomis aligns the
+  // gonial corner with the nose-base line (the bottom of the ear is at nose-base).
+  const gonialY = noseBaseY;
+  // Cheek silhouette half-width at the gonial corner. Square jaws (low gonialAngle) keep this near
+  // the bigonial width; soft jaws (high gonialAngle) tuck it in slightly.
+  const cheekHalfWidth = bigonialHalfW * (1 - 0.10 * gonialAngle);
+  // Legacy variable name kept locally for the silhouette construction below.
+  const cheekY = gonialY;
 
   const frontZ = (x: number, y: number): number => {
     const u = x / rx, v = y / ry;
@@ -1162,8 +1189,12 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const sideL: Vec3[] = sideCurve(leftTempleTop, cheekL, -1);
   const sideR: Vec3[] = sideCurve(rightTempleTop, cheekR, 1);
 
-  const chinZ = p.head.depth * 0.30;
-  const jaw = jawCurve(cheekL, cheekR, chinY, chinZ, p.head.chinSharpness, 18);
+  const chinZ = diameter * 0.30 + p.head.jaw.mentalProtrusion * diameter;
+  // gonialAngle (0..1) and mentalWidth jointly shape the jaw curve.
+  // For jawCurve's `sharpness` parameter: 0=round chin pad, 1=pointed. Derive from mentalWidth
+  // — narrow mental width = pointed chin; wide = round. (jawCurve will read this as the chin pad width.)
+  const jawSharpness = 1 - p.head.jaw.mentalWidth * 2.5;   // 0.38 default → 0.05 (essentially round); 0.10 → 0.75 (pointed)
+  const jaw = jawCurve(cheekL, cheekR, chinY, chinZ, Math.max(0, Math.min(1, jawSharpness)), 18);
 
   const silhouettePoints: Vec3[] = [];
   silhouettePoints.push(...topArc);
@@ -1202,29 +1233,29 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const features: Curve[] = [];
 
   // Hair (drawn first so other features can overlap it slightly via Z-order — painter actually sorts later)
-  features.push(...buildHair(rx, ry, rz, sx, browY, p.head.height, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill));
+  features.push(...buildHair(rx, ry, rz, sx, browY, totalH, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill));
 
   // Hat (sits on top of head; opt-in via p.hat.style)
-  features.push(...buildHat(rx, ry, sx, p.head.height, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));
+  features.push(...buildHat(rx, ry, sx, totalH, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));
 
   // Ears — inset deep into the head silhouette so they read as ATTACHED, not floating.
   // Earlier inset was 25% of protrusion (~too little); judge flagged the visible gap.
   // Now 70% so the inner edge overlaps the cranium silhouette decisively.
   if (p.ears.visible) {
-    const earY = ((eyeY + noseBaseY) / 2) + p.ears.yOffset * p.head.height;
-    const earH = p.ears.size * p.head.height;
+    const earY = ((eyeY + noseBaseY) / 2) + p.ears.yOffset * totalH;
+    const earH = p.ears.size * totalH;
     const earInset = p.ears.protrusion * 0.70;
-    const earZ = p.head.depth * 0.10;
+    const earZ = diameter * 0.10;
     features.push(...buildEar(-sx + earInset, earY, earH, p.ears.protrusion, earZ, true));
     features.push(...buildEar(sx - earInset, earY, earH, p.ears.protrusion, earZ, false));
   }
 
   // Eyes
-  const halfEye = (p.eyes.size * p.head.width) / 2;
-  const eyeAnchorX = (p.eyes.spacing * p.head.width) / 2;
+  const halfEye = (p.eyes.size * diameter) / 2;
+  const eyeAnchorX = (p.eyes.spacing * diameter) / 2;
   const eyeSurfaceZ = frontZ(eyeAnchorX, eyeY);
   if (p.eyes.style === 'dots') {
-    const dotR = p.eyes.dotSize * p.head.width;
+    const dotR = p.eyes.dotSize * diameter;
     features.push(...buildEyeDots(
       [-eyeAnchorX, eyeY, eyeSurfaceZ], dotR, p.eyes.openness, eyeSurfaceZ,
       p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true,
@@ -1239,11 +1270,11 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   }
 
   // Brows
-  const browLen = p.brows.length * p.head.width;
+  const browLen = p.brows.length * diameter;
   // Unibrow pulls the inner anchors toward the centerline (0 = normal spacing, 1 = inner ends touch).
-  const browInnerX = Math.max(0, p.brows.spacing * p.head.width * (1 - p.brows.unibrow));
-  const innerLiftY = p.brows.innerLift * p.head.height;
-  const outerLiftY = p.brows.outerLift * p.head.height;
+  const browInnerX = Math.max(0, p.brows.spacing * diameter * (1 - p.brows.unibrow));
+  const innerLiftY = p.brows.innerLift * totalH;
+  const outerLiftY = p.brows.outerLift * totalH;
   features.push(...buildBrow(
     [-browInnerX, browY + innerLiftY, frontZ(-browInnerX, browY)],
     browLen, 0, outerLiftY - innerLiftY, p.brows.arch, p.brows.fullness, frontZ(-browInnerX, browY), true,
@@ -1256,8 +1287,8 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   ));
 
   // Nose (bridge top sits just below brow line)
-  const bridgeTop: Vec3 = [0, browY - p.head.height * 0.02, frontZ(0, browY)];
-  features.push(...buildNose(bridgeTop, p.nose.length * p.head.height, p.nose.width * p.head.width, frontZ(0, browY), p.nose.bridgeVisible, p.nose.style, p.nose.showNostrils));
+  const bridgeTop: Vec3 = [0, browY - totalH * 0.02, frontZ(0, browY)];
+  features.push(...buildNose(bridgeTop, p.nose.length * totalH, p.nose.width * diameter, frontZ(0, browY), p.nose.bridgeVisible, p.nose.style, p.nose.showNostrils));
 
   // Facial hair — emitted BEFORE the mouth so the mustache covers the mouth line when beardWithMustache
   // is requested (painter's order is by avgZ; both sit at similar Z, so emit order is the tiebreaker).
@@ -1266,8 +1297,8 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     features.push(...buildFacialHair(
       jaw, cheekL, cheekR, mouthY,
       p.facialHair.style,
-      p.facialHair.length * p.head.height,
-      p.facialHair.fullness * p.head.width,
+      p.facialHair.length * totalH,
+      p.facialHair.fullness * diameter,
       hairColor,
       {
         baseOffset: p.facialHair.mustacheBaseOffset,
@@ -1282,20 +1313,20 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   // Mouth
   const mouthCenter: Vec3 = [0, mouthY, frontZ(0, mouthY)];
   features.push(...buildMouth(
-    mouthCenter, p.mouth.width * p.head.width, p.mouth.openness, p.mouth.cornerLift * p.head.height,
+    mouthCenter, p.mouth.width * diameter, p.mouth.openness, p.mouth.cornerLift * totalH,
     p.mouth.upperCurve, p.mouth.lipFullness, p.mouth.cornerMarks, frontZ(0, mouthY),
   ));
 
   // Neck — anchor on the under-jaw between the chin pad and the cheek; widens slightly at the base.
   if (p.neck.visible) {
-    const jawAnchorX = p.head.width * 0.28;
+    const jawAnchorX = diameter * 0.28;
     // Anchor Y: just above the chin (so the neck appears to emerge from under the jaw, not from the chin tip).
-    const jawAnchorY = chinY + p.head.chinDrop * 0.4;
+    const jawAnchorY = chinY + ramusH * 0.4;
     const jawAnchorZ = chinZ * 0.5;
     const anchorL: Vec3 = [-jawAnchorX, jawAnchorY, jawAnchorZ];
     const anchorR: Vec3 = [jawAnchorX, jawAnchorY, jawAnchorZ];
-    const baseHalfWidth = (p.neck.width * p.head.width) / 2;
-    features.push(...buildNeck(anchorL, anchorR, baseHalfWidth, p.neck.length * p.head.height));
+    const baseHalfWidth = (p.neck.width * diameter) / 2;
+    features.push(...buildNeck(anchorL, anchorR, baseHalfWidth, p.neck.length * totalH));
   }
 
   return {
