@@ -894,6 +894,11 @@ const buildHair = (
   };
   const isReceding = frontShape === 'receding';
   const peakHint = frontShape === 'widows-peak' ? headHeight * 0.018 : 0;
+  // Per Pascal (round 5): the hairline reads as a constructed clean arc. Real hair
+  // doesn't form a perfect curve at the forehead — small irregularities suggest
+  // strand boundary against skin. Sub-millimeter Y wobble with two frequencies,
+  // amplitude masked by Math.sin(Math.PI * t) so the temples stay clean and the
+  // irregularity concentrates over the centre of the hairline.
   for (let i = 0; i <= hairSamples; i++) {
     const t = i / hairSamples;
     const x = -reachX + 2 * reachX * t;
@@ -903,7 +908,9 @@ const buildHair = (
       ? peakHint * (1 - distFromCenter / 0.08)
       : 0;
     const recess = isReceding ? headHeight * 0.07 : 0;
-    const y = hairlineY + baseArc - peakDip + recess;
+    const irregularity = headHeight * 0.008 * Math.sin(Math.PI * t) *
+      (Math.sin(t * 17.3) * 0.6 + Math.sin(t * 31.7) * 0.4);
+    const y = hairlineY + baseArc - peakDip + recess + irregularity;
     hairline.push([x, y, surfZ(x, y)]);
   }
 
