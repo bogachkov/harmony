@@ -1,17 +1,31 @@
 import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
-import { cranialField, clumpStroke, type UV } from './hair-field.ts';
+import { cranialField, clumpStroke } from './hair-field.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
 // `role` lets the renderer identify special curves (silhouette, hair) for fills.
+//
+// kind: 'feature-ink' is an inked stroke — the renderer pipes it through perfect-freehand
+// to produce a closed outline polygon with tapered tips (variable width per `ink.pressure`),
+// and paints it as a FILL in pass 1. Pass 2 (strokes) skips feature-ink curves. This is the
+// hair / characterization-stroke path; per Leo's pass-3 hair-tooling research.
+export type InkProfile = {
+  size: number;          // base diameter in normalized world units (multiplied by lineWeight in svg)
+  taperStart: number;    // 0..1 fraction of stroke length tapered at start
+  taperEnd: number;      // 0..1 fraction of stroke length tapered at end
+  pressureMid?: number;  // peak pressure at mid-stroke (default 0.85)
+  color?: string;        // optional fill color override (defaults to style.color)
+};
+
 export type Curve = {
-  kind: 'construction' | 'feature';
+  kind: 'construction' | 'feature' | 'feature-ink';
   closed: boolean;
   points: Vec3[];
   role?: 'silhouette' | 'hair-top';
   fill?: string | null;
   noStroke?: boolean;   // skip stroke pass — fill-only render (used for hidden hairlines)
+  ink?: InkProfile;     // required when kind === 'feature-ink'
 };
 
 export type Scaffold = {
@@ -764,6 +778,22 @@ const buildEar = (
   return curves;
 };
 
+// Hair — per Leo's pass-3 research (`research/hair-tooling.md`).
+//
+// SYMBOLIC TREE (universal sub-tree, every school):
+//   mass  → outer silhouette (closed shape, slight lift above cranium)
+//   boundary → hairline (front), implicit (side/back)
+//   topology → crown + ONE parting curve, optional
+//   interior → ONE characterization stroke (forelock flick for Hergé/parted,
+//              hatching set for Caniff, fringe wedge for manga — we do the
+//              Tintin/parted variant in this pass)
+//
+// Three primitives carry the load: mass silhouette (fill polygon),
+// parting curve (feature-ink stroke), one characterization stroke (feature-ink).
+//
+// PROHIBITED (Leo's STOP flags): more than ~3 interior ink strokes; per-strand
+// lines; hairline as the load-bearing characterization line; flat-fill wedge as
+// the only mass primitive.
 const buildHair = (
   rx: number, ry: number, rz: number, sx: number, browY: number, headHeight: number,
   style: FaceParams['hair']['style'], frontShape: FaceParams['hair']['frontShape'],
@@ -780,9 +810,7 @@ const buildHair = (
   const sideTheta = Math.acos(Math.min(1, sx / rx));
   const templeY = ry * Math.sin(sideTheta);
 
-  // Hair top silhouette: arcs from JUST BELOW the temple corner, up over the cranium with `lift`,
-  // and back down to the other temple corner. We add small SILHOUETTE-BREAK WISPS at a few
-  // azimuth positions so the cap stops reading as a hat (judge complaint).
+  // ---- MASS SILHOUETTE: closed envelope (slight lift above the cranium).
   const topSamples = 64;
   const topSil: Vec3[] = [];
   const startY = templeY - headHeight * 0.02;
@@ -791,57 +819,43 @@ const buildHair = (
     const theta = t * Math.PI;
     const baseX = sx * Math.cos(theta);
     const domeT = Math.sin(theta);
-    // Smooth dome with tiny natural variation, no stamped bumps.
     const naturalWobble = headHeight * 0.003 * Math.sin(t * 11.7);
     const y = startY + (ry - startY) * domeT + effectiveLift * domeT + naturalWobble * domeT;
     topSil.push([baseX, y, 0]);
   }
-  curves.push({ kind: 'feature', closed: false, points: topSil, role: 'hair-top' });
 
-  // Hairline: nearly straight line with subtle natural variation. PREVIOUS approaches built
-  // hairlines from parameterized topology shapes (V, M, dip) — judge said those all read as
-  // "shape stamped onto a head" rather than as where hair stops growing. New rule: hairline
-  // is almost straight; characterization lives in the HAIR MASS ABOVE, not the boundary below.
-  // 'receding' raises the hairline overall (high forehead). 'widows-peak' adds the tiniest
-  // V hint (not a stamp). 'parted' / 'straight' are basically the same near-straight line.
+  // ---- HAIRLINE (boundary): one confident arc; widow's-peak adds a subtle V hint,
+  // receding raises the line overall. Per Leo STOP #3, the hairline is a boundary,
+  // not the subject — characterization lives in the mass and the parting above.
   const hairlineY = browY + (ry - browY) * Math.max(0.05, Math.min(1, forehead));
-  const u = hairlineY / ry;
-  const ellipseHalfAtY = rx * Math.sqrt(Math.max(0, 1 - u * u));
+  const uPos = hairlineY / ry;
+  const ellipseHalfAtY = rx * Math.sqrt(Math.max(0, 1 - uPos * uPos));
   const reachX = Math.min(sx, ellipseHalfAtY) * 0.78;
   const hairSamples = 32;
   const hairline: Vec3[] = [];
-  const surfaceZ = (x: number, y: number): number => {
+  const surfZ = (x: number, y: number): number => {
     const w = x / rx, v = y / ry;
     const k = 1 - w * w - v * v;
     return k > 0 ? rz * Math.sqrt(k) + 0.020 : 0.020;
   };
-  // Clean confident curve — no jitter, no V/M topology. Per j8: the hairline must be
-  // invisible-as-a-constructed-line, which means clean single-arc geometry.
   const isReceding = frontShape === 'receding';
   const peakHint = frontShape === 'widows-peak' ? headHeight * 0.018 : 0;
   for (let i = 0; i <= hairSamples; i++) {
     const t = i / hairSamples;
     const x = -reachX + 2 * reachX * t;
-    // Shallow confident arch (highest at center, drops slightly toward temples).
     const baseArc = -headHeight * 0.012 * (1 - Math.sin(Math.PI * t));
-    // Widow's peak: small downward V at center (kept very subtle).
     const distFromCenter = Math.abs(t - 0.5);
     const peakDip = peakHint && distFromCenter < 0.08
       ? peakHint * (1 - distFromCenter / 0.08)
       : 0;
-    // Receding: raise the line overall (high forehead).
     const recess = isReceding ? headHeight * 0.07 : 0;
     const y = hairlineY + baseArc - peakDip + recess;
-    hairline.push([x, y, surfaceZ(x, y)]);
+    hairline.push([x, y, surfZ(x, y)]);
   }
-  // For receding hairlines we still draw the boundary — the side-tuft remnants need an outline
-  // to read as hair-on-skull rather than a floating color blob (j9 correction to j8).
-  // What we DO skip for receding: interior cranial-field strokes (which read as scratches).
-  const drawHairlineStroke = true;
-  const drawInteriorStrokes = !isReceding;
-  // Hair fill region (closed polygon). Rendered FILL-ONLY (no stroke) so the bottom edge
-  // (the hairline) doesn't draw as a hard line. The hairline stroke is added separately as
-  // an open curve, which gets skipped when we want it hidden (receding hair).
+
+  // Mass cap as a filled closed polygon. noStroke = true; the visible top edge is
+  // rendered as a SEPARATE inked stroke (next), so the cap reads as drawn rather
+  // than as a flat fill region.
   if (fillColor) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
@@ -849,135 +863,84 @@ const buildHair = (
       role: 'hair-top', fill: fillColor, noStroke: true,
     });
   }
-  // Hairline as a SEPARATE open curve — drawn only when we want it visible. For receding
-  // hairlines, this is skipped so there's no scar-like line between scalp and forehead.
-  if (drawHairlineStroke) {
-    curves.push({ kind: 'feature', closed: false, points: hairline });
-  }
 
-  // (Front-fringe-strand approach was tried and removed — at this resolution + ligne-claire
-  // style, separate front strands rendered as black fangs. Per-demographic VARIATION in
-  // hairline shape (widow's-peak, receding, parted) and forehead height now does the
-  // characterization work instead. See demographics.ts hair overrides.)
+  // Mass silhouette OUTLINE as inked stroke (perfect-freehand): confident, slightly
+  // tapered at the temples. This replaces the uniform thin polyline that previously
+  // outlined the cap.
+  curves.push({
+    kind: 'feature-ink', closed: false, points: topSil,
+    role: 'hair-top',
+    ink: { size: 1.5, taperStart: 0.10, taperEnd: 0.10, pressureMid: 0.95 },
+  });
 
-  // Interior detail — strokes sampled from a cranial vector field instead of
-  // hand-placed coordinates. Crown is a SINK; parting (when present) is a SADDLE.
-  // Each stroke is traced through the field for `length` units of UV-space,
-  // producing a curve that follows the hair-grow direction naturally.
-  if (style !== 'bald' && style !== 'none') {
-    // Slight off-center parting (just left of front-center) for visual interest.
-    const field = cranialField(rx, ry, rz, {
-      crown: { u: 0.05, v: 0.88 * Math.PI / 2 },  // top, very slightly to the right
-      parting: { u: -0.10, strength: 0.6 },        // parting just left of center
-      gravity: 0.6,
+  // Hairline as a discrete inked stroke (skipped on receding so there's no scar across
+  // the bald forehead). Tapered at both ends so it sinks into the temples gracefully.
+  if (!isReceding) {
+    curves.push({
+      kind: 'feature-ink', closed: false, points: hairline,
+      ink: { size: 0.9, taperStart: 0.25, taperEnd: 0.25, pressureMid: 0.70 },
     });
-
-    // Helper: place stroke seeds across a band on the upper cranium, biased to the visible front.
-    // We sample (count) seeds in azimuth across the front half of the head and at slightly varied
-    // latitudes so the strokes don't all start from the same horizontal row.
-    const seedRing = (count: number, uSpread: number, vBase: number, vJitter: number): UV[] => {
-      const out: UV[] = [];
-      for (let i = 0; i < count; i++) {
-        const t = count === 1 ? 0.5 : i / (count - 1);
-        const u = -uSpread + 2 * uSpread * t;
-        // Vary v slightly per seed using a deterministic pattern (sin) so seeds don't form a line.
-        const v = vBase + Math.sin(i * 1.7) * vJitter;
-        out.push({ u, v });
-      }
-      return out;
-    };
-
-    // Sparse interior detail per judge feedback: 2 strokes for short, 3 for medium/long.
-    // (Previous counts of 5/7/9 created a "sunburst seam" reading as cap construction.)
-    const config = style === 'short'
-      ? { count: 2, uSpread: 0.70, vBase: 0.55 * Math.PI / 2, vJitter: 0.06, strokeLen: 0.30, samples: 14 }
-      : style === 'medium'
-      ? { count: 3, uSpread: 0.95, vBase: 0.50 * Math.PI / 2, vJitter: 0.08, strokeLen: 0.45, samples: 18 }
-      : { count: 3, uSpread: 1.15, vBase: 0.45 * Math.PI / 2, vJitter: 0.10, strokeLen: 0.65, samples: 22 };
-
-    const seeds = seedRing(config.count, config.uSpread, config.vBase, config.vJitter);
-
-    // Stroke termination at the SHAPED hairline. For receding/widow's-peak shapes the hairline
-    // Y varies across X, so a fixed-Y threshold would let strokes spill into the bald region.
-    // We do a nearest-X lookup on the actual hairline polyline.
-    const stopAtHairline = (pt: Vec3): boolean => {
-      // Find the closest hairline point by X-distance and use its Y as the threshold.
-      let bestY = hairlineY;
-      let bestDist = Infinity;
-      for (const h of hairline) {
-        const dist = Math.abs(h[0] - pt[0]);
-        if (dist < bestDist) { bestDist = dist; bestY = h[1]; }
-      }
-      return pt[1] < bestY - headHeight * 0.005;
-    };
-
-    // Parting curve: only when not receding (a parting on a balding head is nonsensical).
-    if (drawInteriorStrokes) {
-      const partingPts = clumpStroke(
-        field,
-        { u: -0.10, v: 0.88 * Math.PI / 2 },
-        0.85, 18, 0.020,
-        stopAtHairline,
-      );
-      if (partingPts.length >= 2) curves.push({ kind: 'feature', closed: false, points: partingPts });
-    }
-
-    // Interior flow strokes — only when the head isn't receding (otherwise they read as
-    // scratches on the bald scalp).
-    if (drawInteriorStrokes) {
-      for (const seed of seeds) {
-        const stroke = clumpStroke(field, seed, config.strokeLen, config.samples, 0.018, stopAtHairline);
-        if (stroke.length >= 2) curves.push({ kind: 'feature', closed: false, points: stroke });
-      }
-    }
   }
 
-  // Side curtains for medium/long — each is a FILLED closed shape (a mass of hair falling
-  // past the face), not a single open stroke. Previous version drew two thin vertical lines
-  // that read as cables. Now: each side has a width that flares slightly down its length,
-  // matching the hair-fill color.
-  if (style === 'medium' || style === 'long') {
-    const fallLen = style === 'long' ? headHeight * 0.55 : headHeight * 0.22;
-    const innerOffset = 0.02;   // how much the inner edge tucks against the face/jaw
-    const outerOffset = style === 'long' ? 0.06 : 0.04;  // mass extends outward by this
-    const tipNarrow = 0.025;     // strands taper at the tip
-    const mkCurtain = (sign: number): Vec3[] => {
-      const topY = templeY * 0.95;
-      const bottomY = -ry * 0.20 - fallLen;
-      // Outer edge: flares outward from temple to mid-length, then tapers in at tip.
-      const outer: Vec3[] = [];
-      const outerSamples = 14;
-      for (let i = 0; i <= outerSamples; i++) {
-        const t = i / outerSamples;
-        const flare = Math.sin(Math.PI * t * 0.7);
-        const taperIn = Math.pow(Math.max(0, t - 0.7) / 0.3, 2) * tipNarrow;
-        const x = sign * (sx + outerOffset * flare - taperIn);
-        const y = topY + (bottomY - topY) * t;
-        outer.push([x, y, 0]);
-      }
-      // Inner edge: hugs the face — bows inward slightly past the jaw.
-      const inner: Vec3[] = [];
-      for (let i = 0; i <= outerSamples; i++) {
-        const t = i / outerSamples;
-        // Bow inward (toward x=0) in the middle so the strand tucks against the cheek.
-        const tuckIn = Math.sin(Math.PI * t) * 0.025;
-        const x = sign * (sx - innerOffset - tuckIn);
-        const y = topY + (bottomY - topY) * t;
-        inner.push([x, y, 0]);
-      }
-      return [...outer, ...inner.reverse()];
-    };
-    const leftCurtain = mkCurtain(-1);
-    const rightCurtain = mkCurtain(1);
-    // Render both as a filled mass + outline. Inherit the hair fill color so the curtain reads
-    // as part of the same hair body.
-    if (fillColor) {
-      curves.push({ kind: 'feature', closed: true, points: leftCurtain, fill: fillColor });
-      curves.push({ kind: 'feature', closed: true, points: rightCurtain, fill: fillColor });
+  // ---- TOPOLOGY: ONE parting curve from crown to hairline.
+  //
+  // The cranial field IS available (and is correct for interior flow strokes), but the
+  // parting itself is a single deliberate line a human draws — not a field trace. Tracing
+  // through the field's saddle puts us on the wrong side of the parting and sends the
+  // stroke sideways. So we hand-build a confident curve from the crown down-and-forward to
+  // the hairline, projected onto the cranial surface so it sits on the scalp.
+  //
+  // Per Leo's STOP #1 / STOP #2 — ONE parting, not many. ONE characterization, not many.
+  const drawInteriorStrokes = !isReceding;
+
+  if (drawInteriorStrokes && frontShape !== 'straight') {
+    // Slightly off-center (just left of midline) — Hergé convention for parted hair.
+    const partingX = -rx * 0.10;
+    const partingTopY = ry * 0.92;   // near the crown
+    const partingBottomY = hairlineY + headHeight * 0.02;
+    const partingPts: Vec3[] = [];
+    const partSamples = 14;
+    for (let i = 0; i <= partSamples; i++) {
+      const t = i / partSamples;
+      // Slight forward sweep (x moves toward face center as we descend toward forehead).
+      const x = partingX * (1 - 0.4 * t);
+      const y = partingTopY + (partingBottomY - partingTopY) * t;
+      partingPts.push([x, y, surfZ(x, y)]);
     }
-    curves.push({ kind: 'feature', closed: true, points: leftCurtain });
-    curves.push({ kind: 'feature', closed: true, points: rightCurtain });
+    curves.push({
+      kind: 'feature-ink', closed: false, points: partingPts,
+      ink: { size: 2.2, taperStart: 0.30, taperEnd: 0.45, pressureMid: 1.0 },
+    });
   }
+
+  // ---- INTERIOR characterization: ONE flow stroke sweeping from near the crown forward
+  // and to the LEFT temple. Leo's pass-3 §3 — Tintin's "single flick of asymmetry at the
+  // silhouette edge." Hand-built so we control direction precisely. Suppressed for
+  // 'receding' (would read as a scratch on bald scalp) and 'straight' (no parted feel).
+  if (drawInteriorStrokes && frontShape !== 'straight') {
+    const flickStartX = rx * 0.06;     // just to the right of center top (the parting)
+    const flickStartY = ry * 0.85;
+    const flickEndX = rx * 0.40;       // sweep out toward right temple
+    const flickEndY = hairlineY + headHeight * 0.08;
+    const flickSamples = 14;
+    const flickPts: Vec3[] = [];
+    for (let i = 0; i <= flickSamples; i++) {
+      const t = i / flickSamples;
+      // Cubic ease so the stroke curves through the middle, not a straight line.
+      const ease = t * t * (3 - 2 * t);
+      const x = flickStartX + (flickEndX - flickStartX) * ease;
+      const y = flickStartY + (flickEndY - flickStartY) * t;
+      flickPts.push([x, y, surfZ(x, y)]);
+    }
+    curves.push({
+      kind: 'feature-ink', closed: false, points: flickPts,
+      ink: { size: 1.6, taperStart: 0.55, taperEnd: 0.45, pressureMid: 0.95 },
+    });
+  }
+
+  // Reserve the cranial field for FUTURE per-school characterization strokes (Caniff
+  // hatching, manga fringe wedges). Imported but not used in this pass.
+  void cranialField; void clumpStroke;
 
   return curves;
 };

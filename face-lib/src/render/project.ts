@@ -12,6 +12,7 @@ export type Projected = {
   role?: Curve['role'];
   fill?: Curve['fill'];
   noStroke?: Curve['noStroke'];
+  ink?: Curve['ink'];
 };
 
 // Orthographic projection. Rotate around camera yaw (Y) and pitch (X), then drop Z.
@@ -31,6 +32,7 @@ export const projectCurve = (curve: Curve, p: FaceParams): Projected => {
     role: curve.role,
     fill: curve.fill,
     noStroke: curve.noStroke,
+    ink: curve.ink,
   };
 };
 

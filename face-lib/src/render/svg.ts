@@ -1,6 +1,7 @@
 import type { FaceParams } from '../model/params.ts';
 import type { Projected } from './project.ts';
 import { bounds } from './project.ts';
+import { inkStrokePath } from './strokes.ts';
 
 // Deterministic seeded RNG so identical params produce identical SVG.
 const mulberry32 = (seed: number): (() => number) => {
@@ -90,16 +91,20 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   type Prepped = {
     c: Projected;
     pxPath: string;
+    inkPath: string;       // populated for feature-ink curves; rendered as fill in pass 1
+    inkColor: string;
     fill: string | null;   // null = no fill pass
     isConstruction: boolean;
+    isInk: boolean;
     sw: number;
   };
   const prepped: Prepped[] = [];
   for (const c of ordered) {
     const isConstruction = c.kind === 'construction';
+    const isInk = c.kind === 'feature-ink';
     const px: Array<readonly [number, number]> = c.points.map(([x, y]) => [tx(x), ty(y)] as const);
     if (px.length === 0) continue;
-    const wobbled = isConstruction ? px : wobble(px, jitter, rng);
+    const wobbled = (isConstruction || isInk) ? px : wobble(px, jitter, rng);
     const swVar = jitter > 0 ? (rng() - 0.5) * 0.4 : 0;
     // Silhouette gets a slightly heavier stroke than interior features — standard comic-art
     // figure-ground separation. Interior features keep the base weight.
@@ -108,11 +113,23 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
     const sw = isConstruction
       ? p.style.constructionWeight
       : Math.max(0.5, p.style.lineWeight * weightMul + swVar);
+    // Ink size is anchored to the same line weight, but scaled per InkProfile.size so
+    // hair partings (size ~1.4×) read as confident comic ink rather than scaffold weight.
+    let inkPath = '';
+    let inkColor = p.style.color;
+    if (isInk && c.ink) {
+      const sizePx = Math.max(1, p.style.lineWeight * c.ink.size);
+      inkPath = inkStrokePath(wobbled, c.ink, sizePx);
+      inkColor = c.ink.color ?? p.style.color;
+    }
     prepped.push({
       c,
       pxPath: pointsToPath(wobbled, c.closed),
+      inkPath,
+      inkColor,
       fill: c.fill ?? null,
       isConstruction,
+      isInk,
       sw,
     });
   }
@@ -120,6 +137,14 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   // Pass 1: fills only (no stroke). Painted in painter's order so later layers cover earlier ones.
   const paths: string[] = [];
   for (const item of prepped) {
+    if (item.isInk) {
+      // Inked stroke — render the perfect-freehand outline polygon as a fill. No separate
+      // stroke pass for inked strokes (they're already the right shape).
+      if (item.inkPath) {
+        paths.push(`<path d="${item.inkPath}" fill="${xmlEscape(item.inkColor)}" stroke="none"/>`);
+      }
+      continue;
+    }
     if (!item.fill) continue;
     paths.push(
       `<path d="${item.pxPath}" fill="${xmlEscape(item.fill)}" stroke="none"/>`,
@@ -127,9 +152,10 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   }
   // Pass 2: strokes for every curve. Skipped for curves marked noStroke (used for
   // hidden-edge fills like the receding-hairline cap, where the colored mass should
-  // bleed into the skin without a visible boundary line).
+  // bleed into the skin without a visible boundary line) or feature-ink curves
+  // (which are already rendered as a fill outline polygon in pass 1).
   for (const item of prepped) {
-    if (item.c.noStroke) continue;
+    if (item.c.noStroke || item.isInk) continue;
     const stroke = item.isConstruction ? p.style.constructionColor : p.style.color;
     const dash = item.isConstruction ? ' stroke-dasharray="4 3"' : '';
     paths.push(
