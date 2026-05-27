@@ -52,14 +52,21 @@ export const generateFace = (params: FaceParams): string => {
 
 // Convenience: compose presets + overrides and render in one call.
 // Cascade order (each layer overrides previous):
-//   defaults → STYLE → age → presentation → expression → character → overrides
-// Style is FIRST so it acts as a rendering base. Demographics (age × presentation)
-// then own proportions; if a demographic doesn't override a field, the style's
-// default for that field stays. Expression then layers emotion. Character is
-// the most specific identity. User overrides always win.
+//   defaults → STYLE → presentation → age → expression → character → overrides
 //
-// (Previous order had style LAST, which collapsed all demographic variation —
-// every Tintin face had the same skull. Fixed.)
+// Order rationale:
+// - STYLE first: rendering substrate. Sets line weight, eye style, etc.
+// - PRESENTATION next: gloss layer (lashes, lip fullness, slight jaw shape).
+// - AGE after presentation: age signals (elder eye underline, child cranium
+//   ratio, elder hairline recession) are the more SPECIFIC demographic axis
+//   and must dominate. Otherwise "elder feminine" reads as adult feminine
+//   (Pascal flagged this as demographic-axis collapse, 3/10 round).
+// - EXPRESSION: emotion overlay.
+// - CHARACTER: identity, the most specific data.
+// - OVERRIDES: user always wins.
+//
+// (Prior order had presentation AFTER age, which collapsed elder/teen/child
+// into their presentation when both were specified. The reorder fixes that.)
 export type ComposeArgs = {
   expression?: ExpressionName;
   age?: AgeName;
@@ -72,8 +79,8 @@ export type ComposeArgs = {
 export const composeFace = (args: ComposeArgs): string => {
   const params = mergeParams(
     args.style ? stylePreset(args.style) : undefined,
-    args.age ? agePreset(args.age) : undefined,
     args.presentation ? presentationPreset(args.presentation) : undefined,
+    args.age ? agePreset(args.age) : undefined,
     args.expression ? expressionPreset(args.expression) : undefined,
     args.character ? characterPreset(args.character) : undefined,
     args.overrides,
