@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
-import { composeFace, expressionNames, ageNames, presentationNames, styleNames, characterNames } from './api.ts';
-import type { ComposeArgs, ExpressionName, AgeName, PresentationName, StyleName, CharacterName, DeepPartial, FaceParams } from './api.ts';
+import { composeFace, expressionNames, ageNames, presentationNames, styleNames, characterNames, hairstyleNames } from './api.ts';
+import type { ComposeArgs, ExpressionName, AgeName, PresentationName, StyleName, CharacterName, HairstyleName, DeepPartial, FaceParams } from './api.ts';
 import { tools } from './llm-tools.ts';
 import { svgToPng } from './render/raster.ts';
 
@@ -69,6 +69,7 @@ GENERATE OPTIONS
   --presentation <name>     ${presentationNames.join(' | ')}
   --style <name>            ${styleNames.join(' | ')}
   --character <name>        ${characterNames.join(' | ')}
+  --hairstyle <name>        ${hairstyleNames.join(' | ')}
   --yaw <radians>           camera yaw (default 0 = front)
   --pitch <radians>         camera pitch (default 0)
   --height <px>             output height in px (default 600)
@@ -97,6 +98,7 @@ const cmdGenerate = (args: Args, sets: Array<[string, string]>): void => {
   if (args.has('presentation')) compose.presentation = String(args.get('presentation')) as PresentationName;
   if (args.has('style')) compose.style = String(args.get('style')) as StyleName;
   if (args.has('character')) compose.character = String(args.get('character')) as CharacterName;
+  if (args.has('hairstyle')) compose.hairstyle = String(args.get('hairstyle')) as HairstyleName;
 
   const overrides: DeepPartial<FaceParams> = {};
   const setOverride = (path: string, value: unknown): void => setPath(overrides as Record<string, unknown>, path, value);

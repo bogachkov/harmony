@@ -33,14 +33,21 @@ import {
   characterNames,
   type CharacterName,
 } from './characters/index.ts';
+import {
+  hairstyles,
+  hairstylePreset,
+  hairstyleNames,
+  type HairstyleName,
+} from './hairstyles/index.ts';
 
 export type { FaceParams, DeepPartial };
-export type { ExpressionName, AgeName, PresentationName, StyleName, CharacterName };
+export type { ExpressionName, AgeName, PresentationName, StyleName, CharacterName, HairstyleName };
 export { defaults, mergeParams };
 export { expressions, expressionPreset, expressionNames };
 export { ages, presentations, agePreset, presentationPreset, ageNames, presentationNames };
 export { styles, stylePreset, styleNames };
 export { characters, characterPreset, characterNames };
+export { hairstyles, hairstylePreset, hairstyleNames };
 
 // One-shot: build, project, render. Accepts a fully-resolved FaceParams.
 export const generateFace = (params: FaceParams): string => {
@@ -52,7 +59,7 @@ export const generateFace = (params: FaceParams): string => {
 
 // Convenience: compose presets + overrides and render in one call.
 // Cascade order (each layer overrides previous):
-//   defaults → STYLE → presentation → age → expression → character → overrides
+//   defaults → STYLE → presentation → age → HAIRSTYLE → expression → character → overrides
 //
 // Order rationale:
 // - STYLE first: rendering substrate. Sets line weight, eye style, etc.
@@ -61,17 +68,20 @@ export const generateFace = (params: FaceParams): string => {
 //   ratio, elder hairline recession) are the more SPECIFIC demographic axis
 //   and must dominate. Otherwise "elder feminine" reads as adult feminine
 //   (Pascal flagged this as demographic-axis collapse, 3/10 round).
+// - HAIRSTYLE after demographic: per Leo pass 5 §2 — a hairstyle is a chosen
+//   identity (a bob is a bob on any demographic). It must survive demographic
+//   hair-knob defaults; therefore applied AFTER demographic so it wins on hair
+//   conflicts. Hairstyle files touch only the `hair` block, so demographics
+//   still drive everything else (jaw, eyes, brows, ...).
 // - EXPRESSION: emotion overlay.
 // - CHARACTER: identity, the most specific data.
 // - OVERRIDES: user always wins.
-//
-// (Prior order had presentation AFTER age, which collapsed elder/teen/child
-// into their presentation when both were specified. The reorder fixes that.)
 export type ComposeArgs = {
   expression?: ExpressionName;
   age?: AgeName;
   presentation?: PresentationName;
   style?: StyleName;
+  hairstyle?: HairstyleName;
   character?: CharacterName;
   overrides?: DeepPartial<FaceParams>;
 };
@@ -81,6 +91,7 @@ export const composeFace = (args: ComposeArgs): string => {
     args.style ? stylePreset(args.style) : undefined,
     args.presentation ? presentationPreset(args.presentation) : undefined,
     args.age ? agePreset(args.age) : undefined,
+    args.hairstyle ? hairstylePreset(args.hairstyle) : undefined,
     args.expression ? expressionPreset(args.expression) : undefined,
     args.character ? characterPreset(args.character) : undefined,
     args.overrides,

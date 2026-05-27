@@ -9,6 +9,45 @@
 // anchors are computed as RATIOS of these masses (Loomis 1956), not as
 // additive Y-offsets, so proportion changes self-propagate.
 
+// PartingKind — discrete surface API for the parting topology choice. Per
+// Leo pass 5 §4.6 (categorical at the user-facing layer per Loomis 1956 +
+// Faigin 2012). The renderer maps this enum to a continuous partingU on the
+// scalp where two grain regions meet (hair-theorist HT-2).
+//   'none'       — no parting drawn (Asterix bowl, Goku spike).
+//   'centre'     — parting at scalp midline.
+//   'sideL'      — off-centre, slightly left of midline.
+//   'sideR'      — off-centre, slightly right of midline.
+//   'deepSideL'  — far-left parting (~3/4 of the way over).
+//   'deepSideR'  — far-right parting.
+//   'sweptBack'  — no parting; mass flows up + back (pompadour, slick).
+export type PartingKind =
+  | 'none' | 'centre' | 'sideL' | 'sideR' | 'deepSideL' | 'deepSideR' | 'sweptBack';
+
+// FlowStroke — one ink stroke inside the hair mass. The recipe carries an
+// explicit array of these, replacing the hardcoded "parting + 2 flow flicks"
+// composition. Each stroke is defined by start/end positions as fractions of
+// cranium radius (x: ratio of rx; y: ratio of ry) plus an ink-pen weight.
+// Stroke surfaces onto the cranial ellipsoid via the renderer.
+export type FlowStroke = {
+  startX: number;       // ratio of rx (−1..+1)
+  startY: number;       // ratio of ry (−1..+1)
+  endX: number;
+  endY: number;
+  size: number;         // ink size multiplier (× lineWeight in render)
+  pressureMid: number;  // 0..1; peak pressure at mid-stroke
+};
+
+// HairstyleRecipe — the load-bearing composition of a hairstyle. Per Leo
+// pass 5 §4.7: buildHair consumes a recipe rather than hardcoding the
+// composition. Each named hairstyle file (src/hairstyles/*.ts) sets BOTH the
+// silhouette knobs (templeRecession etc.) AND this recipe.
+export type HairstyleRecipe = {
+  parting: PartingKind;
+  flowStrokes: readonly FlowStroke[];
+  // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
+  // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
+};
+
 export type FaceParams = {
   head: {
     cranium: {
@@ -125,6 +164,11 @@ export type FaceParams = {
     crownPeakX: number;
     napeExtension: number;
     edgeKind: 'smooth' | 'spiked' | 'flicked' | 'edgeTextured' | 'crowSnipped';
+    // The composition recipe — per Leo pass 5 (research/hairstyles.md §4.7) +
+    // hair-theorist HT-2 (research/hair-theory.md §4 — parting is a continuous
+    // locus internally; the PartingKind enum is the surface API). Recipe replaces
+    // the previously hardcoded "parting + 2 flow flicks" composition in buildHair.
+    recipe: HairstyleRecipe;
   };
   neck: {
     // Per Leo §5: Bridgman cylinder + SCM V + trapezius wedge. SCM origin is the
@@ -271,6 +315,22 @@ export const defaults: FaceParams = {
     crownPeakX: 0,
     napeExtension: 0,
     edgeKind: 'smooth',
+    // Default recipe = the previously hardcoded buildHair composition: an
+    // off-centre-left parting plus two flow flicks (one each side). Preserved
+    // here so demographics that don't pick a hairstyle render approximately like
+    // pre-recipe behaviour. (Leo pass 5 §5 step 2 gating contract — Y endpoints
+    // shift slightly because endY is now a ratio of ry rather than absolute
+    // hairline+offset; new values are tuned to land on the hair mass across
+    // common demographics.)
+    recipe: {
+      parting: 'sideL',
+      flowStrokes: [
+        // Right-side flow — from near parting top, sweeping out + down toward right temple.
+        { startX:  0.04, startY: 0.86, endX:  0.42, endY: 0.55, size: 1.8, pressureMid: 0.95 },
+        // Left-side flow — heavy side of the parting, shorter.
+        { startX: -0.18, startY: 0.70, endX: -0.32, endY: 0.50, size: 1.4, pressureMid: 0.80 },
+      ],
+    },
   },
   neck: {
     visible: true,

@@ -806,6 +806,7 @@ const buildHair = (
   forehead: number, volume: number, fillColor: string | null,
   templeRecession: number, sideFall: number, crownPeakX: number,
   napeExtension: number, edgeKind: FaceParams['hair']['edgeKind'],
+  recipe: FaceParams['hair']['recipe'],
 ): Curve[] => {
   if (style === 'none' || style === 'bald') return [];
 
@@ -844,6 +845,36 @@ const buildHair = (
       // ONE outward bump near the right temple — Hergé forelock at the silhouette edge.
       const bump = Math.exp(-Math.pow((t - 0.22) / 0.05, 2));
       return -headHeight * 0.035 * bump;             // negative-y = OUTWARD (up/forward)
+    }
+    if (edgeKind === 'spiked') {
+      // Shounen silhouette teeth — 6 triangular spikes spanning nearly the
+      // full silhouette (first-pass had a smooth dome shoulder either side of
+      // the spike band; real shounen hair like Goku/Zoro spikes all the way to
+      // the temples). Each tooth is a sharp triangle ~9% headHeight tall.
+      // Per Leo pass-3 §4 / pass-5 §4.5; pedagogy: Crilley 2012 vol.1 shounen ch.
+      if (t < 0.05 || t > 0.95) return 0;
+      const spikes = 6;
+      const span = 0.90;
+      const local = (t - 0.05) / span * spikes;       // 0..spikes across the top band
+      const inSpike = local - Math.floor(local);      // 0..1 within current spike
+      // Asymmetric triangle: rises in first 65% of each tooth (the long lean
+      // direction), falls in last 35%. Off-centre peak gives a slight
+      // direction-of-styling lean.
+      const tri = inSpike < 0.65 ? inSpike / 0.65 : (1 - inSpike) / 0.35;
+      return -headHeight * 0.090 * tri;               // negative-y = outward (taller now)
+    }
+    if (edgeKind === 'edgeTextured') {
+      // Coily-canon arc bumps — small repeated outward bumps with a higher
+      // frequency than crowSnipped and consistent across the whole dome (the
+      // entire halo is textured, not just the front). Per Leo pass-2 §1 +
+      // hair-theorist HT-1: coily silhouettes are textured ALL the way around;
+      // distinguishes the look from a smooth dome with chop on top.
+      // Amplitude bumped after first-pass render — 0.022 was visually subtle;
+      // 0.045 reads clearly as coily texture rather than wave noise.
+      const phase = t * Math.PI;
+      const window = Math.max(0.5, Math.sin(phase));
+      const bump = 0.7 + 0.3 * Math.cos(t * 24.0);    // bias positive so bumps stack outward
+      return -headHeight * 0.045 * window * bump;
     }
     return 0;
   };
@@ -943,21 +974,33 @@ const buildHair = (
     });
   }
 
-  // ---- TOPOLOGY: ONE parting curve from crown to hairline.
+  // ---- TOPOLOGY + INTERIOR: driven by the recipe (Leo pass 5 §4.7).
+  // Previously hardcoded "parting curve + 2 flow flicks." Now the recipe field
+  // on FaceParams.hair carries a PartingKind enum + an explicit FlowStroke[]
+  // array, so different hairstyles (Pompadour, spike, bob, ...) compose
+  // different interior arrangements without touching buildHair.
   //
-  // The cranial field IS available (and is correct for interior flow strokes), but the
-  // parting itself is a single deliberate line a human draws — not a field trace. Tracing
-  // through the field's saddle puts us on the wrong side of the parting and sends the
-  // stroke sideways. So we hand-build a confident curve from the crown down-and-forward to
-  // the hairline, projected onto the cranial surface so it sits on the scalp.
-  //
-  // Per Leo's STOP #1 / STOP #2 — ONE parting, not many. ONE characterization, not many.
+  // Receding hair suppresses ALL interior strokes (parting + flows) — drawing
+  // them on a bald scalp reads as scratches (preserved from prior behaviour).
   const drawInteriorStrokes = !isReceding;
 
-  if (drawInteriorStrokes && frontShape !== 'straight') {
-    // Slightly off-center (just left of midline) — Hergé convention for parted hair.
-    const partingX = -rx * 0.10;
-    const partingTopY = ry * 0.92;   // near the crown
+  // PartingKind → continuous partingX on the scalp (hair-theorist HT-2:
+  // parting is mechanically a continuous locus; the enum is the user surface).
+  const partingXForKind = (kind: typeof recipe.parting): number | null => {
+    switch (kind) {
+      case 'none':       return null;
+      case 'sweptBack':  return null;        // mass flows up+back; no parting line
+      case 'centre':     return 0;
+      case 'sideL':      return -rx * 0.10;
+      case 'sideR':      return  rx * 0.10;
+      case 'deepSideL':  return -rx * 0.32;
+      case 'deepSideR':  return  rx * 0.32;
+    }
+  };
+  const partingX = drawInteriorStrokes ? partingXForKind(recipe.parting) : null;
+
+  if (partingX !== null) {
+    const partingTopY = ry * 0.92;
     const partingBottomY = hairlineY + headHeight * 0.02;
     const partingPts: Vec3[] = [];
     const partSamples = 14;
@@ -978,44 +1021,34 @@ const buildHair = (
     });
   }
 
-  // ---- INTERIOR characterization: TWO flow strokes, one on each side of the parting,
-  // following the hair-fall direction. Pascal feedback (4/10 round): interior was flat
-  // dead fill. Adding a deliberate flow-separator on EACH side of the parting suggests
-  // mass + volume without dropping into "draw individual strands" (Leo STOP #2). Total
-  // interior strokes: parting + 2 separators = 3 — the maximum Leo allowed.
-  // Suppressed for 'receding' (bald scalp) and 'straight' (no parting context).
-  if (drawInteriorStrokes && frontShape !== 'straight') {
-    const flickSamples = 14;
-    const mkSeparator = (sx: number, ex: number, sy: number, ey: number): Vec3[] => {
+  // ---- INTERIOR characterization: flow strokes from the recipe (Leo pass 5 §4.7).
+  // Each FlowStroke is start/end XY in cranium-radius ratios; renderer sweeps along
+  // the cranial surface with cubic ease and per-stroke ink weight. Pascal-validated
+  // black colour so dark hair doesn't swallow the strokes (round 5 feedback).
+  // Suppressed for 'receding' (bald scalp).
+  if (drawInteriorStrokes) {
+    const flowSamples = 14;
+    for (const fs of recipe.flowStrokes) {
+      const sx = fs.startX * rx;
+      const sy = fs.startY * ry;
+      const ex = fs.endX * rx;
+      const ey = fs.endY * ry;
       const pts: Vec3[] = [];
-      for (let i = 0; i <= flickSamples; i++) {
-        const t = i / flickSamples;
+      for (let i = 0; i <= flowSamples; i++) {
+        const t = i / flowSamples;
         const ease = t * t * (3 - 2 * t);
         const x = sx + (ex - sx) * ease;
         const y = sy + (ey - sy) * t;
         pts.push([x, y, surfZ(x, y)]);
       }
-      return pts;
-    };
-    // RIGHT-side flow: from near the parting top, sweep out and down to the right temple.
-    const rightFlow = mkSeparator(
-      rx * 0.04, rx * 0.42,
-      ry * 0.86, hairlineY + headHeight * 0.08,
-    );
-    curves.push({
-      kind: 'feature-ink', closed: false, points: rightFlow,
-      ink: { size: 1.8, taperStart: 0.55, taperEnd: 0.45, pressureMid: 0.95, color: '#000000' },
-    });
-    // LEFT-side flow: from below the parting, sweep down and slightly leftward.
-    // Shorter than the right flow — the left side of a Hergé part is the heavy side.
-    const leftFlow = mkSeparator(
-      -rx * 0.18, -rx * 0.32,
-      ry * 0.70, hairlineY + headHeight * 0.10,
-    );
-    curves.push({
-      kind: 'feature-ink', closed: false, points: leftFlow,
-      ink: { size: 1.4, taperStart: 0.60, taperEnd: 0.55, pressureMid: 0.80, color: '#000000' },
-    });
+      curves.push({
+        kind: 'feature-ink', closed: false, points: pts,
+        ink: {
+          size: fs.size, taperStart: 0.55, taperEnd: 0.45,
+          pressureMid: fs.pressureMid, color: '#000000',
+        },
+      });
+    }
   }
 
   return curves;
@@ -1684,6 +1717,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     rx, ry, rz, sx, browY, totalH,
     p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill,
     p.hair.templeRecession, p.hair.sideFall, p.hair.crownPeakX, p.hair.napeExtension, p.hair.edgeKind,
+    p.hair.recipe,
   ));
 
   // Hat (sits on top of head; opt-in via p.hat.style)
