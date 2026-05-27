@@ -17,8 +17,8 @@
 // become the filename prefix in the output dir.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { composeFace } from '../src/api.ts';
-import type { ComposeArgs, DeepPartial, FaceParams } from '../src/api.ts';
+import { composeFace, hairstyleNames } from '../src/api.ts';
+import type { ComposeArgs, DeepPartial, FaceParams, HairstyleName } from '../src/api.ts';
 import { svgToPng } from '../src/render/raster.ts';
 
 // ---- Ethnicity proxies (NOT a full ethnicity model — just skin/hair tone overrides;
@@ -160,7 +160,18 @@ const TEST_CASES: Sample[] = [
   { label: 'elder-fem-white',        args: { style: 'tintin', age: 'elder', presentation: 'feminine',  overrides: styleSkin(skinTones.paleWarm,   hairTones.white) } },
   { label: 'elder-fem-grey',         args: { style: 'tintin', age: 'elder', presentation: 'feminine',  overrides: styleSkin(skinTones.brownLight, hairTones.grey) } },
 
-  // === Tier 4: hairstyle archetypes beyond the demographic-preset defaults ===
+  // === Tier 4a: hairstyle PRIMITIVE (post Leo pass 5) — each registered hairstyle
+  // applied to all three primary demographics. Tests the "same hairstyle across
+  // demographics" orthogonality the hairstyle primitive was built to provide.
+  ...hairstyleNames.flatMap((hs) => [
+    { label: `masc-${hs}`,    args: { style: 'tintin', age: 'adult', presentation: 'masculine', hairstyle: hs satisfies HairstyleName } },
+    { label: `fem-${hs}`,     args: { style: 'tintin', age: 'adult', presentation: 'feminine',  hairstyle: hs } },
+    { label: `elder-${hs}`,   args: { style: 'tintin', age: 'elder', presentation: 'masculine', hairstyle: hs } },
+  ] satisfies Sample[]),
+
+  // === Tier 4b: legacy hairArchetypes (DeepPartial overrides) — pre-dating the
+  // hairstyle primitive. Keep for now; sunset once the hairstyle catalog covers
+  // every archetype, then delete.
   ...(Object.entries(hairArchetypes)).filter(([k]) => k !== 'preset').flatMap(([name, hairOv]) => [
     { label: `fem-hair-${name}`,  args: { style: 'tintin', age: 'adult', presentation: 'feminine',  overrides: hairOv } },
     { label: `masc-hair-${name}`, args: { style: 'tintin', age: 'adult', presentation: 'masculine', overrides: hairOv } },
