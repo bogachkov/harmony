@@ -467,3 +467,244 @@ Engine code paths:
 - `face-lib/research/hair.md` — primitive vocabulary (pass 1).
 - `face-lib/research/hair-pass-2.md` — schools, texture axis, license-
   verified import sources (pass 2).
+
+---
+
+## 8. Pass 4 — Mass silhouette differentiation audit (post-Pascal-3/10)
+
+*Pascal scored 3/10 on the refreshed gallery and called the oscillation
+signal: perfect-freehand is plumbed, but every demographic renders as the
+same chocolate dome with one vertical parting scratch. The previous pass
+fixed the motor layer (stroke quality). This pass fixes the symbolic layer
+(mass SHAPE). Fred: do not iterate `buildHair`'s constants again — the bug
+is in the parameterization, not the magic numbers.*
+
+### 8.1 Why the silhouette is a generic dome on every demographic
+
+Read `scaffold.ts:813–825`. The mass envelope `topSil` is a single
+ellipsoidal half-arc parameterized **only by Y-lift**:
+
+```
+startY  = templeY − 0.02·H              // both temples, symmetric
+domeT   = sin(θ)                         // smooth dome from 0 to π
+y(θ)    = startY + (ry − startY)·domeT + effectiveLift·domeT
+x(θ)    = sx·cos(θ)                      // ellipsoidal half-perimeter
+```
+
+There is exactly one shape-degree-of-freedom on the silhouette:
+`effectiveLift = volume · headHeight · lengthMul(style)`. It controls
+**height of the dome**. Everything else is hard-coded:
+
+- Temples land at `(±sx, templeY)`. No `templeRecession` knob — masculine
+  and feminine hair both meet the face at the same X,Y on each side.
+- Lower bound is `templeY` on BOTH sides. No `sideFall` — hair cannot
+  extend down past the temple. So "long feminine" and "cropped masculine"
+  share the same lower envelope.
+- The dome is **left/right symmetric by construction** (`cos(θ)` from 0 to
+  π). No asymmetry knob — Tintin's quiff has nowhere to live in the
+  silhouette; the flick (`scaffold.ts:920–939`) is an *interior* stroke
+  buried inside an unbroken dome.
+- The peak is at `θ = π/2` (top dead-center). No `crownPeakX` — the
+  apex never moves forward (Tintin quiff), back (slicked-back exec), or
+  drops (centre-part heavy fringe).
+- The arc is **C∞ smooth**. No break-points, no recession dip, no
+  triangular teeth, no edge texture. Every school renders as ligne-claire
+  smooth, even when the demographic preset says "short masculine" (which
+  in real comics has hairline corners, recession dip, or a crew-cut flat
+  top).
+
+**Conclusion: the mass primitive has ONE shape-knob (lift) and four
+hidden zero-knobs (recession, side-fall, peak-X, edge-kind).** No
+amount of tuning `volume` and `forehead` per preset can produce a
+differentiated silhouette set, because those knobs only move the
+existing dome up and down. Pascal's 3/10 is mechanical — the shape
+space *literally cannot represent the variation he is asking for*.
+
+This is exactly the oscillation pattern AGENTS.md predicts: the
+*primitive* is wrong, so iterating its parameters moves laterally.
+
+### 8.2 Minimum new shape knobs — five, no more
+
+Pedagogy (Faigin *The Artist's Complete Guide to Drawing the Head*, ch. 9
+"Hair as Mass"; Loomis 1956, "Hair as a Block on Top of the Block";
+Hampton ch. 7) is consistent: a hair MASS is described by **silhouette
+shape on five axes**, not by interior detail. Add these five knobs to the
+`hair` param group. Each must be **per-side capable** (left/right
+asymmetry) — but default symmetric. All five live on `massSilhouette3D`,
+not as new primitives.
+
+| # | Knob | Range | What it does to the envelope | Pedagogy |
+|---|---|---|---|---|
+| 1 | `templeRecession` | 0..1 | At `t ≈ 0.15` and `t ≈ 0.85` of the dome arc, **dip Y downward and X inward** by `recession · 0.08·H`. Produces the M-shape (Faigin's "widow's-peak inverse") or mature-masculine receding corners. 0 = flat across forehead (child / shoujo). | Faigin §9.3; Bridgman *Heads* fig. 41 (mature male hairline) |
+| 2 | `sideFall` | 0..1 | Allow the silhouette's lower bound at `t ∈ [0, 0.1]` and `t ∈ [0.9, 1]` to **drop below `templeY`** by `sideFall · 0.35·H`. Mass now extends past the ear (long-fem, teen-fem, bob). 0 = cropped above ear. | Hayashi *Bishoujo* §2 "side curtain"; Loomis 1956 plate 38 |
+| 3 | `crownPeakX` | −0.4..+0.4 | Shifts the dome apex from centre toward forehead (+) or nape (−). +0.25 = Tintin quiff; 0 = generic dome; −0.2 = slicked-back exec; +0.1 with `sideFall = 0` = adult masculine pomp. Implemented as a non-uniform reparameterization of θ. | Hergé canon (Sterckx 1988 p.92); Caniff *Terry* hair-block analyses |
+| 4 | `napeExtension` | 0..1 | At `t = 0.5` (the *back*, which is currently `(0, ry+lift)` — the top) we cannot extend further up; this knob extends the **rear lower envelope** down past `templeY` toward the neck. (Requires the silhouette polygon to gain rear vertices below templeY, not just on the front arc.) Long-fem signal; pageboy / bob fall. | Hayashi *Bishoujo*; Disney 2D animation model sheets (Pocahontas, Mulan) |
+| 5 | `edgeKind` | `'smooth' \| 'spiked' \| 'flicked' \| 'edgeTextured' \| 'crowSnipped'` | Discrete edge-modifier on the silhouette. `smooth` = ligne-claire. `flicked` = ONE asymmetric outward bump at `t = 0.2` (Tintin forelock — moves the flick from being a buried interior stroke to being PART OF the silhouette, which is where Hergé actually drew it). `spiked` = shounen. `edgeTextured` = coily canon. `crowSnipped` = short choppy ends (Vashti Harrison child style). | Pass-2 §3 + Crilley *Mastering Manga* vol.1; Nelson canon §6 |
+
+**Hairline as a SECONDARY axis (not a primary knob).** Pass-3 §6 STOP #3
+already flagged this: the hairline is a boundary, not the subject. Keep
+the existing `frontShape: 'straight' | 'widows-peak' | 'parted' |
+'receding'` — but understand that for demographic legibility it is the
+silhouette's `templeRecession` + `crownPeakX` that does the work.
+`receding` is a *consequence* of `templeRecession > 0.5` combined with
+`forehead > 0.55`, not an independent topology.
+
+**Why not more knobs.** Adding a sixth introduces interaction debt: every
+pair of knobs has a combinatorial preset surface that we must validate
+against real comic art. Five is the maximum Fred can hold in his head
+while writing one `buildHair`. AGENTS.md ("don't dump 7 parameters in
+parallel that happen to add up to old"): demographic presets must commit
+to a small ordered tree, not a high-dimensional knob bank.
+
+### 8.3 Distinct silhouettes for the Tintin-bar
+
+Pascal's reading: 2 silhouettes out of 6 are distinct (essentially
+"shorter dome" vs "taller dome"). The demographic axis is **not legible
+at thumbnail**, which is the working-pro side-character test.
+
+Minimum count for legibility: **5 distinct silhouettes**, one per
+demographic pillar (M / F / elder-M / elder-F / child) with teen-F
+allowed to overlap teen-M or fem-adult without losing the bar.
+
+Concretely, the five must be visually distinguishable from one another
+at thumbnail with the FACE MASKED. If you can only ID the demographic
+by looking at jaw/eyes, the hair primitive is failing — the hair
+silhouette must independently carry demographic readability, because
+in comics it does (Tintin recognizable hair-only, Asterix hair-only,
+Charlie Brown hair-only, Olive Oyl hair-only, the Calvin spike-only).
+
+### 8.4 Per-preset hair recommendations (concrete)
+
+Each preset names: SHAPE (silhouette envelope choice), HAIRLINE
+(boundary), CHARACTERIZATION (the one interior stroke). All five knobs
+are listed; missing = 0 / `smooth`.
+
+**masculine adult** — short pompadour-ish, the Caniff/Toth working-male
+default. Silhouette has **forward-shifted crown**, slight recession at the
+temples, NO side-fall. Reads as "structured, short, parted."
+- `templeRecession: 0.35`, `crownPeakX: +0.10`, `sideFall: 0`,
+  `napeExtension: 0`, `edgeKind: 'smooth'`
+- `frontShape: 'parted'`, `forehead: 0.46`, `volume: 0.07`
+- Characterization: parting at left of midline, ONE forelock flick
+  *escaping the silhouette* on the right (via `edgeKind: 'flicked'`
+  if Tintin-side-character; otherwise the existing interior flick).
+
+**feminine adult** — chin-length bob (the Hergé/Tintin supporting-fem
+default — Bianca Castafiore short variant, Tintin women generally). Mass
+**falls past the temple** to roughly mid-ear; hairline straight; crown
+centred but slightly raised; edge smooth.
+- `templeRecession: 0`, `crownPeakX: 0`, `sideFall: 0.45`,
+  `napeExtension: 0.30`, `edgeKind: 'smooth'`
+- `frontShape: 'parted'`, `forehead: 0.33`, `volume: 0.10`
+- Characterization: ONE side-curtain stroke (clumpStroke off the
+  forelock seed sweeping down toward the cheekbone), not a parting.
+
+**elder masculine** — significant recession + thinning. Silhouette
+PULLED BACK from the hairline corners; crown centred or slightly back
+(volume gravitates to the back as the front goes); no side-fall.
+- `templeRecession: 0.85`, `crownPeakX: −0.05`, `sideFall: 0`,
+  `napeExtension: 0`, `edgeKind: 'smooth'`
+- `frontShape: 'receding'`, `forehead: 0.65`, `volume: 0.04`
+- Characterization: NONE (no parting, no flick — bald-crown adjacent).
+  The defining feature is the M-shape recession, drawn by the
+  silhouette itself, not by a separate hairline stroke (STOP #3 holds).
+
+**elder feminine** — shorter than fem-adult, gathered up; greying not
+shape-modeled here. Mass sits closer to the cranium (lower
+`sideFall`), often a backward-volume puff.
+- `templeRecession: 0.10`, `crownPeakX: −0.10`, `sideFall: 0.20`,
+  `napeExtension: 0.15`, `edgeKind: 'smooth'`
+- `frontShape: 'parted'`, `forehead: 0.38`, `volume: 0.08`
+- Characterization: parting + ONE soft interior separator (clumpStroke
+  along the field; not a flick).
+
+**child** — round full cap, no recession, NO parting (kids' hair reads
+flat-front before parting habits set in — Loomis 1956 plate 30,
+Vashti Harrison's *Little Leaders* canon §6). Slight `crowSnipped` edge
+gives the choppy-fringe look ubiquitous in Western kid comics.
+- `templeRecession: 0`, `crownPeakX: 0`, `sideFall: 0.15`,
+  `napeExtension: 0.10`, `edgeKind: 'crowSnipped'`
+- `frontShape: 'straight'`, `forehead: 0.30`, `volume: 0.12`
+- Characterization: NONE. The choppy edge does the characterization.
+
+**teen feminine** — longer than fem-adult, hair as primary identifier.
+Big `sideFall`, big `napeExtension`, optional small flick.
+- `templeRecession: 0`, `crownPeakX: +0.05`, `sideFall: 0.85`,
+  `napeExtension: 0.70`, `edgeKind: 'flicked'`
+- `frontShape: 'parted'`, `forehead: 0.36`, `volume: 0.11`
+- Characterization: side curtain stroke + ONE inward fringe flick on
+  the forehead (the fringe-wedge primitive from §4 — already in the
+  primitive vocabulary; not yet wired).
+
+Reality check: at thumbnail with face masked, these are five distinct
+silhouettes (M-recession, F-bob, elder-M-deep-recession, elder-F-puff,
+child-cap) plus teen-F-long. That's 6 distinct shapes. Pascal's bar
+passes if Fred implements knobs 1–5 and these presets faithfully.
+
+### 8.5 STOP-the-line flags — mass silhouette specific
+
+These are in *addition* to §6's prohibitions, all of which still hold.
+
+**SS-1. Do NOT fix demographics by going back to pre-pullback caricature.**
+The demographics file (`presets/demographics.ts:117`) was pulled back
+explicitly because the prior fem preset rendered as "one scary looking
+ugly lady" (user verdict). The fix for collapsed differentiation is
+the silhouette knobs above, not re-cranking `bigonialWidth` and chin
+points. Caricature is a JAW failure mode; legibility belongs to HAIR.
+
+**SS-2. Do NOT add a sixth shape knob.** Five is the budget. If
+something doesn't fit (e.g. "asymmetric undercut" for a punk teen),
+that is a `'spiked'` or `'crowSnipped'` `edgeKind` variant, not a new
+parameter. If we need a sixth knob in six months, that is a *new
+section in this doc*, not a vibe-coded constant.
+
+**SS-3. Do NOT let the knobs interact non-orthogonally.** E.g. if
+`templeRecession` silently scales with `forehead`, presets become
+impossible to reason about. Each of the five knobs must do exactly one
+thing and not modify the others. (Implementation hint: build
+`templeRecession`'s deformation as an *additive* offset to `topSil`
+at the right θ range, not a multiplicative factor on `effectiveLift`.)
+
+**SS-4. Do NOT move the parting / flick before the silhouette is
+fixed.** The current flick is invisible because it lives inside an
+unbroken dome — perfect-freehand cannot save a stroke that has nothing
+to push against. Fix silhouette first; THEN evaluate whether the
+existing parting and flick still need adjustment. (They likely will,
+once `crownPeakX` and `edgeKind: 'flicked'` move the silhouette under
+them — but verify empirically.)
+
+**SS-5. Do NOT introduce a "hair style" name explosion.** Resist adding
+`'pompadour' | 'bob' | 'pixie' | 'mohawk' | 'bun' | ...` to the
+`style` enum. Style names are *compositions* of (length, knobs 1–5,
+edgeKind). The enum stays at `none | short | medium | long | bald`;
+demographic presets pick the knob tuple. AGENTS.md §3 ("symbolic
+compression"): names are derived, not primary.
+
+**SS-6. Do NOT skip the asymmetry path.** Real comic hair is rarely
+left-right symmetric (Tintin's quiff, Asterix's wings, almost every
+shoujo fringe). The five knobs above must accept `[L, R]` tuples or a
+scalar (broadcasted). If Fred ships them as scalar-only, the engine
+ossifies into bilateral symmetry and the next pass has to redo the
+plumbing. Default to scalar in the preset file (so it reads clean)
+but make sure the underlying type accepts tuple from day one.
+
+### 8.6 Implementation order for Fred (do not skip)
+
+1. Type-extend `FaceParams['hair']` with the five knobs (and the
+   scalar-or-tuple shape — `number | [number, number]`).
+2. Rewrite `topSil` generation in `buildHair` to consume them.
+   Single function, five additive deformations of the base arc.
+   ≤ 60 LOC.
+3. Update `demographics.ts` with the six presets above.
+4. Render gallery. Compare to Pascal's previous 3/10 set.
+5. Hand to Pascal. If Pascal still sees ≤2 distinct silhouettes, the
+   bug is in step 2 (the deformations aren't large enough to read at
+   thumbnail), NOT in the knob choice. Don't change the knob set; turn
+   the knob amplitudes up. If Pascal still scores ≤3/10 after that —
+   call Leo, the primitive needs another pass.
+
+*Sources added in pass 4:* Faigin *The Artist's Complete Guide to
+Drawing the Head*, Watson-Guptill 2012, ch. 9 "Hair"; Bridgman
+*Constructive Anatomy: Heads*, 1924, figs. 38–43; Sterckx 1988 p.92
+(Hergé hair geometry); Hayashi 2000 §2; Crilley 2012 vol.1; Loomis
+1956 plates 30, 38; Nelson, Harrison canon as cited pass-2 §1.

@@ -33,7 +33,11 @@ export const ages = {
     nose: { length: 0.14, width: 0.10 },
     mouth: { width: 0.18, yOffset: -0.01, upperCurve: 0.15 },
     ears: { helixProtrusion: 0.050 },
-    hair: { frontShape: 'straight', forehead: 0.30, volume: 0.10 },
+    hair: {
+      frontShape: 'straight', forehead: 0.30, volume: 0.12,
+      templeRecession: 0, sideFall: 0.15, crownPeakX: 0,
+      napeExtension: 0.10, edgeKind: 'crowSnipped',
+    },
   } satisfies DeepPartial<FaceParams>,
 
   teen: {
@@ -52,7 +56,11 @@ export const ages = {
     brows: { ridgeY: 0.06 },
     nose: { length: 0.24 },
     mouth: { upperCurve: 0.1 },
-    hair: { frontShape: 'parted', forehead: 0.40, volume: 0.06 },
+    hair: {
+      frontShape: 'parted', forehead: 0.36, volume: 0.11,
+      templeRecession: 0, sideFall: 0.50, crownPeakX: 0.05,
+      napeExtension: 0.45, edgeKind: 'smooth',
+    },
   } satisfies DeepPartial<FaceParams>,
 
   // ELDER: platysma failure → jowled topology. Pulled back: was too extreme on
@@ -82,7 +90,16 @@ export const ages = {
     brows: { fullness: 0.022, arch: 0.25, ridgeY: 0.05, length: 0.21 },
     nose: { length: 0.32, width: 0.16 },
     mouth: { width: 0.23, cornerLift: -0.003, labiomentalShow: 0.4 },
-    hair: { frontShape: 'receding', forehead: 0.55, volume: 0.03 },
+    // Elder hair — only the AGE-SPECIFIC knobs (recession, forehead, volume,
+    // crownPeakX-shifted-back, frontShape='receding'). Other knobs (sideFall,
+    // edgeKind) come from presentation. Per Leo §8.4: age signals hair retreat
+    // toward the crown — front recedes, peak shifts slightly back. edgeKind
+    // overrides 'flicked' or 'crowSnipped' back to 'smooth' (no characterization
+    // flicks on elderly hair).
+    hair: {
+      frontShape: 'receding', forehead: 0.58, volume: 0.04,
+      templeRecession: 0.55, crownPeakX: -0.07, edgeKind: 'smooth',
+    },
   } satisfies DeepPartial<FaceParams>,
 } as const;
 
@@ -111,7 +128,13 @@ export const presentations = {
     nose: { length: 0.30, width: 0.17 },
     mouth: { width: 0.27, upperCurve: 0, lipFullness: 0, labiomentalShow: 0.22 },
     ears: { helixProtrusion: 0.048 },
-    hair: { frontShape: 'parted', forehead: 0.46, volume: 0.05 },
+    // Per Leo §8.4 masculine-adult: forward-shifted crown, slight temple
+    // recession, no side-fall — reads as "structured, short, parted."
+    hair: {
+      frontShape: 'parted', forehead: 0.46, volume: 0.07,
+      templeRecession: 0.30, sideFall: 0, crownPeakX: 0.10,
+      napeExtension: 0, edgeKind: 'flicked',
+    },
   } satisfies DeepPartial<FaceParams>,
 
   // FEMININE: OVAL topology. Pulled back HARD per user feedback ("one scary
@@ -142,7 +165,13 @@ export const presentations = {
     brows: { fullness: 0.012, arch: 0.75, ridgeY: 0.08, length: 0.20 },
     nose: { length: 0.24, width: 0.11 },
     mouth: { width: 0.25, upperCurve: 0.30, lipFullness: 0.35, cornerLift: 0.003 },
-    hair: { frontShape: 'parted', forehead: 0.33, volume: 0.08 },
+    // Per Leo §8.4 feminine-adult: chin-length bob (Hergé/Tintin supporting-fem
+    // default). Mass falls past the temple; no temple recession; smooth edge.
+    hair: {
+      frontShape: 'parted', forehead: 0.33, volume: 0.10,
+      templeRecession: 0, sideFall: 0.45, crownPeakX: 0,
+      napeExtension: 0.30, edgeKind: 'smooth',
+    },
   } satisfies DeepPartial<FaceParams>,
 } as const;
 

@@ -1,7 +1,13 @@
 import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
-import { cranialField, clumpStroke } from './hair-field.ts';
+// cranialField and clumpStroke are imported on-demand when future per-school hair
+// characterization strokes are added (Caniff hatching, manga fringe wedges) — see
+// research/hair-tooling.md §4. Not used in the current pass: the parting and the
+// single characterization flick are hand-laid Beziers (the field's parting saddle
+// pushes traces sideways rather than forward; the field is correct for INTERIOR
+// flow strokes, not for boundary lines).
+import { /* cranialField, clumpStroke */ } from './hair-field.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
 // `role` lets the renderer identify special curves (silhouette, hair) for fills.
@@ -798,6 +804,8 @@ const buildHair = (
   rx: number, ry: number, rz: number, sx: number, browY: number, headHeight: number,
   style: FaceParams['hair']['style'], frontShape: FaceParams['hair']['frontShape'],
   forehead: number, volume: number, fillColor: string | null,
+  templeRecession: number, sideFall: number, crownPeakX: number,
+  napeExtension: number, edgeKind: FaceParams['hair']['edgeKind'],
 ): Curve[] => {
   if (style === 'none' || style === 'bald') return [];
 
@@ -810,19 +818,65 @@ const buildHair = (
   const sideTheta = Math.acos(Math.min(1, sx / rx));
   const templeY = ry * Math.sin(sideTheta);
 
-  // ---- MASS SILHOUETTE: closed envelope (slight lift above the cranium).
-  const topSamples = 64;
+  // ---- MASS SILHOUETTE: closed envelope with 5 additive deformations (Leo §8.2).
+  // t goes 0..1 over the dome arc, theta = t·π. The base is a half-ellipse; each
+  // knob is an additive Δx / Δy at the right t-band so the knobs are orthogonal.
+  const topSamples = 80;
   const topSil: Vec3[] = [];
   const startY = templeY - headHeight * 0.02;
+  const recessionMag = templeRecession * headHeight * 0.08;
+  const sideFallMag = sideFall * headHeight * 0.35;
+  const peakXOffset = crownPeakX * rx;
+  // Gaussian-like temple-band influence centered at t=0.18 and t=0.82 (the temples).
+  const tempInfluence = (t: number): number => {
+    const left = Math.exp(-Math.pow((t - 0.18) / 0.07, 2));
+    const right = Math.exp(-Math.pow((t - 0.82) / 0.07, 2));
+    return left + right;
+  };
+  // edgeKind: small periodic modifiers on the outer envelope.
+  const edgeJitter = (t: number): number => {
+    if (edgeKind === 'crowSnipped') {
+      // Choppy ends — high-frequency Y wobble across the front of the dome (t in 0.1..0.9).
+      const window = Math.sin(Math.PI * t);          // 0 at edges, 1 mid
+      return headHeight * 0.012 * window * Math.sin(t * 38);
+    }
+    if (edgeKind === 'flicked') {
+      // ONE outward bump near the right temple — Hergé forelock at the silhouette edge.
+      const bump = Math.exp(-Math.pow((t - 0.22) / 0.05, 2));
+      return -headHeight * 0.035 * bump;             // negative-y = OUTWARD (up/forward)
+    }
+    return 0;
+  };
   for (let i = 0; i <= topSamples; i++) {
     const t = i / topSamples;
     const theta = t * Math.PI;
-    const baseX = sx * Math.cos(theta);
     const domeT = Math.sin(theta);
+    // 1. Base ellipsoidal half-arc.
+    let x = sx * Math.cos(theta);
+    let y = startY + (ry - startY) * domeT + effectiveLift * domeT;
+    // 2. crownPeakX — shift apex toward forehead (+) or nape (−), proportional to dome height.
+    x += peakXOffset * domeT;
+    // 3. templeRecession — dip Y down + tuck X inward at the temple bands.
+    const tinf = tempInfluence(t);
+    y -= recessionMag * tinf;
+    x += recessionMag * 0.5 * tinf * (t < 0.5 ? 1 : -1);   // inward (positive at left temple t<0.5)
+    // 4. sideFall — drop Y below templeY at t∈[0, 0.06] and t∈[0.94, 1].
+    if (t < 0.06) {
+      y -= sideFallMag * (1 - t / 0.06);
+    } else if (t > 0.94) {
+      y -= sideFallMag * ((t - 0.94) / 0.06);
+    }
+    // 5. edgeKind — discrete edge modifier.
+    y += edgeJitter(t);
+    // Natural sub-millimeter wobble (independent of knobs; baseline ink-life).
     const naturalWobble = headHeight * 0.003 * Math.sin(t * 11.7);
-    const y = startY + (ry - startY) * domeT + effectiveLift * domeT + naturalWobble * domeT;
-    topSil.push([baseX, y, 0]);
+    y += naturalWobble * domeT;
+    topSil.push([x, y, 0]);
   }
+  // napeExtension — extends the rear lower envelope toward the neck. In FRONT view
+  // (yaw=0, pitch=0) this is barely visible; reserved for future 3/4 + back rendering
+  // so the param shape is stable in the meantime.
+  void napeExtension;
 
   // ---- HAIRLINE (boundary): one confident arc; widow's-peak adds a subtle V hint,
   // receding raises the line overall. Per Leo STOP #3, the hairline is a boundary,
@@ -937,10 +991,6 @@ const buildHair = (
       ink: { size: 1.6, taperStart: 0.55, taperEnd: 0.45, pressureMid: 0.95 },
     });
   }
-
-  // Reserve the cranial field for FUTURE per-school characterization strokes (Caniff
-  // hatching, manga fringe wedges). Imported but not used in this pass.
-  void cranialField; void clumpStroke;
 
   return curves;
 };
@@ -1604,7 +1654,11 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const features: Curve[] = [];
 
   // Hair (drawn first so other features can overlap it slightly via Z-order — painter actually sorts later)
-  features.push(...buildHair(rx, ry, rz, sx, browY, totalH, p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill));
+  features.push(...buildHair(
+    rx, ry, rz, sx, browY, totalH,
+    p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill,
+    p.hair.templeRecession, p.hair.sideFall, p.hair.crownPeakX, p.hair.napeExtension, p.hair.edgeKind,
+  ));
 
   // Hat (sits on top of head; opt-in via p.hat.style)
   features.push(...buildHat(rx, ry, sx, totalH, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));

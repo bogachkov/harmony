@@ -96,9 +96,35 @@ export type FaceParams = {
   };
   hair: {
     style: 'none' | 'short' | 'medium' | 'long' | 'bald';
+    // Hairline shape — boundary primitive, NOT the load-bearing characterization
+    // (see research/hair-tooling.md §6 STOP #3 / §8 SS-3). For demographic legibility,
+    // tune templeRecession + crownPeakX + sideFall instead. frontShape='receding'
+    // is treated as a CONSEQUENCE of templeRecession>0.5 + forehead>0.55, not an
+    // independent topology.
     frontShape: 'straight' | 'widows-peak' | 'parted' | 'receding';
     forehead: number;
     volume: number;
+    // Mass-silhouette shape knobs (Leo pass 4). Each knob does ONE thing on the
+    // envelope; orthogonal, no cross-interactions.
+    //   templeRecession: 0..1 — dip Y + tuck X inward at the temple bands (~t=0.15, t=0.85).
+    //                            Mature masculine recession; M-shape hairline.
+    //   sideFall:         0..1 — let the silhouette drop below templeY at the two extremes
+    //                            (t in [0,0.1] and [0.9,1]). Mass extends past the ear
+    //                            for bobs / long fem / teen.
+    //   crownPeakX:       -0.4..+0.4 — reparameterize θ so the dome apex shifts forward
+    //                            (+; Tintin quiff) or back (−; slicked exec). 0 = centred.
+    //   napeExtension:    0..1 — extends rear lower envelope toward the neck. Long-fem.
+    //                            Effects mainly visible in 3/4 + back views.
+    //   edgeKind:         silhouette-edge MODIFIER. 'smooth' = ligne-claire dome.
+    //                    'flicked' adds ONE asymmetric outward bump near a temple
+    //                    (Hergé forelock — promoted from interior stroke to silhouette).
+    //                    'crowSnipped' = small choppy ends (Western kids canon).
+    //                    'spiked' / 'edgeTextured' reserved for future schools.
+    templeRecession: number;
+    sideFall: number;
+    crownPeakX: number;
+    napeExtension: number;
+    edgeKind: 'smooth' | 'spiked' | 'flicked' | 'edgeTextured' | 'crowSnipped';
   };
   neck: {
     // Per Leo §5: Bridgman cylinder + SCM V + trapezius wedge. SCM origin is the
@@ -240,6 +266,11 @@ export const defaults: FaceParams = {
     frontShape: 'straight',
     forehead: 0.45,
     volume: 0.05,
+    templeRecession: 0,
+    sideFall: 0,
+    crownPeakX: 0,
+    napeExtension: 0,
+    edgeKind: 'smooth',
   },
   neck: {
     visible: true,
