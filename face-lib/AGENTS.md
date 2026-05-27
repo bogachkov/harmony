@@ -184,6 +184,28 @@ Use the anchor table. If hair is dead, no score above 4.
   with `character: 'haddock'` happens to look better as the engine improves,
   that is downstream — never the driver.
 
+- **Examples are not targets — the meta-Haddock rule.** When the user
+  references a specific character to illustrate a point (Sanji's forelock,
+  Robin's straight curtain, Goku's spikes, Captain Haddock), they are using
+  it as a METAPHOR for a class of variation the engine should support — NOT
+  as an optimization target. Fred MUST NOT then iterate the engine to make
+  that specific character render correctly. If "Sanji" came up, build the
+  general primitive (asymmetric forelock mass) that lets MANY characters
+  with that hair archetype work; do not check progress by "does it look
+  like Sanji yet."
+
+  Concrete tells that Fred is sliding into this trap:
+  - A research doc, hairstyle file, or character file named after the
+    referenced character (per HS-2 in `research/hairstyles.md`).
+  - Tuning constants in a primitive while mentally evaluating against a
+    specific real-world image.
+  - A Pascal round where the test set is dominated by attempts at one
+    referenced character.
+
+  When in doubt, ask: "If the user had named a different example in the
+  same category, would my work generalize?" If no, you've started
+  Haddocking. Stop and call Leo on the primitive.
+
 - **Variety in test rotation — uniformity is itself a Haddock.**
   Image generation is essentially free with this engine. Six similar faces
   is not a test set; it is a confirmation bias. Each iteration round, Fred
