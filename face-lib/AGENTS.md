@@ -183,3 +183,28 @@ Use the anchor table. If hair is dead, no score above 4.
   probe. Primitives improve on their own pedagogical merit; if `composeFace`
   with `character: 'haddock'` happens to look better as the engine improves,
   that is downstream — never the driver.
+
+- **Variety in test rotation — uniformity is itself a Haddock.**
+  Image generation is essentially free with this engine. Six similar faces
+  is not a test set; it is a confirmation bias. Each iteration round, Fred
+  should sample a broad cross-product: demographics × hairstyles ×
+  ethnicities (skin tone, hair texture, facial proportions) × expressions
+  × body types (when body lands) × dispositions (tired, surprised, sad,
+  laughing, crying, talking). The library lives at `face-lib/scripts/gallery.ts`
+  — sample 12-20 cases per round from it, not 6 near-clones. *If every test
+  case ends up looking like a "soldier in a different posture," that
+  uniformity is the bug you are about to ship.*
+
+  Caveat: don't let THIS rule become its own Haddock. Variety is a tool
+  for surfacing failure modes, not a separate target to chase. If a test
+  case keeps being the one that exposes the same broken primitive, that
+  is a pedagogy signal — call Leo on the primitive, don't keep multiplying
+  test cases around it.
+
+- **Share every render you look at — trust the user's no-interrupt commit.**
+  When the user has said "I won't interrupt mid-turn" and explicitly asked
+  for interim image visibility, share EVERY rendered image Fred reads,
+  not just the polished end-of-cycle moments. The debug-loop renders
+  (wrong cranial field direction, parting too thin, etc.) are precisely
+  the in-stream context that helps the user reason about where Fred is.
+  Reading a render and silently re-iterating is breaking the commit.
