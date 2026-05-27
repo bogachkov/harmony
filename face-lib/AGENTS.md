@@ -178,3 +178,8 @@ Use the anchor table. If hair is dead, no score above 4.
 - Research findings live in `face-lib/research/*.md` and are durable across
   sessions. Both Leo and Fred should read them before working on the
   corresponding primitive.
+- **Parked targets** — Haddock specifically. User directive: stop trying to
+  make him. Do not render him in interim galleries, do not use him as a test
+  probe. Primitives improve on their own pedagogical merit; if `composeFace`
+  with `character: 'haddock'` happens to look better as the engine improves,
+  that is downstream — never the driver.

@@ -1,3 +1,16 @@
+// PARKED — DO NOT iterate on this character.
+//
+// User directive (verbatim): "and hadock! just stop trying to make him. by
+// blustering thundering barnacle of thundering blustering spittoons - he has
+// become the moby dick to your captain ahab."
+//
+// Rule for future Fred: do NOT use Haddock as a test target. Do not render
+// him in interim galleries. Do not tune the engine to make him work. The
+// general primitives (jaw topologies, hair, facial hair) must improve on
+// their own pedagogical merit; Haddock is downstream of those primitives,
+// not the driver. He stays in the registry as evidence of the data-only
+// character pattern — that is all.
+//
 // Captain Archibald Haddock — Hergé, Tintin universe.
 //
 // Identifiable by:
