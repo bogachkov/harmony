@@ -116,18 +116,28 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Lloyd | Pass 3 — review Nick PR #2 alpha-shape | running | Three concerns flagged: LOC overrun, decision-1 default direction, ALPHA_FACTOR constant. |
 | Nick  | `tasks/nick-timmflat-pack.md` (PR #3) | running | Pack delta in `styles.ts` + 16-cell grid. File overlap with PR #2 is zero — parallel-safe. |
 
 ## Done this sprint (W2)
 
-- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Two commits
+- **Lloyd Pass 3** — `research/lloyd-pass-1.md`. Code review of Nick
+  PR #2. Verdicts: LOC overrun APPROVED-AS-IS (§7 projection was
+  naive about input scale, honest bill was always ~200 not 80);
+  decision-1 default split APPROVED-AS-IS (preserves byte-identical
+  baseline, mixture rule satisfied); ALPHA_FACTOR=1.5
+  APPROVED-AS-IS for v1, exposure deferred to W3-when-bitten
+  (filed in BACKLOG); dead-code at `hull.ts:71-86` NEEDS-CHANGES,
+  surgical 11-line drop landed inline by Bob (PROCESS.md exception)
+  as `dda5d0b`. No re-review.
+
+- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Three commits
   on vector-draw: engine (`hull.ts` alpha-shape + `params.ts` hullMode
   + `svg.ts` dispatch) + fixtures (`longCurtainAlpha`, `coilyHaloAlpha`,
-  index registration). 30/30 original catalog byte-identical (convex
-  default unchanged). longCurtain wimple eliminated; coilyHalo hexagon
-  eliminated. ALPHA_FACTOR = 1.5 (Lloyd's §7 starting guess held up).
-  LOC ~340 vs Lloyd's ~80 projection flagged. Lloyd reviews next.
+  index registration) + handoff. 30/30 original catalog byte-identical
+  (convex default unchanged). longCurtain wimple eliminated; coilyHalo
+  hexagon eliminated. ALPHA_FACTOR = 1.5 (Lloyd's §7 starting guess
+  held up). LOC ~340 vs Lloyd's ~80 projection — Lloyd accepted as
+  honest at input scale. **Box 2 fully closed.**
 
 - **Nick PR #1** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
   Three commits on vector-draw: `25dc884` (eye plumbing),

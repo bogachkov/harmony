@@ -99,6 +99,68 @@ export const styles = {
       cornerMarks: false,
     },
   } satisfies DeepPartial<FaceParams>,
+
+  // Timm flat-shape (Bruce Timm / DC Animated Universe tradition). Per W1 joint
+  // spec (research/stylepack-timmFlat-spec.md). Pedagogy: shape-is-everything +
+  // flat-fills are load-bearing. Categorical-jaw-topology dispatch through
+  // demographics IS the characterization signal. Hair is large geometric flat-
+  // fill silhouette with ZERO interior strokes (recipe.leads = []). Eye is the
+  // lid more than the pupil (Sito 2004 p.40) — heavy upper lid (lidLine 0.6),
+  // faint underline, no lashes. Per styles.ts header rule: no proportion writes.
+  // Colors at pack level are DEFAULTS — per-render skinFill / hairFill override
+  // (e.g. for "dark" cells in the 16-cell grid) MUST win over these.
+  timmFlat: {
+    style: {
+      lineWeight: 3.0,          // medium-heavy contour, animation-clean (heavier than tintin's 2.4)
+      jitter: 0,                // zero wobble — cel-clean
+      color: '#0a0a0a',         // true black (vs tintin's warm '#1a1410')
+      skinFill: '#fdd6b3',      // pale-saturated default — overrideable per render
+      hairFill: '#1a1a1a',      // very dark default — overrideable per render
+      background: '#e8e4d8',    // Rollo: warm-neutral plate, NOT pure white
+      showConstruction: false,
+    },
+    eyes: {
+      style: 'almond',          // explicitly almond, NOT dots
+      lidLine: 0.6,             // load-bearing heavy upper-lid stroke (Sito 2004 p.40)
+      underlineHint: 0.15,      // faint lower-lid hint
+      lashes: 0,                // no lash array (decision §1)
+    },
+    brows: {
+      style: 'single',          // single thick stroke
+      // fullness / length / arch stay demographic-owned (proportions-forbidden)
+    },
+    nose: {
+      style: 'minimal',         // single contour, no nostril dots, no bridge
+      bridgeVisible: false,
+      showNostrils: false,
+    },
+    mouth: {
+      lipFullness: 0,           // no vermilion modeling
+      cornerMarks: false,
+      upperCurve: 0,
+      labiomentalShow: 0,       // no Faigin sulcus for Timm
+    },
+    ears: {
+      helixProtrusion: 0.030,   // small flush ear (similar to tintin)
+      antihelixShow: 0,
+      tragusShow: 0,
+      conchaShow: 0,
+      lobeDrop: 0,
+    },
+    neck: {
+      scmShow: 0,
+      trapShow: 0,
+      laryngealProminence: 0,
+    },
+    hair: {
+      edgeKind: 'smooth',       // default — 'spiked' overrideable per character
+      recipe: {
+        parting: 'none',        // no parting line — silhouette carries identity
+        leads: [],              // CRITICAL: NO interior strokes (decision §5)
+        // clumpMode defaults to 'flat' from defaults; do not override.
+      },
+    },
+  } satisfies DeepPartial<FaceParams>,
 } as const;
 
 export type StyleName = keyof typeof styles;
