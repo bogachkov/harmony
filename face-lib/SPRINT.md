@@ -148,7 +148,8 @@ which is the right trade per the rule.
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| (none — Claudia returning W2 re-plan) | | | Next spawns queued below. |
+| Nick  | `tasks/nick-cascade-leak-fix.md` (PR #4) | running | Cascade-leak fix: extend `TIMM_PEDAGOGY` override OR promote `pack.suppressInteriorHairDetail` flag (Claudia gave inline authority). |
+| Lloyd | `tasks/lloyd-cascade-architecture.md` (design pass) | running | Written design only — covers cascade-merge + demographic-topology layer-of-fix questions. Nick implements in W3. |
 
 ## Done this sprint (W2)
 
