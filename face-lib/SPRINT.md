@@ -63,16 +63,20 @@ All four must be true:
   dropped pre-fix; default/ligneClaire renders with demographic
   presets now honor those knobs. Catalog unaffected. Filed for
   Pascal/Holly.**
-- [ ] **`hullMode: 'convex' | 'alpha'` knob landed.** Alpha-shape
-  merger in `src/render/hull.ts` (alpha auto-tuned from clump
-  spacing per Lloyd §7). Convex stays as a mode. The three W1
-  volume fixtures (`shortBob`, `longCurtain`, `coilyHalo`)
-  re-render with `hullMode: 'alpha'`; `longCurtain` no longer
-  reads as a wimple, `coilyHalo` no longer reads as a hexagon.
-  Bundled in the same PR: `hullGroup` keying switched to `centreU`
-  quadrant (Lloyd item 2, one-line at `scaffold.ts:1414`); debug
-  `data-hull-group` attr dropped (Lloyd item 3, ~6 LOC). Lloyd
-  reviews the alpha-shape PR.
+- [x] **`hullMode: 'convex' | 'alpha'` knob landed.** Alpha-shape
+  merger in `src/render/hull.ts` (Bowyer-Watson Delaunay +
+  α-complex; α auto-tuned from clump spacing × 1.5 per Lloyd §7).
+  Convex stays as a mode. **Decision (Nick): leave W1 fixtures
+  undefined → 'convex' as regression-history record; add sibling
+  `longCurtainAlpha` / `coilyHaloAlpha` fixtures with
+  `hullMode: 'alpha'` so alpha is REACHABLE as a preset.** No
+  `shortBobAlpha` (flat mode bypasses merger). 30/30 original
+  catalog SVGs byte-identical; alpha fixtures determinism-checked
+  (identical SVG on repeat). longCurtain wimple gone; coilyHalo
+  hexagon gone. LOC drift to ~340 vs Lloyd's ~80 projection
+  flagged in handoff. Bundled items (centreU key + debug attr)
+  landed earlier in PR #1. **Landed PR #2 — two commits on
+  vector-draw; awaiting Lloyd review.**
 - [ ] **`timmFlat` pack lands in `src/presets/styles.ts`** per the
   W1 spec. All 16 Rollo grid cells render at Pascal ≥ 5 + Rollo
   "would ship." The four-corner thumbnail test (cells 1, 4, 12,
@@ -112,9 +116,17 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Nick  | `tasks/nick-alpha-shape-hullmode.md` (PR #2) | spawning | Alpha-shape merger + `hullMode` knob. Lloyd reviews on completion. |
+| —     | —    | —      | Nick PR #2 done; awaiting Lloyd review trigger from Bob. |
 
 ## Done this sprint (W2)
+
+- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Two commits
+  on vector-draw: engine (`hull.ts` alpha-shape + `params.ts` hullMode
+  + `svg.ts` dispatch) + fixtures (`longCurtainAlpha`, `coilyHaloAlpha`,
+  index registration). 30/30 original catalog byte-identical (convex
+  default unchanged). longCurtain wimple eliminated; coilyHalo hexagon
+  eliminated. ALPHA_FACTOR = 1.5 (Lloyd's §7 starting guess held up).
+  LOC ~340 vs Lloyd's ~80 projection flagged. Lloyd reviews next.
 
 - **Nick PR #1** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
   Three commits on vector-draw: `25dc884` (eye plumbing),
