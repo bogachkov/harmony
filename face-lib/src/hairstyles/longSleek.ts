@@ -23,7 +23,7 @@ const longSleek: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'centre',
-      flowStrokes: [],
+      leads: [],
       waviness: 0,
       waveFrequency: 0,
     },

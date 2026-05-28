@@ -24,7 +24,7 @@ const bobChinLength: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'centre',
-      flowStrokes: [
+      leads: [
         // LEFT side-curtain — vertical stroke ALONG the side of the bob,
         // starting near the parting top and falling well past the temple to
         // suggest hair MASS rather than a thin tick. Pascal round 6: prior

@@ -25,7 +25,7 @@ const shortSwept: DeepPartial<FaceParams> = {
     edgeKind: 'flicked',
     recipe: {
       parting: 'sideL',
-      flowStrokes: [
+      leads: [
         { startX:  0.04, startY: 0.86, endX:  0.42, endY: 0.55, size: 1.8, pressureMid: 0.95 },
         { startX: -0.18, startY: 0.70, endX: -0.32, endY: 0.50, size: 1.4, pressureMid: 0.80 },
       ],

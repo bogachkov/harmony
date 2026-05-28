@@ -39,7 +39,7 @@ const curlyDome: DeepPartial<FaceParams> = {
     edgeKind: 'edgeTextured',
     recipe: {
       parting: 'none',
-      flowStrokes: [],
+      leads: [],
     },
   },
 };

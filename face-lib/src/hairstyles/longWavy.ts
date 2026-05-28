@@ -23,7 +23,7 @@ const longWavy: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'centre',
-      flowStrokes: [],
+      leads: [],
       waviness: 0.030,
       waveFrequency: 2.2,
     },

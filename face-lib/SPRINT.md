@@ -27,7 +27,6 @@ work with appropriate parallelism.
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Nick   | Bob-cap regression fix (3-line drawCap widen) + lead/fill rename | RUNNING | Per Leo pass 8 §3 + §2 — both independent of Lloyd's 3D design |
 | Lloyd  | 3D clump-volume refactor architecture | RUNNING | Per Leo pass 8 §1 — design before Nick implements |
 
 ## Blocked / pending
@@ -38,6 +37,25 @@ work with appropriate parallelism.
 
 ## Done this sprint
 
+- Nick pass 2 — Bob-cap regression fix + lead/fill rename. `tasks/nick-pass-2.md`.
+  Ship 1: widened `drawCap` at `scaffold.ts:972` so short/medium smooth/flicked/
+  crowSnipped styles draw the cap polygon. Fixes bobChinLength, shortSwept,
+  shortPompadour, shortReceding (all verified rendering with visible mass).
+  Ship 2: `HairstyleRecipe.flowStrokes` → `leads`; `Lead` type (née `FlowStroke`)
+  gains optional `flowWeight`; `fillBias` plumbed to recipe (behaviour OFF pending
+  Lloyd). All hairstyle files + demographics.ts updated. Pixel-equivalent renders
+  confirmed.
+- Lloyd pass 1 — 3D clump-volume refactor architecture.
+  `research/lloyd-pass-1.md` (198 lines). Types: `ClumpSpec` +
+  `ClumpTrace`; `Curve` gains `radiusProfile` / `hullGroup` /
+  `kind:'clump-volume'`; `HairstyleRecipe` gains
+  `clumpMode:'flat'|'volume'` (default 'flat'). Refactor seam:
+  `clumpStroke(field, ClumpSpec): ClumpTrace` — one function, one
+  return type. New file `src/render/hull.ts` (~150 LOC).
+  Two divergences from Leo (§0). Net +150 LOC (not Leo's +118 —
+  `flat` mode keeps cap polygon alive). Three test cases for Nick.
+  One tech-debt warning (convex hull collapses concavities).
+  Awaiting Tech Lead review before Nick spawns to implement.
 - Tech Lead — formalized six-role crew in `AGENTS.md`. Tech Lead +
   Leo + Pascal + Rollo + Nick + Lloyd.
 - Nick v1 — `verticalLift` recipe parameter + `shortPomp` preset. Cap

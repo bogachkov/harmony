@@ -24,7 +24,7 @@ const shortPompadour: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'sweptBack',
-      flowStrokes: [
+      leads: [
         // ONE upward stroke from mid-front-hairline rising toward the crown apex.
         { startX: 0.08, startY: 0.55, endX: 0.20, endY: 0.85, size: 1.6, pressureMid: 0.85 },
       ],

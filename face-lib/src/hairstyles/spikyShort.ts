@@ -23,7 +23,7 @@ const spikyShort: DeepPartial<FaceParams> = {
     edgeKind: 'spiked',
     recipe: {
       parting: 'none',
-      flowStrokes: [],
+      leads: [],
     },
   },
 };

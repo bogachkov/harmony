@@ -15,10 +15,10 @@
 //   volume:       0.12 — moderate base volume; verticalLift adds the extra height.
 //   templeRecession: 0.12 — clean masculine temple taper.
 //   parting: 'sweptBack' — no parting line; mass flows as a unit.
-//   flowStrokes: two strokes in the lifted zone — one forward sweep rising through
-//                the mass, one following behind it. Both start LOW (near forehead)
-//                and arc UP-AND-BACK so they carry directional flow, not just radial
-//                scatter from the crown.
+//   leads: two strokes in the lifted zone — one forward sweep rising through
+//          the mass, one following behind it. Both start LOW (near forehead)
+//          and arc UP-AND-BACK so they carry directional flow, not just radial
+//          scatter from the crown.
 
 import type { DeepPartial, FaceParams } from '../model/params.ts';
 
@@ -40,7 +40,7 @@ const shortPomp: DeepPartial<FaceParams> = {
     recipe: {
       parting: 'sweptBack',
       verticalLift: 0.45,
-      flowStrokes: [
+      leads: [
         // Primary sweep: rises from mid-front-hairline upward and back through the
         // lifted mass. Large ΔY crosses the crown zone; endX slightly negative
         // (nape side) carries the swept-back read.

@@ -28,7 +28,7 @@ const longCurly: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'centre',
-      flowStrokes: [],
+      leads: [],
       waviness: 0.075,
       waveFrequency: 5.0,
     },

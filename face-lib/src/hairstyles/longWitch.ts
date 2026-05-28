@@ -25,7 +25,7 @@ const longWitch: DeepPartial<FaceParams> = {
     edgeKind: 'crowSnipped',
     recipe: {
       parting: 'none',
-      flowStrokes: [],
+      leads: [],
       waviness: 0.085,
       waveFrequency: 4.5,
     },

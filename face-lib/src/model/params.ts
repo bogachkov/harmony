@@ -23,19 +23,28 @@
 export type PartingKind =
   | 'none' | 'centre' | 'sideL' | 'sideR' | 'deepSideL' | 'deepSideR' | 'sweptBack';
 
-// FlowStroke — one ink stroke inside the hair mass. The recipe carries an
-// explicit array of these, replacing the hardcoded "parting + 2 flow flicks"
-// composition. Each stroke is defined by start/end positions as fractions of
-// cranium radius (x: ratio of rx; y: ratio of ry) plus an ink-pen weight.
-// Stroke surfaces onto the cranial ellipsoid via the renderer.
-export type FlowStroke = {
+// Lead (née FlowStroke) — one ink stroke inside the hair mass. The recipe
+// carries an explicit array of these (the "leads" layer), replacing the
+// hardcoded "parting + 2 flow flicks" composition. Each lead is defined by
+// start/end positions as fractions of cranium radius (x: ratio of rx; y:
+// ratio of ry) plus an ink-pen weight. Stroke surfaces onto the cranial
+// ellipsoid via the renderer.
+// Per Leo pass 8 §2: flowStrokes ARE the leads. Renamed to make the
+// lead/fill two-layer model explicit. flowWeight is reserved for upcoming
+// fill-bias coupling (influences how strongly this lead seeds nearby clumps
+// when fillBias='follow-leads'); no behaviour change yet, default 1.0.
+export type Lead = {
   startX: number;       // ratio of rx (−1..+1)
   startY: number;       // ratio of ry (−1..+1)
   endX: number;
   endY: number;
   size: number;         // ink size multiplier (× lineWeight in render)
   pressureMid: number;  // 0..1; peak pressure at mid-stroke
+  flowWeight?: number;  // relative clump-seeding weight (default 1.0); reserved for fill-bias
 };
+
+// @deprecated — use Lead. Kept as an alias for one pass.
+export type FlowStroke = Lead;
 
 // HairstyleRecipe — the load-bearing composition of a hairstyle. Per Leo
 // pass 5 §4.7: buildHair consumes a recipe rather than hardcoding the
@@ -43,7 +52,15 @@ export type FlowStroke = {
 // silhouette knobs (templeRecession etc.) AND this recipe.
 export type HairstyleRecipe = {
   parting: PartingKind;
-  flowStrokes: readonly FlowStroke[];
+  // leads — the "soul" strokes of the hairstyle. A small N (0–5) of explicit
+  // ink lines that define the hair's flow direction and character. Each lead
+  // is rendered as a feature-ink stroke through perfect-freehand. Per Leo
+  // pass 8 §2: these were called flowStrokes; renamed to leads to make the
+  // lead/fill two-layer model explicit.
+  leads: readonly Lead[];
+  // @deprecated — use leads. Both fields are read; leads takes priority.
+  // Hairstyle files should be migrated to leads. Remove after next audit pass.
+  flowStrokes?: readonly Lead[];
   // Waviness applied to field-traced strokes (only used by the experimental
   // style='long' renderer for now — adds sinusoidal perpendicular displacement
   // to each stroke, envelope-windowed so endpoints stay fixed). 0 = straight,
@@ -65,6 +82,18 @@ export type HairstyleRecipe = {
   // 0.3..0.6 = visible pompadour rise; >0.8 = dramatic quiff.
   // Per mixture-not-survival rule: this is a new axis, not a replacement.
   verticalLift?: number;
+  // fillBias — controls how the ~28 clump-centre fill seeds are placed.
+  // Per Leo pass 8 §2: with 'follow-leads', clumps seed near the leads
+  // (weighted by each lead's flowWeight) so the fill layer follows the soul
+  // strokes. With 'free', clumps remain RNG-only (current behaviour for all
+  // existing styles).
+  // BEHAVIOUR CHANGE IS OFF FOR NOW — the coupling code is not yet wired.
+  // This field is plumbed so the type surface is ready; buildHair reads it
+  // but treats both values identically until the 3D clump-volume refactor
+  // (Lloyd's architecture) lands. No rendered-pixel change from adding this.
+  // Default 'follow-leads'. Per mixture-not-survival rule: 'free' preserves
+  // all existing aesthetics as reachable parameter points.
+  fillBias?: 'follow-leads' | 'free';
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
@@ -345,7 +374,7 @@ export const defaults: FaceParams = {
     // common demographics.)
     recipe: {
       parting: 'sideL',
-      flowStrokes: [
+      leads: [
         // Right-side flow — from near parting top, sweeping out + down toward right temple.
         { startX:  0.04, startY: 0.86, endX:  0.42, endY: 0.55, size: 1.8, pressureMid: 0.95 },
         // Left-side flow — heavy side of the parting, shorter.

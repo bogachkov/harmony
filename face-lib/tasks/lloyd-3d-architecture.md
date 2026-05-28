@@ -95,4 +95,28 @@ Write a design doc, not code. Specifically:
 
 ## Handoff
 
-(Lloyd fills in.)
+Design landed at `face-lib/research/lloyd-pass-1.md` (198 lines, under
+cap). Two opinionated divergences from Leo flagged in §0:
+
+1. `clumpStroke()` stays one function returning 3D data (not split
+   into trace+project). Projection stays at the existing
+   `Curve→Projected` boundary in `src/render/project.ts`.
+2. Volume rides on `Curve` via optional `radiusProfile` + `hullGroup`
+   + new `kind:'clump-volume'`. Scaffold doesn't need to know about
+   projection or hulls.
+
+Net LOC honest estimate: **+150**, not Leo's +118. The delta is
+`clumpMode:'flat'` keeping the cap polygon path 959-1045 alive — the
+mixture-rule cost, and worth it for ligne-claire preservation.
+
+New file required: `src/render/hull.ts` (~150 LOC, convex hull v1).
+~10 lines added to `svg.ts`. One helper added to `project.ts`.
+
+Three test cases specified for Nick (§6): `shortBob` (flat regression
+guard), `longCurtain` (volume gravity=0.8), `coilyHalo` (volume
+radial=+0.6).
+
+One tech-debt warning (§7): convex hull v1 will collapse concavities;
+alpha-shape needed within two sprints.
+
+Ready for Tech Lead review. Nick blocked on this until reviewed.

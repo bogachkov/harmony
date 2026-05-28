@@ -37,10 +37,10 @@ export const ages = {
       frontShape: 'straight', forehead: 0.30, volume: 0.12,
       templeRecession: 0, sideFall: 0.15, crownPeakX: 0,
       napeExtension: 0.10, edgeKind: 'crowSnipped',
-      // Child recipe: no parting, no flow strokes. The crow-snipped silhouette
+      // Child recipe: no parting, no leads. The crow-snipped silhouette
       // edge is the entire characterization (Loomis 1956 plate 30; Vashti
       // Harrison kid canon). Interior strokes on a child read as un-childlike.
-      recipe: { parting: 'none', flowStrokes: [] },
+      recipe: { parting: 'none', leads: [] },
     },
   } satisfies DeepPartial<FaceParams>,
 
@@ -115,7 +115,7 @@ export const ages = {
       // default-demographic face fell back to a parted-with-flicks recipe.
       recipe: {
         parting: 'none',
-        flowStrokes: [],
+        leads: [],
       },
     },
   } satisfies DeepPartial<FaceParams>,
@@ -157,7 +157,7 @@ export const presentations = {
       napeExtension: 0, edgeKind: 'flicked',
       recipe: {
         parting: 'sideL',
-        flowStrokes: [
+        leads: [
           { startX:  0.04, startY: 0.86, endX:  0.42, endY: 0.55, size: 1.8, pressureMid: 0.95 },
           { startX: -0.18, startY: 0.70, endX: -0.32, endY: 0.50, size: 1.4, pressureMid: 0.80 },
         ],
@@ -204,7 +204,7 @@ export const presentations = {
       napeExtension: 0.30, edgeKind: 'smooth',
       recipe: {
         parting: 'centre',
-        flowStrokes: [
+        leads: [
           { startX: -0.25, startY: 0.60, endX: -0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
           { startX:  0.25, startY: 0.60, endX:  0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
         ],

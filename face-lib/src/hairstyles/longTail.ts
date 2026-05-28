@@ -30,7 +30,7 @@ const longTail: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'centre',
-      flowStrokes: [],
+      leads: [],
       waviness: 0,
       waveFrequency: 0,
       tailMass: 0.85,

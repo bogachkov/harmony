@@ -23,7 +23,7 @@ const shortReceding: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'none',
-      flowStrokes: [],
+      leads: [],
     },
   },
 };

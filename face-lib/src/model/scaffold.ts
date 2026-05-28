@@ -1134,14 +1134,16 @@ const buildHair = (
     });
   }
 
-  // ---- INTERIOR characterization: flow strokes from the recipe (Leo pass 5 §4.7).
-  // Each FlowStroke is start/end XY in cranium-radius ratios; renderer sweeps along
+  // ---- INTERIOR characterization: leads from the recipe (Leo pass 5 §4.7 + pass 8 §2).
+  // Each Lead is start/end XY in cranium-radius ratios; renderer sweeps along
   // the cranial surface with cubic ease and per-stroke ink weight. Pascal-validated
   // black colour so dark hair doesn't swallow the strokes (round 5 feedback).
   // Suppressed for 'receding' (bald scalp).
+  // Read from recipe.leads (preferred) with fallback to deprecated recipe.flowStrokes.
+  const leadsArray = recipe.leads ?? recipe.flowStrokes ?? [];
   if (drawInteriorStrokes) {
     const flowSamples = 14;
-    for (const fs of recipe.flowStrokes) {
+    for (const fs of leadsArray) {
       const sx = fs.startX * rx;
       const sy = fs.startY * ry;
       const ex = fs.endX * rx;
