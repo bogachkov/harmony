@@ -46,4 +46,58 @@ Three connected questions for one audit pass:
 
 ## Handoff
 
-(Leo fills this in on completion.)
+Pass 8 appended to `face-lib/research/hair-tooling.md` §11 (199 lines,
+under the 200 cap).
+
+Decisions:
+
+1. **3D abstraction = 3D clump-volume.** Each clump is a swept tube
+   (centreline polyline + radius profile) rooted on scalp, with a
+   gravity term + sign-flippable radial term for coily. Net ~+200 LOC.
+   The refactor seam is `clumpStroke()` in `hair-field.ts` — UV→XYZ
+   becomes a STARTING point, not a constraint. The `topSil`/cap/shadow/
+   highlight machinery in `scaffold.ts:813-1045` collapses to a
+   projected-hull merge; Lloyd should plan that deletion alongside the
+   addition so net LOC FALLS. Justified not by any single pass but by
+   obviating three deferred escape primitives (forelockMass,
+   side-curtain fall, halo radiate).
+
+2. **Lead/fill = YES, but it's already half-built — rename and couple.**
+   `HairstyleRecipe.flowStrokes` IS the leads; the 28-50 clump centres
+   ARE the fill. Bug is naming and the absence of coupling. Rename
+   `flowStrokes` → `leads`, add per-lead `flowWeight`, add `fillBias`
+   recipe knob defaulting to `'follow-leads'`. ~50 LOC, mixture-safe
+   (`fillBias: 'free'` reproduces today's random field, preserving the
+   exp-wavy-1 chaotic aesthetic in BACKLOG). Does NOT require the 3D
+   refactor first — works in 2D today, upgrades for free when 3D lands.
+
+3. **Bob regression = pass 7 was 80% right, missing one boolean
+   clause.** Three-line fix: widen `drawCap` at `scaffold.ts:972` to
+   include `(style === 'short' || style === 'medium') && (edgeKind in
+   smooth|flicked|crowSnipped)`. This unregresses bobChinLength,
+   shortSwept, shortPompadour, shortReceding immediately, doesn't
+   contradict pass 7 (the cap dies anyway when 3D lands), and is
+   mixture-safe (widen, don't rewrite). Ship before the 3D work; the
+   sprint can't close with a HIGH regression open.
+
+Surprises:
+
+- The lead/fill abstraction the user described from his own drawing
+  experience matches the production-animation guide-curves convention
+  EXACTLY (Bruderlin 1999; Petrovic 2005; Yuksel 2009). Two completely
+  separate professional traditions converged on the same two-layer
+  model the user articulated. That convergence is the strongest
+  evidence I've seen this sprint that we're on the right primitive.
+
+- Pass 7 + commit `e8b9b52` was a closer call than I gave it credit
+  for. The cap-drop was structurally right for spiked/edgeTextured/
+  verticalLift; it just shouldn't have been universal. I share the
+  blame — my pass 7 prescription said "drop the cap for short/medium"
+  without per-edgeKind nuance. The fix is one clause, not a rewrite.
+
+- The 3D refactor LOC estimate (net +200) is smaller than the pass-5
+  recipe refactor was. Lloyd should not be intimidated by the framing.
+  The big win is in the DELETION column — `topSil` + cap + shadow +
+  highlight (~232 lines in scaffold.ts) collapses to projected-hull
+  merging (~150 lines). The new code is mostly the gravity-drape and
+  tube-hull primitives, not new wiring.

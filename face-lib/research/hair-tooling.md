@@ -986,3 +986,205 @@ verbatim.
 
 *Sources pass 7:* none new — Toth IDW 2011 ch.4 (clump-bridged
 silhouette), Faigin 2012 ch.9, Loomis 1956 pl.38, previously cited.
+
+---
+
+## 11. Pass 8 — 3D abstraction + lead/fill + bob-regression diagnosis
+
+*Three questions in one audit. The user's note: hair OCCUPIES 3D space,
+not paint on a scalp. The lead/fill question maps the user's own
+technique to API shape. The bob regression is pass 7's collateral. I
+treat them together because the right 3D answer makes the bob fix
+obvious, not orthogonal.*
+
+### 11.1 The 3D abstraction — pick one
+
+| Candidate | Cost | Verdict |
+|---|---|---|
+| **3D clump-volume** — each clump = swept tube (centreline polyline + radius profile) rooted on scalp, with gravity + sign-flippable radial term | ~200 net LOC | **ADOPT** |
+| Hair-shell offset surface | ~180 LOC | REJECT — collapses variety; no clump separation; coily halo fails. |
+| Voxelised density field | ~600 LOC + render cost | REJECT — overkill; mixture rule wants a recipe knob, not a renderer rewrite. |
+| Keep 2D-surface + bolt on escape primitives | ~40 LOC per escape mode | REJECT as architecture; viable as the STOPGAP we already use (`tailMass`). |
+
+**Why clump-volume wins.** Pedagogy + physics agree the clump is the
+unit (Loomis pl.38; Toth IDW2011 ch.4; Robbins 2012 ch.9; Bertails
+SIGGRAPH 2006; hair-theory §2). Every working animation pipeline runs
+**guide curves + interpolated children** with per-guide volume — Maya
+nHair, Yeti, Houdini Karma, Blender particle hair. That is a 3D clump.
+The engine's `clumpStroke()` is already a polyline sampler; we promote
+it from "polyline on a surface" to "polyline through space with a
+radius and a gravity term."
+
+**What it buys over 2D-surface:**
+
+1. Mass falls THROUGH air past the cranium silhouette. A bob, a
+   curtain, a forelock all need points BELOW the chin or FORWARD of
+   the face — there is no UV in the cranial field that represents
+   "4 cm in front of the ear." 2D-surface forces every such case into
+   an ad-hoc escape primitive (`tailMass` was the first).
+2. Silhouette emerges from the projection of clump hulls — Toth's
+   bridging is automatic. Pass 7 §10.2's "hard horizontal line = shadow
+   polygon edge" disappears because there IS no shadow polygon; the
+   silhouette IS the union of projections.
+3. Forelock occlusion (BACKLOG `forelockMass`) becomes "a clump whose
+   centreline drapes in front of the face plane" — render-order falls
+   out of Z, not a separate primitive.
+4. Coily volume — `gravityFactor < 0` (spring > weight, hair-theory §5)
+   drives clumps radially outward instead of down. Same primitive,
+   different sign. Mixture rule: knob, not new primitive.
+
+**Doesn't buy:** light physics (we're still drawing ink). Doesn't fix
+curl-as-helix (§9.3 arc-stack is still needed).
+
+**LOC: ~+280 new, ~-80 deletion of `topSil`/cap/shadow/highlight in
+scaffold.ts:813-1045. Net ~+200.** Smaller than the pass-5 recipe
+refactor. The cranial field's UV→XYZ map stays; XYZ becomes a STARTING
+point rather than a constraint. `clumpStroke()` signature changes by
+~30 lines.
+
+**Can 2D-surface be saved without the refactor? Honest answer: no, but
+not for the reason the user thinks.** 2D-surface is not load-bearingly
+broken — it carries pass 7. What it cannot do is the negative-space
+cases (forward-of-face forelock, below-chin fall, beyond-cranium halo).
+Three are deferred in BACKLOG; each costs ~50 LOC of escape primitive.
+The refactor pays for itself in deferred-primitive avoidance across the
+next three passes, not in any single pass. Lloyd should price it that
+way, not as "fix the bob."
+
+### 11.2 Bob-cap regression — was pass 7 right?
+
+**Pass 7's prescription was right; the implementation went one step
+too far for one edgeKind branch.** Pass 7 §10.4 said: drop the cap for
+short/medium, let strokes carry. Commit `e8b9b52` dropped it for
+`smooth|flicked|crowSnipped`; commit `618800d` restored it for
+`spiked|edgeTextured` because those have silhouette extensions strokes
+don't reach. What pass 7 and the implementer both missed: **smooth +
+short + sideFall>0 is the densest mass case in the catalog**. The bob
+has sideFall=0.55, a large envelope that 50 short clumps don't fill.
+Long hair gets away with no cap because each stroke is 4× the length —
+visual coverage scales with length, not count. Short-smooth-sideFall is
+the regime where pure-stroke is under-resolution. Same primitive bug
+pass 7 was solving, but from the inside.
+
+| Fix | Cost | Verdict |
+|---|---|---|
+| **(a) Restore cap for `smooth\|flicked\|crowSnipped` when `style: short\|medium`** — widen the boolean clause | ~3 LOC | **INTERIM — DO THIS NOW.** Unregresses 4 hairstyles. Doesn't block the 3D refactor; cap polygon dies anyway when clump-volumes ship. |
+| (b) Bump density to 80-100 clumps for short-smooth | ~20 LOC | REJECT — trips SM-1 ceiling; masks the primitive bug; CC-style band-aid. |
+| (c) Wait for 3D refactor | weeks | REJECT alone; OK as long-term cleanup. |
+
+Mixture rule: widen the condition, don't rewrite the primitive. The
+edit at `scaffold.ts:972`:
+
+```
+const drawCap =
+  edgeKind === 'spiked' || edgeKind === 'edgeTextured' ||
+  verticalLift > 0 ||
+  ((style === 'short' || style === 'medium') &&
+   (edgeKind === 'smooth' || edgeKind === 'flicked' ||
+    edgeKind === 'crowSnipped'));
+```
+
+Pass 7 was right; pass 7's implementation was 80% right; the missing
+20% is one boolean clause.
+
+### 11.3 Lead/fill — yes, but it's already implicit, just unnamed
+
+The user's lead/fill technique maps to two real traditions:
+
+1. **Maya nHair / Yeti / Houdini guide-curves + interpolated children**
+   (Pixar, Weta, Disney TPS) — N "guide" curves authored deliberately,
+   thousands of "children" interpolated between them. Refs: Bruderlin
+   "Hair sketch" SIGGRAPH 1999; Petrovic, Henne, Anderson "Volumetric
+   methods for simulating hair on production characters" SIGGRAPH 2005;
+   Yuksel, Schaefer, Keyser "Hair meshes" ACM TOG 2009.
+2. **Ribbon-based hair for stylised CG** — Arc System Works' Guilty
+   Gear, Park "Stylised hair ribbon shading for Guilty Gear Xrd" GDC
+   2015. Small N of ribbon leads modelled; fill strands procedural.
+
+Comic-art mapping (Loomis pl.38; Toth IDW2011 ch.4; Hayashi 2000 §2;
+Crilley 2012; Faigin 2012 ch.9 "lead lines"; Hampton 2009 ch.7 "primary
+masses → secondary flows"): the artist draws 5-15 keys — parting,
+curtain, forelock, 1-2 separators — then fills along them. Every comic
+hair tutorial teaches this. **The engine already has both layers**:
+`HairstyleRecipe.flowStrokes` is the leads (bobChinLength 2, shortSwept
+2, shortPompadour 1); the 28-50 clump centres are the fill. **The two
+layers exist; they are not named; and the fill does not follow the
+leads.** That is the bug. The fix is naming and coupling.
+
+**Recommended API change to `HairstyleRecipe`:**
+
+```ts
+type HairstyleRecipe = {
+  parting: PartingKind;
+  leads: readonly Lead[];          // RENAMED from flowStrokes
+  fillBias?: 'follow-leads' | 'free' | 'mixed';  // default 'follow-leads'
+  // existing knobs untouched
+};
+type Lead = FlowStroke & { flowWeight?: number };  // 0..1, default 0.6
+```
+
+Rename uses artist vocabulary (Faigin "lead lines"; Hampton "primary
+masses"). For each fill clump, find the nearest lead in 3D, bias the
+clump direction toward the lead's tangent by `flowWeight`. ~50 LOC at
+scaffold.ts:1260. Works in 2D today; upgrades to 3D for free when
+clump-volumes land. `fillBias: 'free'` reproduces today's random
+clumping — preserves the BACKLOG exp-wavy-1 chaotic aesthetic.
+
+### 11.4 STOP flags — additive to §6 / §8.5 / §9.6 / §10.6
+
+**LF-1.** Do NOT add a third layer. Two layers is the comic-art
+tradition. If a hairstyle needs more structure, add leads, not depth.
+
+**LF-2.** Do NOT use 3D as an excuse for strand-level drawing. SM-2
+holds. The clump is the unit in 3D too; the volume is the clump hull,
+not a strand bundle. Bertails 2006 simulated 5-50 strand groups, not
+5000.
+
+**LF-3.** Do NOT delete the 2D-surface path on the 3D ship. Mixture
+rule. 2D-surface is the degenerate case (gravity=0, radius=0). Expose
+as `clumpMode: 'flat' | 'volume'`; default 'volume'; ligne-claire flat
+presets opt out. Tintin is genuinely 2D; a 3D fall would caricature
+him.
+
+**LF-4.** Do NOT block the bob fix on the 3D refactor. §11.2 (a) is
+3 lines. Ship it. HIGH severity does not wait on architecture.
+
+### 11.5 Executive summary — for the Tech Lead
+
+- **3D abstraction: clump-volume.** Each clump = 3D swept tube
+  (centreline polyline + radius profile) rooted on scalp, with gravity
+  + sign-flippable radial term for coily. **~+200 net LOC.** Pays back
+  by obviating three deferred escape primitives (forelockMass,
+  side-curtain fall, halo radiate), not by fixing any single pass.
+
+- **Lead/fill: YES, already implicit, rename and couple.** Rename
+  `flowStrokes` → `leads`, add per-lead `flowWeight`, add `fillBias`
+  recipe knob defaulting to `'follow-leads'`. Maps to Maya guide-curves
+  + comic-art pedagogy. ~50 LOC, does NOT require 3D first.
+  Mixture-safe: `'free'` restores current random clump field.
+
+- **Bob fix: interim 3 LOC now, long-term in 3D refactor.** Widen
+  `drawCap` for short/medium smooth/flicked/crowSnipped (one clause in
+  scaffold.ts:972). Pass 7 was right; the implementation was 80%
+  right; this is the missing clause. The cap polygon dies cleanly
+  when clump-volumes ship.
+
+- **For Lloyd:** the refactor seam is `clumpStroke()` in
+  `hair-field.ts` — change return type from "surface-bound polyline"
+  to "world-space polyline + per-point radius." UV→XYZ map stays; XYZ
+  becomes a STARTING point, not a constraint. `scaffold.ts:813-1045`
+  (topSil + cap + shadow + highlight) collapses to a projected-hull
+  merge — plan the deletion alongside the addition; net LOC FALLS if
+  Lloyd carries the deletion through. Keep `clumpMode:'flat'` for
+  ligne-claire (LF-3).
+
+- **For Nick:** order is (i) ship the 3-line bob fix on its own
+  commit; (ii) rename `flowStrokes → leads` + `flowWeight` +
+  `fillBias='follow-leads'` (additive, no default-behaviour change);
+  (iii) wait for Lloyd's clump-volume design before touching the field
+  tracer or cap polygon. (i) and (ii) are independent; (iii) blocks on
+  Lloyd.
+
+*Sources added pass 8:* Bruderlin, SIGGRAPH 1999. Petrovic, Henne,
+Anderson, SIGGRAPH 2005. Yuksel, Schaefer, Keyser, ACM TOG 2009. Park,
+GDC 2015. Bertails et al. SIGGRAPH 2006 + Hampton ch.7 (prior, reinforced).

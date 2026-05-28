@@ -27,16 +27,14 @@ work with appropriate parallelism.
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Leo    | Pass 8 — 3D abstraction + lead/fill + bob-regression diagnosis | RUNNING | `tasks/leo-3d-and-lead-fill.md`. Longest pole of the sprint. Unblocks Lloyd + Nick when it returns. |
+| Nick   | Bob-cap regression fix (3-line drawCap widen) + lead/fill rename | RUNNING | Per Leo pass 8 §3 + §2 — both independent of Lloyd's 3D design |
+| Lloyd  | 3D clump-volume refactor architecture | RUNNING | Per Leo pass 8 §1 — design before Nick implements |
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Leo    | 3D-abstraction audit + lead/fill audit | Needs to be spawned — Tech Lead intended to extend the prior Leo brief on return, but the prior Leo already returned and was implemented; the 3D audit was never actually launched |
-| Lloyd  | Architecture review of 3D hair refactor | Blocked on Leo's 3D-abstraction answer (above) |
-| Nick   | Implement 3D-aware hair primitive | Blocked on Lloyd's design |
-| Nick   | Restore bob/short cap rendering (HIGH regression — see BACKLOG) | Likely subsumed by Leo's 3D audit; verify with Leo first |
+| Nick   | Implement 3D clump-volume primitive | Lloyd's architecture |
 
 ## Done this sprint
 
@@ -52,6 +50,13 @@ work with appropriate parallelism.
 - Nick tuning pass 1 — three bug fixes shipped (commits 0e2e0ab,
   872aa45, 9173655). shortPomp topknot fixed; bobChinLength forehead
   scar fixed; longTail face-merge fixed. `tasks/nick-tuning-pass-1.md`.
+- Leo pass 8 — 3D abstraction + lead/fill + bob diagnosis audit.
+  Decisions: 3D clump-volume abstraction (~+200 net LOC, refactor
+  seam at `clumpStroke()`); lead/fill IS the right two-layer model
+  and is already half-built (`flowStrokes` are leads, clump centres
+  are fill — needs rename + coupling, ~50 LOC, mixture-safe);
+  bob-regression is a 3-line widen of `drawCap` condition at
+  `scaffold.ts:972`. Full audit in `research/hair-tooling.md` §11.
 
 ## History
 
