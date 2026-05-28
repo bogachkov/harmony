@@ -1,18 +1,17 @@
-// Felix W3 mega-regression: every pack × age × presentation × hairstyle.
-// Used to verify the new long-hair-flat-curtain primitive fires ONLY where
-// expected and nowhere else.
+// Felix W3 broad regression: test that the predicate fires ONLY where
+// expected across (pack, age, presentation, hairstyle) space.
 //
-// Expected differs: timmFlat × {longSleek, longTail, longCurly, longWavy,
-//                                longWitch} × every (age, presentation).
-// Expected identical: everything else (52 packs × non-timmFlat OR non-long).
+// Strategy: hash each rendered SVG and write a manifest. Compare manifests
+// between pre and post Felix.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import type { ComposeArgs, DeepPartial, FaceParams } from '../src/api.ts';
 import {
   composeFace, hairstyleNames, styleNames, ageNames, presentationNames,
 } from '../src/api.ts';
 
-const OUTBASE = process.argv[2] ?? '/tmp/felix-mega';
+const OUTBASE = process.argv[2] ?? '/tmp/felix-broad';
 mkdirSync(OUTBASE, { recursive: true });
 
 const TIMM_PEDAGOGY: DeepPartial<FaceParams> = {
@@ -22,7 +21,7 @@ const TIMM_PEDAGOGY: DeepPartial<FaceParams> = {
   nose: { style: 'minimal', bridgeVisible: false, showNostrils: false },
 };
 
-let n = 0;
+const manifest: string[] = [];
 for (const pack of styleNames) {
   for (const age of ageNames) {
     for (const presentation of presentationNames) {
@@ -32,10 +31,11 @@ for (const pack of styleNames) {
           overrides: pack === 'timmFlat' ? TIMM_PEDAGOGY : undefined,
         };
         const svg = composeFace(args);
-        writeFileSync(`${OUTBASE}/${pack}-${age}-${presentation}-${hs}.svg`, svg);
-        n++;
+        const hash = createHash('sha256').update(svg).digest('hex').slice(0, 16);
+        manifest.push(`${pack} ${age} ${presentation} ${hs} ${hash}`);
       }
     }
   }
 }
-process.stderr.write(`Rendered ${n} cells to ${OUTBASE}\n`);
+writeFileSync(`${OUTBASE}/manifest.txt`, manifest.join('\n') + '\n');
+process.stderr.write(`Wrote manifest with ${manifest.length} entries to ${OUTBASE}/manifest.txt\n`);

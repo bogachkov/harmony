@@ -251,12 +251,254 @@ trivially.
 
 ## Handoff
 
-(Felix fills in on completion. Required:
-- Investigation writeup — algorithm class, input-scale sizing,
-  parallel-fields finding.
-- Which approach taken (predicate vs knob) and why.
-- Per-cell pre-Pascal sniff reads for cells 6/7/11.
-- Regression sweep status on the long-hair styles across `default` /
-  `tintin` / `ligneClaire`.
-- Render paths.
-- Any graphics-math tech debt surfaced.)
+*— Felix, W3, first spawn.*
+
+### Headline finding (Felix-lane STOP that wasn't)
+
+The brief proposed two paths: a no-op predicate firing when `clumpMode:
+'flat'` AND no leads, or a `recipe.strandMode: 'off'` knob. **Both are
+wrong against the current code state.** Pre-Felix render of cells 6/7/11
+on the current `vector-draw` branch (post Nick PR #4) does NOT show the
+"strand-radial-from-crown / vertical-strands-past-chin" artifact Pascal
+Pass 1 scored at 2/2/2 — it shows a **completely bald head**. The
+strand layer is already silenced. The artifact moved.
+
+**Mechanism** (load-bearing, future Felix passes need this):
+Nick PR #4 promoted `recipe.suppressInteriorHairDetail` to a primitive
+flag that gates the entire clump-stroke field + sweep block + trailing-
+mass block in `scaffold.ts` (the three "field-tracer" layers — the
+brief's `src/render/field-tracer.ts` is a conceptual name; the actual
+implementation is in `scaffold.ts` and `model/hair-field.ts`). For
+`style: 'long'`, the cap polygon at L1080 already has a gate that
+EXCLUDES long-hair (`drawCap` only fires for short/medium/spiked/lift),
+so long-hair's mass is normally CARRIED BY the strand layer. When the
+strand layer is suppressed and the cap is also excluded, long-hair has
+NO geometry. Result: bald, on every (age × presentation × long-style)
+under timmFlat.
+
+This is the kind of estimate-vs-reality gap AGENTS.md §Felix names as
+Felix's lane: Lloyd's W2 estimate was "~30-50 LOC field-tracer no-op,"
+but the actual fix is **add a primitive** (a flat long-hair shape) for
+the suppress-detail-long-hair case, not no-op anything. The pre-Felix
+render is the input-scale-sizing data that would have caught this at
+design time.
+
+### Path taken — neither predicate nor knob
+
+**Stayed inside `scaffold.ts`. Pure graphics-math interior. No
+architectural surface touched (no `params.ts`, no `recipe.strandMode`
+type). Lloyd review NOT required.** Two-line change to the cap-fill
+gate (extends `drawCap` to fire for `style === 'long' &&
+suppressInteriorHairDetail`), plus a new curtain-polygon block that
+fills the side/below extension.
+
+The two pieces compose:
+1. **Cap polygon** (`[...topSil, ...hairline]`, z>0): reused from the
+   existing short/medium path. Paints OVER the face silhouette via
+   painter's-order avgZ, so the forehead reads as hair down to the
+   hairline tick. No new code — just a predicate extension.
+2. **Long-hair curtain polygon** (z=0): new closed polygon = topSil arc
+   on top + rounded-corner side drops + concave-bottom horizontal. avgZ
+   is 0 so it paints BEHIND the face silhouette; only the parts
+   extending OUTSIDE the silhouette (the two side curtains, the
+   below-chin nape extension) are visible. Bottom rises gently in the
+   centre (cosine bump) to soften the "block of hair" read.
+
+Why no knob: the existing `recipe.suppressInteriorHairDetail` is
+already the correct surface — it expresses pack-pedagogy intent ("Timm
+canon = flat shape"). Adding a second knob (`strandMode`) would
+fragment the surface. The primitive should respond to the existing
+flag.
+
+### Input-scale sizing (Felix-lane differentiator)
+
+Walked the 13-hairstyle catalog before designing. The relevant slice
+for this primitive:
+
+| Hairstyle         | style    | clumpMode | tailMass | Fires Felix block?         |
+| ----------------- | -------- | --------- | -------- | -------------------------- |
+| longSleek         | long     | flat      | 0        | Yes (timmFlat × this)      |
+| longTail          | long     | flat      | 0.85     | Yes (timmFlat × this)      |
+| longCurly         | long     | flat      | 0        | Yes (timmFlat × this)      |
+| longWavy          | long     | flat      | 0        | Yes (timmFlat × this)      |
+| longWitch         | long     | flat      | 0        | Yes (timmFlat × this)      |
+| longCurtain       | long     | volume    | 0        | No (isVolume excludes)     |
+| longCurtainAlpha  | long     | volume    | 0        | No (isVolume excludes)     |
+| coilyHalo         | medium   | volume    | 0        | No (medium, not long)      |
+| coilyHaloAlpha    | medium   | volume    | 0        | No (medium, not long)      |
+| bobChinLength     | medium   | flat      | 0        | No (medium, not long)      |
+| shortSwept        | short    | flat      | 0        | No (short, not long)       |
+| shortPomp/Pompadour | short  | flat      | 0        | No                         |
+| shortReceding     | short    | flat      | 0        | No                         |
+| shortBob          | short    | flat      | 0        | No                         |
+| spikyShort        | short    | flat      | 0        | No                         |
+| curlyDome         | short    | flat      | 0        | No                         |
+
+5 hairstyles activate the Felix block; only when paired with timmFlat
+(the only pack that sets `suppressInteriorHairDetail: true`).
+
+**Predicate truth table — verified against full demographic space
+(816 cell broad-regression sweep):**
+- Total cells: 4 packs × 4 ages × 3 presentations × 17 hairstyles = 816.
+- Cells that differ from pre-Felix baseline: **60**.
+- Breakdown: timmFlat × {longCurly, longSleek, longTail, longWavy,
+  longWitch} × 4 ages × 3 presentations = 5 × 12 = 60. **Exactly the
+  expected set, no over-fire, no under-fire.**
+- Cells byte-identical: **756 / 816** (every non-timmFlat pack, plus
+  timmFlat × non-long-flat-hairstyles including timmFlat × longCurtain
+  which sits in volume mode).
+
+### Parallel-fields finding
+
+The brief asked about parallel fields (per Nick's PR #4 diagnosis of
+4 unconditional blocks in `scaffold.ts`). For long hair, three blocks
+generate strand-class output:
+1. **Clump-stroke field** (L1304+, ~250 LOC): per-clump correlated
+   strokes seeded across the cranial field.
+2. **Trailing mass** (L1546+, ~70 LOC): 2D strands falling past the
+   chin for `tailMass > 0`.
+3. **Vertical lift sweep** (L1640+, ~70 LOC): 2D Bezier sweep for
+   `verticalLift > 0`.
+
+All three are gated by `!suppressDetail` (in the outer guard at L1304
+for blocks 1+2, and an explicit `!suppressDetail` clause for block 3).
+**No further unconditional blocks** for long-hair found. PR #4's
+suppress flag is comprehensive at the strand level. The bug was on the
+SHAPE side, not the strand side.
+
+### Per-cell pre-Pascal sniff reads (cells 6/7/11)
+
+- **Cell 6 (adult-fem-oval × longSleek):** Single closed flat shape.
+  Top dome reads as hair-cap; side curtains fall past the chin and
+  extend slightly below the chest. Hairline tick visible above brows.
+  No radial-from-crown strands, no vertical strands past chin (because
+  there are no strands). Predict Pascal lands at register-correct
+  (≥ 5).
+- **Cell 7 (adult-fem-oval × longTail):** Same construction as cell 6
+  but the curtain extends further (tailMass=0.85 adds ~0.48 headHeight
+  to the drop). Bottom edge cosine rise is small relative to total
+  drop, so the bottom reads as gently arched. Predict ≥ 5 with a small
+  "the bottom is geometric" sniff possibly knocking it to a 5 not 6.
+- **Cell 11 (teen-fem-ovalsoft × longSleek dark):** Construction
+  identical to cell 6 but with dark skin. Hair reads against the
+  brown skin tone; teen demographic differentiation is whisper-thin
+  from cell 6 (same `templeY`, same `forehead`, same recipe) — that's
+  the demographic-topology gap Lloyd's W3 Q2 owns, not Felix's.
+  Predict 4-5 (hair clean, demographic gap may dominate).
+
+The brief says "your goal is a clean flat-shape silhouette" — that
+goal is met. Pascal scores absolute.
+
+### Regression sweep status (mixture rule)
+
+- **default × every long hairstyle** (7 styles): byte-identical
+  pre-vs-post Felix (verified via felix-full-pre / felix-full-v4
+  diff and via felix-broad manifest hash diff).
+- **tintin × every long hairstyle** (7 styles): byte-identical.
+- **ligneClaire × every long hairstyle** (7 styles): byte-identical.
+- **timmFlat × non-long hairstyles** (incl. longCurtain in volume mode,
+  coilyHalo in medium): byte-identical.
+- **timmFlat × longCurtain** (volume mode): byte-identical (predicate
+  excludes via `!isVolume`).
+- **timmFlat × 5 long-flat hairstyles** (longSleek, longTail, longCurly,
+  longWavy, longWitch) × every (age, presentation): **changed
+  intentionally** — 60 cells. Pre-Felix all rendered bald; post-Felix
+  all render as a flat curtain shape.
+
+**Mixture rule passes. 756 of 816 (pack × demographic × hairstyle)
+combinations byte-identical.**
+
+### LOC tally
+
+Lloyd W2 estimate: ~30-50 LOC. Actual diff against pre-Felix scaffold:
+- +147 / -5 (net +142 lines) in `src/model/scaffold.ts`.
+- Of the +147: ~40 LOC is code; ~107 LOC is comments (load-bearing
+  per the brief — the curtain polygon shape, the avgZ painter-order
+  reasoning, the truth-table walk are all documented inline for future
+  Felix passes).
+
+Surfacing the overrun honestly per AGENTS.md §Felix. Reasons:
+- The "no-op the strand layer" framing in Lloyd's W2 ~30-50 LOC
+  estimate was based on the brief's assumed failure mode; the actual
+  failure mode (bald, not strandy) requires a NEW primitive (the
+  curtain polygon), not a no-op. Code volume scales with that.
+- Without comments the code change is ~40 LOC, in Lloyd's range.
+  With comments it's ~140 LOC. Per task brief acceptance #4 the
+  investigation writeup IS half the deliverable, and the comments are
+  that writeup at the line level.
+
+### Render paths
+
+- Probe (target cells 6/7/11 plus 4-pack × 7-long-style matrix):
+  `scripts/felix-longhair-probe.ts /tmp/<dir>` → `/tmp/<dir>/timmflat-6-7-11/`
+  + `/tmp/<dir>/longhair-matrix/{sheet,*}.{png,svg}`. Latest:
+  `/tmp/felix-final/`.
+- Full 16-cell timmFlat grid (cells 1-16 with 6/7/11 restored by
+  Nick Q2): `scripts/timmflat-grid.ts /tmp/<dir>`. Latest:
+  `/tmp/felix-grid-final/grid/sheet-full.png`.
+- Mixture-rule regression (pack × hairstyle, single demographic):
+  `scripts/felix-full-regression.ts /tmp/<dir>`. Pre-Felix baseline
+  at `/tmp/felix-full-pre`, post at `/tmp/felix-full-v4`. Diff: 5 of
+  68 (only timmFlat × 5 long-flat hairstyles).
+- Mixture-rule broad regression (full 816-cell pack × age ×
+  presentation × hairstyle): `scripts/felix-broad-regression.ts
+  /tmp/<dir>` writes a manifest of (cell, sha256[:16]). Pre at
+  `/tmp/felix-broad-pre/manifest.txt`, post at `/tmp/felix-broad-post/
+  manifest.txt`. Diff: 60 of 816 lines (exactly the expected set).
+- Pre-Felix scaffold snapshot (for re-deriving baselines):
+  `/tmp/scaffold-pre-felix.ts` (a copy of commit 8a9b5f0 :
+  src/model/scaffold.ts).
+
+### Graphics-math tech debt surfaced
+
+1. **`clumpMode === 'volume' && suppressInteriorHairDetail` renders
+   bald.** The clump-volume primitive emits its hull polygon ONLY when
+   the clump-stroke field block runs (L1304+, gated by
+   `!suppressDetail`). On timmFlat × volume-mode (longCurtain,
+   coilyHalo's alpha variants) the entire mass disappears. Fix would
+   parallel my Felix block: build a hull-shaped polygon directly from
+   `recipe.clumpVolume` (gravity, radial, radius) without strand
+   integration. Not in scope for cells 6/7/11 (which are all flat-mode
+   long-hair) but worth filing for the next volume-mode Felix pass.
+   The longCurtain test fixture explicitly notes "NOT an aesthetic
+   target" so it's not urgent.
+
+2. **The curtain polygon is geometric (rectangular-with-rounded-corners
+   + concave-bottom cosine).** Pascal may flag the bottom as
+   "computed-feeling." A future Felix pass could replace the bottom
+   with a hair-specific noise function (matching the existing
+   `topSil`'s natural wobble) or use sideFall/napeExtension to drive a
+   more organic curtain envelope. Not urgent — register reads clean,
+   strand artifact is gone, that's the W3 acceptance bar.
+
+3. **The hairline irregularity (`Math.sin(t*17.3)` at L1041) fires on
+   the cap polygon, which Timm canon explicitly wants zero-jitter on
+   (research/stylepack-timmFlat-spec.md §3). Currently the irregularity
+   is small (`headHeight * 0.008`) so it's barely visible at print
+   size, but a strict zero-jitter audit on Timm output would surface
+   it. Cross-cutting (affects bob/pomp cells too — not Felix-specific).
+   File for a future Pascal calibration pass or a strict-zero-jitter
+   pack flag.
+
+4. **The drawCap predicate is a growing OR-tree.** Five conditions
+   (spiked, edgeTextured, verticalLift, short/medium-with-soft-edge,
+   long-flat-suppress) and counting. Lloyd-lane refactor candidate
+   when the next condition arrives.
+
+### Files touched
+
+- `face-lib/src/model/scaffold.ts` (+147 / -5 — primitive interior).
+
+### Probes added
+
+- `face-lib/scripts/felix-longhair-probe.ts` — renders the 3 target cells
+  (6/7/11) at full size + the 4-pack × 7-long-hairstyle mixture-rule
+  matrix sheet. Visual probe for future passes on this primitive.
+- `face-lib/scripts/felix-broad-regression.ts` — writes a manifest of
+  `(pack, age, presentation, hairstyle, sha256[:16])` for every
+  combination (816 lines). Diff against the pre-Felix manifest to
+  confirm only the expected 60 cells (timmFlat × 5 flat-long ×
+  12 demographic combos) changed.
+
+Both probes are runnable standalone (no fixture dependencies). Removed
+the mega/full intermediate scripts; broad-regression subsumes them.
