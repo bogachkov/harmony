@@ -111,4 +111,145 @@ engine clean enough to keep moving?
 
 ## Handoff
 
-(David fills in on completion.)
+David's W4 directional call. (Note: written under a degraded tool
+channel — BACKLOG/SPRINT/Pascal-rescore could not be re-read live this
+session; this call rests on the task brief's quoted state, AGENTS.md,
+ROADMAP.md, and prior david handoffs, all of which I did read. If
+Claudia finds the BACKLOG ceiling-raiser list differs materially from
+what's quoted here, the *direction* still holds — only the named knobs
+in §B would shift.)
+
+### 1. Q1 trajectory verdict — ON TRACK, honestly at the floor
+
+We are on track for the Q1 goal, with one honest caveat that is a
+feature of our process, not a failure of it. The concrete deliverable
+is "N≥4 style packs at quality bar, demographic depth > pack count."
+We have 4 packs (default, tintin, ligneClaire, timmFlat) and timmFlat
+— the first pack built end-to-end under the structured Leo→Felix→Nick
+→Pascal process — closed at 16/16 ≥ Pascal-5 across the full 16-cell
+demographic grid, four-corner test passing, tintin×4 regression
+holding. That is the deliverable met as written: floor cleared, depth
+present, strict close (not ship-with-gap). The caveat: the deliverable
+is met at the *floor* (Pascal-5, "off-day-pro"), not at the working-pro
+target (Pascal-7) the ROADMAP names as the aspiration. "16/16 at
+off-day-pro across 4 packs" satisfies the letter of the Q1 goal. It is
+an open question — Gary's to answer — whether it satisfies the spirit
+of "really really good" and Gary's gut bar ("my non-artist friends
+would be impressed, i might use it in a video game as artwork"). That
+gap between letter-met and spirit-maybe is the whole substance of the
+W4 call below. Nothing is *off* track; the question is whether we spend
+the last week proving the ceiling or widening the floor.
+
+### 2. W4 direction — (B) primary, then (C). Defer (A) to Q2-open.
+
+**Weighting: B ~60%, C ~40%, A deferred (not cut).**
+
+**Primary: (B) Polish timmFlat toward master-tier (Pascal-5 → 6-7).**
+
+Rationale, in priority order:
+
+- **(B) is the de-risking move, and de-risking beats breadth at the
+  floor.** We are exactly at N≥4. A 5th pack at Pascal-5 grows the
+  count but proves nothing new — we already know the engine produces
+  off-day-pro packs; timmFlat demonstrated it. What we do NOT yet know
+  is whether the engine *can reach* confident-pro at all. If it can't,
+  that is the single most important thing to learn before Q2, because
+  the Q2→Q3 ship gate requires every Q1 pack to *extend across bodies/
+  clothes/poses at the quality bar* — and if the face ceiling is
+  Pascal-5, the clothed-character ceiling will be lower, and we'll find
+  out in Q3 when it's expensive. Proving the ceiling now, on the one
+  pack we've fully exercised, retires that risk for every future pack.
+
+- **(B) is the honest answer to Gary's bar.** Gary's bar is not "an
+  editor could find no fault" (that's Pascal-9). It's "doesn't suck /
+  friends impressed / usable as game artwork." Pascal-5 is *literally*
+  defined as "a real pro could plausibly have drawn this on an off day,
+  with visible weaknesses an editor would flag." A render an editor
+  would flag is a render a sharp non-artist friend might side-eye.
+  Pascal 6-7 is where "I'd actually drop this into my game" lives. (B)
+  is the most direct path to clearing Gary's *gut* bar, not just the
+  rubric floor.
+
+- **(B) uses fuel we already filed.** The BACKLOG ceiling-raisers
+  (highlightCutout, per-feature line-weight multiplier, and siblings)
+  were filed precisely as the Pascal-5→7 levers. W4 spends them on the
+  pack we understand best. This is depth-on-a-known-quantity, the
+  lowest-variance week available.
+
+- **Mixture rule is respected:** every ceiling-raiser lands as a new
+  knob defaulting to current behavior. timmFlat-at-5 stays a reachable
+  point; timmFlat-at-7 becomes a *new* reachable point. We are not
+  optimizing one preset and deleting the others (that would violate
+  Rollo's lane and the core engine rule) — we are expanding the
+  parameter surface upward on one pack to prove the surface *has* that
+  altitude.
+
+**Secondary: (C) Q1 closeout — the parts that gate Q2, only those.**
+
+(B) likely does not fill a full week alone, and the Q1→Q2 seam genuinely
+needs hardening before bodies/clothes/poses land. So fold in the
+*gating* slice of (C):
+
+- **Holly's first spawn (test-strategy doc).** Deferred since W1; it's
+  now overdue and it's exactly the right size to run in parallel with
+  (B). Q2 triples the primitive surface (torso, limbs, clothing layer,
+  pose) — entering that with no articulated regression convention is
+  how the cascade-leak class of bug comes back. Holly's doc is "what
+  does 'tests passed' mean for a parametric art engine" — a design
+  artifact, not test code. It must land before Q2, and W4 is the slot.
+- **A thin regression-coverage + BACKLOG-triage pass** so Claudia opens
+  Q2 against a clean board rather than a W1-W3 sediment of deferrals.
+
+**Deferred (NOT cut): (A) Pack #5.** The next-pack-spec slot stays
+filed. The right home for it is **Q2-open**, where it can be specced
+*with* its body conventions from the start (per the ROADMAP handoff
+rule that each pack carries its own body/clothes/pose conventions, not
+a generic body grafted on). Speccing pack #5 in W4 as a face-only pack
+and then re-opening it in Q2 to add a body is wasted motion. Leo + Rollo
+should spec pack #5 as a face+body pack at Q2-open. This is a mixture
+deferral, not a deletion — it goes to BACKLOG as "pack #5: spec at
+Q2-open, full-stack."
+
+**What slips if (B)+(C) overrun one week:** the (C) BACKLOG-triage and
+the broader (non-gating) regression coverage slip to Q2-open. The two
+hard W4 commitments are: (B) one honest attempt at Pascal-6-7 on
+timmFlat (Pascal re-scores; if it lands ≥6 we've proven the ceiling, if
+it lands 5 we've proven the *current* ceiling and that itself is the
+finding Gary needs), and Holly's test-strategy doc. Everything else is
+fill. Lloyd's Q1-closeout body-architecture design pass (ROADMAP: "last
+sprint of Q1 includes Lloyd's body-architecture design pass") is the
+one other Q1-scoped item — Claudia decides whether it rides W4 or opens
+Q2; my lean is Q2-open so W4 stays focused on proving the ceiling.
+
+### 3. For Gary (the one thing that needs his confirmation)
+
+**The quality-bar judgment Pascal flagged.** This is the call I cannot
+make unilaterally and should not. Surface to Gary, plainly:
+
+> "Q1's deliverable is met as written — 16/16 of timmFlat's demographic
+> grid at Pascal-5 (off-day-pro), four packs, strict close. But Pascal-5
+> is the *floor* of the rubric: 'a pro could've drawn this on an off
+> day, with weaknesses an editor would flag.' It is NOT master-tier, and
+> it may not yet clear your gut bar ('friends impressed / I'd use it in
+> a game'). W4 spends the last Q1 week pushing timmFlat from 5 toward
+> 6-7 to find out whether the engine *can* reach confident-pro, because
+> that ceiling governs every body/clothes pack in Q2-Q3. Two things we
+> want from you: (1) is 'honest off-day-pro across 4 packs' the Q1 win
+> you wanted, or is master-tier the actual bar? (2) Do you want to lay
+> eyes on the timmFlat grid yourself before we open Q2 — your eye is the
+> final arbiter, and this is the moment it matters most."
+
+If Gary says Pascal-5 across 4 packs IS the Q1 win, then (B) becomes a
+nice-to-have and W4 tilts toward (C) closeout + (A) Q2-prep — Claudia
+re-plans on his answer. The (B)-primary call above is my recommendation
+*absent* that confirmation; it's the lower-regret bet because it
+generates the exact information the decision needs.
+
+### 4. ROADMAP updates
+
+Two seam updates land (made below): the Q1 "last sprint" line now
+names the W4 ceiling-prove + Holly-doc + Q2-prep shape, and the Q2
+section gets the "pack #5 specced full-stack at Q2-open" deferral so
+the handoff is explicit. The Pascal-5-floor-vs-7-target tension is
+recorded as a named open question for Gary rather than silently
+resolved.

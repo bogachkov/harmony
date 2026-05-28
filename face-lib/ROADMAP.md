@@ -107,7 +107,30 @@ has been substantially exercised.
   under "all aspects of face").
 - Forest registry stays healthy (mixture rule).
 - Last sprint of Q1 includes Lloyd's body-architecture design pass
-  (Q2 prep — gives Q2 a running start).
+  (Q2 prep — gives Q2 a running start). *(David W4 call: Claudia may
+  open this at Q2-open instead, to keep W4 focused on proving the
+  Pascal ceiling; either placement satisfies the "running start"
+  intent.)*
+- **W4 (last Q1 sprint) shape (David directional call):** primary =
+  push timmFlat from Pascal-5 (floor) toward Pascal 6-7 (working-pro)
+  using the BACKLOG ceiling-raisers, to learn whether the engine CAN
+  reach confident-pro before Q2's body/clothes complexity lands;
+  secondary = Holly's first spawn (test-strategy doc, deferred since
+  W1 — must land before Q2's tripled primitive surface) + a thin
+  regression/BACKLOG-triage pass. Pack #5 is deferred (not cut) to
+  Q2-open so it can be specced full-stack (face + body + clothes).
+
+**Open question for Gary (W3-close, David-flagged, non-blocking):**
+Q1's deliverable is met *as written* — 4 packs, timmFlat at 16/16 ≥
+Pascal-5 across its demographic grid, strict close. But Pascal-5 is the
+rubric *floor* ("off-day-pro, weaknesses an editor would flag"), not
+master-tier, and may not yet clear Gary's gut bar ("friends impressed /
+usable as game artwork"). Is "honest off-day-pro across 4 packs" the Q1
+win, or is master-tier (Pascal 6-7) the real bar? W4's ceiling-prove
+generates the evidence; Gary's eye is the final arbiter. Until Gary
+calls it, the working assumption is: prove the ceiling in W4, treat
+Pascal-7 as the aspiration and Pascal-5 as the ship floor (unchanged
+from the Quality-bar section).
 
 **Scope OUT of Q1 (explicitly deferred):**
 
@@ -133,6 +156,14 @@ torso, limbs, a clothing layer, and parametric pose.
 Explicit handoff requirement: each Q1 style pack must extend across Q2
 body/clothes/pose at Pascal ≥5 / Rollo-would-ship. No generic body
 grafted onto faces; each pack carries its own body conventions.
+
+**Pack #5 spec lands here, full-stack (David W4 deferral).** The
+next-pack-spec slot Claudia held for W4 moves to Q2-open: Leo + Rollo
+spec pack #5 as a face + body + clothes + pose pack from the start,
+rather than speccing a face-only pack in W4 and re-opening it in Q2 to
+graft a body on. This is a mixture deferral (filed, not cut) and it
+honors the "each pack carries its own body conventions" rule above by
+designing the body conventions *with* the pack instead of after it.
 
 ### Q3 — People done well
 
