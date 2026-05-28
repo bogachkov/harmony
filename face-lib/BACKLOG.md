@@ -22,9 +22,6 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 
 | Bug | Severity | Notes |
 | --- | -------- | ----- |
-| `shortPomp` strokes converge too tight at apex | medium | Reads as topknot/starburst rather than swept-back sweep. Fix: widen `peakOnX` multiplier from `0.15 + rng*0.20` to `~0.40 + rng*0.30`. Queued for Nick. |
-| `bobChinLength` center-parting stroke trails into forehead | medium | Reads as a "scar" line on the face. Per Rollo. |
-| `longTail` falls merge with face outline at print scale | medium | Production-defect. Per Rollo. The trailing strokes drift inward too much near the bottom. |
 | `longSleek` and `longFlowing` are near-pixel-identical | low (catalog) | Wasted slot. Investigate whether the `waviness=0.012` Fred set on longFlowing is even rendering, or a deeper differentiation is needed. Per Rollo. |
 | Expression primitive is weak | low (not this sprint) | Pascal flagged in prior rounds: happy/sad/angry/surprised barely change the face. Build out next time we sprint on faces. |
 

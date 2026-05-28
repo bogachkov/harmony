@@ -28,7 +28,6 @@ work with appropriate parallelism.
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
 | Leo    | Pass 7 cap-cluster oscillation audit | RUNNING | Will be extended on return with 3D-abstraction + lead/fill questions rather than spawning a fresh audit. |
-| Nick   | Tuning pass 1 — three small bug fixes | RUNNING | `tasks/nick-tuning-pass-1.md`. shortPomp centerline + bobChinLength scar + longTail face-merge. Doesn't conflict with Leo's 3D work. |
 
 ## Blocked / pending
 
@@ -36,7 +35,6 @@ work with appropriate parallelism.
 | ------ | ---- | ---------- |
 | Lloyd  | Architecture review of 3D hair refactor | Leo's 3D-abstraction answer |
 | Nick   | Implement 3D-aware hair primitive | Lloyd's design |
-| Nick   | Fix `shortPomp` centerline-convergence regression | Tech-lead decision: bundle with 3D refactor or do as standalone tuning task |
 
 ## Done this sprint
 
@@ -49,6 +47,9 @@ work with appropriate parallelism.
   two bugs (bobChinLength center-parting trails into forehead;
   longTail falls merge with face outline at print scale). Flagged two
   largest gaps: tight-coily / TWA entry, short-disheveled entry.
+- Nick tuning pass 1 — three bug fixes shipped (commits 0e2e0ab,
+  872aa45, 9173655). shortPomp topknot fixed; bobChinLength forehead
+  scar fixed; longTail face-merge fixed. `tasks/nick-tuning-pass-1.md`.
 
 ## History
 

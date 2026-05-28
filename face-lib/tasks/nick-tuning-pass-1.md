@@ -53,4 +53,15 @@ Three small tuning fixes. Single agent, single commit per fix.
 
 ## Handoff
 
-(Nick fills this in on completion)
+All three fixes shipped cleanly in separate commits (0e2e0ab, 872aa45, 9173655) and pushed
+to vector-draw. Fix 1 (shortPomp topknot) landed exactly as briefed — widening `peakOnX`
+from the 0.15–0.35 range to 0.40–0.70 spreads the sweep fan enough to break the starburst
+convergence, though a slight density increase at the apex is still visible at very high lift
+values; this is within acceptable range and likely improves further with the 3D refactor.
+Fix 2 (bobChinLength scar) required two changes rather than one: raising the parting bottom
+clip from `hairlineY + 0.02×headHeight` to `hairlineY + 0.10×headHeight` AND increasing
+`taperEnd` from 0.35 to 0.55 — the clip alone would have left a bold tip visible at the
+hairline edge; the combined change fades the stroke cleanly inside the hair mass.
+Fix 3 (longTail merge) traced to `startX = 0.97×sx` starting inside the silhouette, not
+an outward drift bug; moved startX to `1.02×sx` and added a minimum outward floor (sx×0.03
+on `outward`) so all strands clear the face boundary from their first point.
