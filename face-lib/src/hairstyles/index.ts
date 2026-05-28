@@ -22,6 +22,11 @@ import longCurly from './longCurly.ts';
 import longSleek from './longSleek.ts';
 import longWitch from './longWitch.ts';
 import longTail from './longTail.ts';
+// 3D clump-volume test fixtures — Lloyd pass 1 §6. NOT aesthetic targets;
+// they exercise the volume primitive in isolation. See each file's header.
+import shortBob from './shortBob.ts';
+import longCurtain from './longCurtain.ts';
+import coilyHalo from './coilyHalo.ts';
 
 export const hairstyles = {
   shortSwept,
@@ -36,6 +41,11 @@ export const hairstyles = {
   longSleek,
   longWitch,
   longTail,
+  // Lloyd pass 1 §6 test fixtures (registered separately from the catalog
+  // budget per HS-8 — these are fixtures, not shipping styles).
+  shortBob,
+  longCurtain,
+  coilyHalo,
   // Future (need primitives not yet wired):
   //   evenBowl        — needs fringeBand
   //   sideForelock    — needs forelockMass
