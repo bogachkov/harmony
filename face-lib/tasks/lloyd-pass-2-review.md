@@ -75,6 +75,38 @@ You do NOT need to render anything; Nick's renders are at
 
 ## Handoff
 
-(Lloyd fills in.)
+**Reviewed.** Verdicts appended to `research/lloyd-pass-1.md` under
+`## Pass 2 — Nick implementation review` (83 lines, under cap).
+
+Summary of the four verdicts:
+
+1. **Tangent-decay `1 − 0.8·gravity·t`** — APPROVED-WITH-EDITS.
+   Defensible directionally; not derivable. Expose the `0.8` magic
+   constant as `spec.tangentDecay?: number` (default 0.8) so a future
+   curl-mechanics pass can tune per regime. Not a ship blocker.
+2. **`hullGroup` keyed by `sideRoll`** — APPROVED-WITH-EDITS,
+   escalated. Use `centreU` quadrant instead of `sideRoll` (one-line
+   fix in `scaffold.ts:1414`). Required before any shipped style
+   adopts `clumpMode: 'volume'`. Visible in the parting-gap collapse
+   on `longCurtain`.
+3. **`data-hull-group` debug attr** — NEEDS-CHANGES. Drop the
+   `avgZ` float leakage; if a debug overlay is wanted, gate behind
+   `p.style.debug` and emit the categorical group key, not the
+   float. ~6 lines.
+4. **Convex-hull artefact + alpha-shape deferral** — NEEDS-CHANGES
+   on the deferral (not on hull.ts itself, which is fine code).
+   Renders are unshippable; pull alpha-shape into **Q1-W2** as
+   `hullMode: 'convex' | 'alpha'` parameter. Convex stays as a mode
+   per mixture rule. Doing this AFTER a W2 pack lands wastes the
+   refactor.
+
+**Also flagged in passing (not the four-item review surface):**
+hull.ts:71-86 has a dead `theta/cx/cy` derivation block left in
+during dev; the `void cx; void cy;` discard is a code smell.
+Clean in follow-up, not a blocker.
+
+**Status for Bob:** PR can merge with item 3 fix (drop debug attr,
+trivial). Items 1 and 2 are next-PR work. Item 4 is a sprint-plan
+decision for Claudia + Bob.
 </content>
 </parameter>

@@ -196,3 +196,90 @@ auto-tuned from clump spacing — ~80 LOC, deferrable until it bites.
   convex hull for v1 to keep the diff bounded. Net LOC +150, not
   Leo's +118 — `flat` mode keeps the cap polygon alive and that's
   the mixture cost.
+
+---
+
+## Pass 2 — Nick implementation review
+
+Structurally sound. Five seams (TRACE / EXPAND / PROJECT / MERGE /
+RENDER) all landed where pass 1 placed them; the `clumpStroke(field,
+ClumpSpec): ClumpTrace` signature is exactly what I specified; flat
+fast-path is identity-preserving (bit-for-bit, exceeding my §5
+visually-equivalent promise). LOC drift to +444 is honest: comment
+density + the `void cx; void cy` dead-theta block in `expandCapsule`
+(hull.ts:71-86) — Nick left both a `theta` derivation and the `phi`
+derivation in the source. Clean that up in a follow-up, not a blocker.
+
+The seam I most expected to leak — `flat` mode's `rng` consumption
+order — did not leak. Good engineering.
+
+### 1. Tangent-decay formula `1 − 0.8·gravity·t`
+
+**APPROVED-WITH-EDITS.** The formula is defensible directionally (long
+strokes fall straighter as gravity rises) and matches hair-theory §2 +
+§5 qualitatively. It is NOT derivable from first principles without
+also modelling shaft stiffness, which is out of scope for v1. The
+`0.8` is a magic constant pulled from intuition; expose it as
+`spec.tangentDecay?: number` (default 0.8) so a future curl-mechanics
+pass can tune per regime (straight/wave/curl have different decay
+rates per HT §5). Document the qualitative basis inline. Do NOT
+block on a measurement pass — that's hair-theorist work for Q2.
+
+### 2. `hullGroup` keyed by `sideRoll` bucket
+
+**APPROVED-WITH-EDITS, escalated.** `sideRoll`-bucketing reuses an
+existing per-clump scalar to key the hull and is fine AS LONG AS the
+clump-seed regions remain `frontShare`-disjoint. The bug case Nick
+flagged (two front clumps in different 3D regions merged into one
+silhouette) is real and visible in `longCurtain`: the centre parting
+gap eats. Fix is one line — derive the key from `(centreU, centreV)`
+quadrant once the centre is rolled, NOT from `sideRoll`:
+`hullGroup = centreU < -PI*0.10 ? 'left' : centreU > PI*0.10 ? 'right' : 'front'`.
+That preserves the parting gap and costs nothing. Nape comes when Q2
+back-views land. Make this change before any shipped hairstyle adopts
+`clumpMode: 'volume'`.
+
+### 3. `data-hull-group` debug attr
+
+**NEEDS-CHANGES.** Ship-blocker, low effort. Two problems: (a) it
+leaks internal `avgZ` numerics into the SVG output, and consumers
+WILL come to depend on it (Hyrum's law); (b) it makes the
+"identical SVG content" regression promise harder for Holly to
+defend next sprint because the attribute carries floating-point
+noise. Drop it. If debug overlay is wanted, gate behind
+`p.style.debug === true` and emit `data-hull-group-id="${groupKey}"`
+(the categorical, not the float). ~6 lines.
+
+### 4. Convex-hull artefact — alpha-shape deferral
+
+**NEEDS-CHANGES on the deferral, not on the hull code.** Renders are
+worse than I predicted. `coilyHalo` is a hexagon; `longCurtain` reads
+as a nun's wimple, not hair. Both are unshippable in their current
+form. My §7 said "deferred until adoption"; I was wrong about how
+bad the v1 looked. Pull alpha-shape into **Q1-W2**, NOT "deferred
+until a shipped style adopts volume." Concrete argument: any W2 pack
+that wants volume mode (a coily or curly pack — both on Rollo's
+gap list) lands DOA without alpha-shape. Doing alpha-shape first
+unblocks pack work; doing it second means W2 ships a pack that
+either avoids volume mode (wastes the refactor) or ships with
+hexagon-halo artefacts (Pascal floor 2/10).
+
+Per mixture-not-survival: keep convex hull as a MODE, not delete it.
+Add `hullMode?: 'convex' | 'alpha'` to `HairstyleRecipe` (default
+`'convex'` for v1 hairstyles that have already opted in; alpha
+becomes default when stable). Alpha-shape lands as a parameter, not
+a replacement — exactly the rule that applied to `clumpMode`.
+
+### Verdicts
+
+- **1. Tangent decay** — APPROVED-WITH-EDITS (expose `0.8` as a
+  parameter; defensible directionally, not measurement-derived).
+- **2. `hullGroup` keying** — APPROVED-WITH-EDITS, escalated (key on
+  `centreU` quadrant, not `sideRoll` bucket; one-line fix before any
+  shipped style adopts volume).
+- **3. `data-hull-group` attr** — NEEDS-CHANGES (drop or gate behind
+  debug flag; replace `avgZ` float with categorical group key if
+  kept).
+- **4. Alpha-shape deferral** — NEEDS-CHANGES (pull into Q1-W2 as
+  `hullMode: 'convex' | 'alpha'` parameter; convex stays as a mode
+  per mixture rule; current artefacts are unshippable).
