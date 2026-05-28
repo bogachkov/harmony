@@ -217,4 +217,190 @@ Soft asks:
 
 ## Handoff
 
-(Nick fills in on completion.)
+**Landed:** `timmFlat` key in `src/presets/styles.ts` (62 LOC for the pack
+itself, against Leo's ~70-LOC estimate). All four hard gates pass:
+
+1. **Pack in `styles.ts`** — every knob is a write to `style.* / eyes.* /
+   brows.* / nose.* / mouth.* / ears.* / neck.* / hair.recipe.*` per the
+   styles.ts header rule. No `head.*` / no proportions touched. Verbatim
+   from the spec delta (Leo §parameter-delta + Rollo §addendum). Set
+   `hair.recipe.parting: 'none'` alongside `leads: []` for type
+   completeness (parting is required on the type).
+2. **All 16 grid cells render.** Full size + 96×96 thumbs + composite
+   sheet. See render paths below. Pre-Pascal sniff-test reads further
+   down.
+3. **Four-corner thumbnail test PASSES.** Cells 1 / 4 / 12 / 14 at
+   96×96 read as clearly different characters AND clearly different
+   ages. Composite at `/tmp/timmflat-out/grid-96/four-corners.png`.
+4. **Mixture rule preserved.** 50/50 regression renders byte-identical
+   before+after (tintin × 13 hairstyles × {masc, fem} = 26; plus
+   `default` and `ligneClaire` across {child, teen, adult, elder} ×
+   {masc, fem} = 16; plus the 8 tintin demographics already in there).
+   Adding a sibling key in the styles record cannot mutate existing keys
+   (confirmed by diff -r).
+5. **No BACKLOG primitive added or modified.** `highlightCutout`,
+   per-feature line-weight multiplier, categorical brow-shape enum all
+   left out per spec.
+
+### Spec drift / integration surprises (the load-bearing finding)
+
+The cascade order in `composeFace` is
+`defaults → STYLE → presentation → age → HAIRSTYLE → expression →
+character → overrides`. The spec was written as if pack-level knobs are
+the contract; in fact several pack-level knobs are silently overwritten
+by later cascade layers:
+
+- `hair.recipe.leads = []` — overwritten by hairstyle layer
+  (`bobChinLength`, `shortSwept`, etc. all carry interior leads). This
+  is decision §5 of the spec ("CRITICAL: NO interior strokes — explicit
+  pack-level override") — it doesn't actually override end-to-end without
+  re-asserting at the overrides layer.
+- `mouth.lipFullness = 0` — overwritten by `presentation: 'feminine'`
+  (0.35). Timm canon (decision §3) is no vermilion modeling.
+- `mouth.labiomentalShow = 0` — overwritten by `presentation:
+  'masculine'` (0.22). Timm canon: no Faigin sulcus.
+- `eyes.lashes = 0` — overwritten by `presentation: 'feminine'` (0.6).
+  Timm canon (decision §1): no lash array.
+- `eyes.lidLine = 0.6` — load-bearing, but `presentation: 'masculine'`
+  sets `lidLine: 0.4` and `presentation: 'feminine'` sets `lidLine:
+  0.5`. The pack value gets overwritten downward.
+
+This is the **same class** as Rollo's flagged `skinFill` integration
+concern. Rollo predicted "if pack-level skinFill wins over per-render
+override, that's an integration bug" — the actual situation is the
+opposite direction: the **demographic layer wins over the pack** on
+these shared knobs. Per-render `overrides` (the last cascade layer)
+correctly wins over both, which is what the grid renders use to enforce
+the Timm pedagogy end-to-end.
+
+Surfaced to Bob rather than tuned in the pack. Did NOT add render logic
+to fix this — that would be spec drift. The fix space is one of:
+
+- Re-order the cascade so STYLE wins on overlapping knobs (architectural
+  change; Lloyd's call).
+- Add a "pack-locks" mechanism so style packs can declare hard pins
+  (new primitive; Leo + Lloyd joint).
+- Continue using `overrides` at render-time as the discipline (current
+  approach; fine for the grid + character data files).
+
+The grid script (`scripts/timmflat-grid.ts`) documents this with a
+`TIMM_PEDAGOGY` const that gets passed via `overrides` per cell — the
+mechanism Rollo's skinFill addendum specifies. **Not a W2 blocker for
+shipping the pack** (the grid demonstrates the pack reads correctly
+when paired with `overrides`), but Claudia + Lloyd should decide whether
+this becomes a W3 architectural item.
+
+Second surprise: the `style: 'long'` field-tracer (used by `longSleek`,
+`longTail`) renders many independent stroke segments that aren't gated
+by `recipe.leads`. Cells 6, 7, 11 show this — the long hair has wispy
+strands visible past the silhouette, which fights Timm's "long hair =
+one flat shape" canon (Catwoman, Wonder Woman). This is **not pack
+drift** — it's a hair-engine ceiling that Leo's spec flagged as a
+known limitation ("`longCurly` / `longWavy` / `longWitch` contain
+interior-stroke clump topology that fights decision §5 and should NOT
+be in the W2 grid"). Rollo allowed `longSleek` / `longTail` in the grid
+on the assumption that "field-traced" wouldn't hit the same axis as
+"interior-clump-stroke", but the long-hair path produces the same
+visible-strand artefact. Flag for Pascal: cells 6, 7, 11 will read as
+"long hair drawn with too many strokes," not as Timm-canon flat. The
+ceiling lift is either `clumpMode: 'flat'` extended into the `style:
+'long'` path, or a `tailMode: 'flat' | 'strands'` knob. Backlog
+candidate.
+
+### Pre-Pascal sniff test (one sentence per cell)
+
+These are the honest pre-scoring reads; Pascal will run the absolute
+0-10 scoring next.
+
+1. **adult-masc-square-shortSwept** — Squarish jaw, heavy brick brows,
+   strong lid line, flat hair fill with no internal strokes, reads
+   cleanly as Timm-masc-protagonist register; the most "canon" cell.
+2. **adult-masc-square-shortSwept-dark** — Same silhouette as #1 with
+   `#6e3f24` skin reading as Static Shock / John Stewart register;
+   confirms per-render skinFill override wins over pack default.
+3. **adult-masc-square-spikyShort** — Spike topology reads through but
+   the spike teeth look thinner than I'd expect for Timm anime-inflected
+   characters (Static Shock proper); 5-ish range, not 6.
+4. **adult-fem-oval-bobChinLength** — Oval jaw, clean almond eyes, mostly
+   flat bob, but a couple of side-curtain strand suggestions still visible
+   even with TIMM_PEDAGOGY override applied (bob's strand layer isn't
+   fully gated by leads); Catwoman-shape adjacent, reads as character.
+5. **adult-fem-oval-bobChinLength-dark** — Same as #4 with dark skin;
+   reads strongly.
+6. **adult-fem-oval-longSleek** — Long hair shows multi-strand strand
+   layer, which fights Timm canon (see "spec drift" note); reads as
+   "long hair, generic anime" rather than "Timm Wonder Woman flat
+   curtain." Likely a Pascal 4.
+7. **adult-fem-oval-longTail** — Same artefact as #6, more dramatic —
+   the trailing ponytail mass is many independent strands. Same flag.
+8. **teen-masc-ovalsoft-shortPomp** — Pomp lift visible at the crown
+   with some spiky top-strand suggestion; the softer teen oval reads
+   younger than the adult-masc square. Reasonable.
+9. **teen-masc-ovalsoft-spikyShort-dark** — Spike + soft oval + dark
+   skin; reads as a clear teen-masc character. Solid.
+10. **teen-fem-ovalsoft-bobChinLength** — Soft-oval + bob; reads as
+    teen-fem. Subtle differentiator from #4 — the soft-oval has slightly
+    different cranium ratio + larger eyes.
+11. **teen-fem-ovalsoft-longSleek-dark** — Same long-hair artefact as
+    #6 visible; the demographic axis reads though.
+12. **child-masc-round-shortSwept** — Round jaw, larger eyes-relative-
+    to-face, shortest face — clearly reads as child. Strong cell.
+13. **child-fem-round-bobChinLength-dark** — Same round/big-eye signal as
+    #12 with bob + dark skin; reads as child-fem clearly.
+14. **elder-masc-jowled-shortReceding** — Jowled jaw + receding hairline
+    + deeper underline + smaller eyes; reads unmistakably as elder.
+    Strong cell.
+15. **elder-masc-jowled-shortReceding-dark** — Same with dark skin;
+    reads.
+16. **elder-fem-jowled-bobChinLength** — Elder-jowled jaw + chin-length
+    bob; reads as elder-fem.
+
+Aggregate honest read: roughly 11/16 cells are "Timm-canon clean," 3/16
+fight the long-hair strand artefact (#6, #7, #11), 2/16 are "decent but
+visibly procedural in spots" (#3 spike teeth thin; #8 pomp top). The
+demographic axis is exercising the topology enum hard (which was the
+Pascal-test-acceptance criterion per Rollo) — cells 1/4/12/14 are
+visibly different characters AND ages at 96×96. Will surface the
+long-hair strand artefact to Pascal as known-not-pack-fault before
+scoring.
+
+### Off-grid soft probes
+
+- `pointed-jaw` (Joker register): topology reaches via overrides; wedge
+  cusp clearly visible. `/tmp/timmflat-out/probes/pointed-jaw.png`.
+- `pear-jaw` (Penguin register): topology reaches via overrides; pear
+  silhouette dramatic (deliberately tuned wide-bigonial + jowled-up).
+  `/tmp/timmflat-out/probes/pear-jaw.png`.
+
+Both confirm the underlying jaw-topology primitive supports the Timm
+villain register; the BACKLOG demographics-data gap (Rollo adjacent-
+gap #1) is real but the primitive isn't blocking it.
+
+### Render paths (for Bob to share)
+
+- 16-cell full sheet (composite, PNG): `/tmp/timmflat-out/grid/sheet-full.png`
+- 16-cell thumb sheet (96px composite): `/tmp/timmflat-out/grid-96/sheet-thumb.png`
+- Four-corner test (cells 1/4/12/14 at 96×96): `/tmp/timmflat-out/grid-96/four-corners.png`
+- Individual full-size cells: `/tmp/timmflat-out/grid/01-*.png` ... `16-*.png`
+- Individual 96px cells: `/tmp/timmflat-out/grid-96/01-*.png` ... `16-*.png`
+- Off-grid probes: `/tmp/timmflat-out/probes/{pointed-jaw,pear-jaw}.png`
+- Regression baselines (before pack add): `/tmp/timmflat-out/regression-before/`
+- Regression post (50/50 byte-identical to baseline): `/tmp/timmflat-out/regression-final2/`
+- Reproducible render script: `face-lib/scripts/timmflat-grid.ts`
+  (run with `node --experimental-strip-types --no-warnings
+  scripts/timmflat-grid.ts [outbase]`)
+
+### Commits landed
+
+- `4c1caee` — the timmFlat pack lands inside this commit's styles.ts
+  hunk (+62 LOC of pack data). The commit message is "Lloyd Pass 3
+  landed; W2 box 2 fully closed" — the pack got bundled in due to my
+  edit coinciding with a parallel Bob commit. **For Bob:** consider
+  whether this needs a follow-up commit message annotation or a
+  cherry-pick into a "Nick PR #3" labeled commit; the diff is correct
+  either way. The +62 LOC delta in `face-lib/src/presets/styles.ts`
+  between HEAD~3 and HEAD is precisely the timmFlat block.
+- Next commit (this handoff): grid script in `face-lib/scripts/
+  timmflat-grid.ts` + handoff update in this task file.
+
+*— Nick, Q1-W2 PR #3.*
