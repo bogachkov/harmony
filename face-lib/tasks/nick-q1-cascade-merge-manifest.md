@@ -334,3 +334,35 @@ Bug-hunt prompts for Lloyd:
 No other Q1 design touchback needed. Q2 (demographic-topology) Pass
 4 review at `research/lloyd-cascade-architecture.md` §Pass 4 confirmed
 nothing in the Q2 work surfaces a Q1 manifest conflict.
+
+### Lloyd Pass 5 verdicts (commit a884a54)
+
+Full Pass 5 review at `research/lloyd-cascade-architecture.md` §Pass 5.
+
+1. **`fillStyle` enum decision** — APPROVED-AS-IS. Drift claim verified
+   (longWitch, coilyHalo, coilyHaloAlpha, curlyDome, shortReceding,
+   spikyShort — exactly 6 hairstyles with `leads:[] && parting:'none'`).
+   Data-derivation would break byte-identity on default/tintin/ligneClaire.
+   The enum names the pedagogy (Timm/DC flat-fill canon), not just the
+   gate — clean split between declarative pedagogy (`fillStyle`) and data
+   (`leads`, `parting`). Keep as shipped.
+2. **LOC overrun** — APPROVED-AS-IS. +173 / +69 code-only is defensible
+   honest-documentation. Inline pedagogy on `AllowedDeclarePath`,
+   `applyDeclares`, `fillStyle`, `Pack`, and the cascade-order header
+   survives agent-spawn context resets. Don't thin.
+3. **Allowed-path union completeness** — APPROVED-AS-IS. All 14 paths
+   match §Q1 §Pick (13 named + `hair.recipe.fillStyle` per §1 above).
+   None demographic-only.
+4. **Regression evidence** — APPROVED-AS-IS. Re-ran broad sweep
+   independently; manifest byte-matches Nick's `/tmp/post-q1-manifest/`.
+   All drift is timmFlat-only across 3 hairstyles (shortSwept,
+   bobChinLength, shortBob) — the designed parting-curve fix. Zero drift
+   on default/tintin/ligneClaire.
+5. **`applyDeclares` semantics** — APPROVED-AS-IS. Wish-list semantics
+   correct; minor `{}`-vs-`undefined` on all-missing-paths is functionally
+   no-op via deepMerge. Implementation clean.
+
+**Verdict: APPROVED-AS-IS across all five concerns. Q1 box closed.**
+Pascal Wave 3 next.
+
+*— Lloyd, Pass 5.*

@@ -256,3 +256,97 @@ still slot 7, demographic-data fixtures don't ride the pack-late-pass.
 Hand to Pascal for Wave 3 re-score.
 
 *— Lloyd, Pass 4 review of Nick Q2 (commit 9e03a7f).*
+
+## Pass 5 — Nick Q1 implementation review
+
+Reviewed commit `a884a54`. Five files (`params.ts`, `styles.ts`, `api.ts`,
+`scaffold.ts`, `timmflat-grid.ts`). Architectural surface only.
+
+### 1. `fillStyle` enum decision — APPROVED-AS-IS
+
+Verified Nick's drift claim independently. Hairstyles with `leads: [] &&
+parting === 'none'`: longWitch, coilyHalo, coilyHaloAlpha, curlyDome,
+shortReceding, spikyShort = **exactly 6** (grep confirms). Data-derivation
+(option A) would flip these 6 to flat-fill under default/tintin/ligneClaire
+and break the byte-identical guarantee — non-starter.
+
+`fillStyle: 'standard' | 'flat'` is the right replacement primitive. The
+boolean `suppressInteriorHairDetail` was always a negative-named gate; the
+enum names the PEDAGOGY ("Timm/DC flat-fill canon"). It lives on
+`HairstyleRecipe` (correct — the cascade carrier for hair-render pedagogy),
+defaults to `undefined === 'standard'` (correct mixture-rule preservation),
+and the manifest declares it so the assertion survives the cascade. The
+seam between declarative pedagogy (`fillStyle` enum) and data (`leads`,
+`parting`) is a clean API split.
+
+The 4 gate sites in `scaffold.ts` (cap-tone band, clump-stroke field, sweep
+field, long-hair curtain) all swap `suppressInteriorHairDetail === true` →
+`fillStyle === 'flat'` mechanically. Felix long-hair primitive (cells
+6/7/11) byte-identical post-swap per Nick — no regression risk on that
+seam.
+
+### 2. LOC overrun — APPROVED-AS-IS
+
++173 / +69 code-only vs ~+50 estimate. Code-only is within 40% of estimate;
+comment volume is real pedagogy (the `AllowedDeclarePath` union doc, the
+`applyDeclares` semantics block, the `fillStyle` doc, the `Pack` type doc,
+the cascade-order header rewrite in `api.ts`). Defensible-as-honest-
+documentation. I'd rather have inline pedagogy that survives across agent
+spawns than terse code that needs context reconstruction. **No thin-out
+required.** Explicit `declares: []` on default/tintin/ligneClaire stays —
+self-documenting mixture-rule guard.
+
+### 3. Allowed-path union completeness — APPROVED-AS-IS
+
+§Q1 §Pick named 13 paths; Nick shipped 14 (the +1 is `hair.recipe.fillStyle`
+per §1 above). Cross-check:
+- hair.recipe.{leads, parting, fillStyle} ✓
+- mouth.{lipFullness, labiomentalShow, cornerMarks, upperCurve} ✓
+- eyes.{lashes, lidLine, underlineHint} ✓
+- brows.style ✓
+- nose.{style, bridgeVisible, showNostrils} ✓
+
+All 14 admissible. None demographic-only. Compile-time engine-vs-style
+separation enforced (Nick's throwaway-fixture verification: 11/11 demographic
+paths produce TS2322).
+
+### 4. Regression evidence — APPROVED-AS-IS
+
+Re-ran `felix-broad-regression.ts` independently: 816-cell manifest matches
+Nick's `/tmp/post-q1-manifest/manifest.txt` byte-for-byte. Pre-vs-post diff
+shows **all drift is timmFlat-only** (default/tintin/ligneClaire ×
+demographics × hairstyles = 0 entries). Among timmFlat drift, 3 hairstyles
+account for the deltas: `shortSwept` (parting='sideL'), `bobChinLength`
+and `shortBob` (parting='centre'). These match Nick's reported parting-curve
+fix — the slot-6 manifest now correctly re-asserts `parting: 'none'` from
+the pack, killing the parting-tick leak. **Intended behaviour, not a
+regression.**
+
+### 5. `applyDeclares` semantics — APPROVED-AS-IS
+
+Walks `parts` of each dotted path; skips missing-in-pack paths
+(declares-as-wish-list semantics — correct); returns `undefined` on empty
+manifest (correct short-circuit). Minor nit: when ALL paths are missing
+the function returns `{}` instead of `undefined`, but `deepMerge` no-ops
+on empty patch anyway. Not a correctness issue. Type-walking via `parts.
+split('.')` is the standard pattern for path-based partial overlay; the
+implementation is clean.
+
+### Q1 design-touchback
+
+None. Nick made one judgment call (`fillStyle` enum vs data-derivation)
+inside scope — verified, correct call, documented in §1 above. No other
+deltas from the design.
+
+### Verdict
+
+**APPROVED-AS-IS across all five concerns. Q1 box closed.** Hand to
+Pascal for Wave 3 absolute-score call.
+
+**Post-merge flag for Claudia:** the parting-curve fix on 3 timmFlat
+hairstyles is *not* a mixture-rule drift (existing tintin/ligneClaire
+identical, only the contested timmFlat cells change in the designed
+direction). No filed-aesthetic registry entry needed; the prior
+parting-tick was the bug, not a reachable aesthetic.
+
+*— Lloyd, Pass 5 review of Nick Q1 (commit a884a54).*
