@@ -22,6 +22,7 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 
 | Bug | Severity | Notes |
 | --- | -------- | ----- |
+| `bobChinLength` has no visible main mass | HIGH | No cap polygon drawn for `edgeKind: 'smooth'` (drawCap condition only fires for spiked / edgeTextured / verticalLift>0). Regressed at commit `e8b9b52` (Leo pass 7 — "drop cap for all styles, unify clumping"). The bob's stroke-based rendering is too sparse to be the mass; it needs either the cap restored OR a real short-hair stroke-density bump. Likely related to what Leo's cap-cluster audit is solving. Other smooth-edgeKind short styles (shortSwept, shortPompadour, shortReceding) may have the same regression — verify. |
 | `longSleek` and `longFlowing` are near-pixel-identical | low (catalog) | Wasted slot. Investigate whether the `waviness=0.012` Fred set on longFlowing is even rendering, or a deeper differentiation is needed. Per Rollo. |
 | Expression primitive is weak | low (not this sprint) | Pascal flagged in prior rounds: happy/sad/angry/surprised barely change the face. Build out next time we sprint on faces. |
 
