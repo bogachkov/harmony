@@ -78,4 +78,32 @@ Update `## Handoff` in this task file.
 
 ## Handoff
 
-(David fills in.)
+David pass 2 complete. Full analysis appended as `## Pass 2 — scope
+revision validation` in `face-lib/research/david-pass-1.md`.
+
+**Verdict: support with edits.**
+
+Note to Bob:
+
+Tech argument holds AS tech. But Gary named monsters as cuttable;
+reframing his preference as architecturally backwards is the move I'm
+wary of. Read engine-generality as coincidence with Gary's instinct
+(storyboard arc needs animals more), not the reason. Land on product
+logic.
+
+Three edits:
+
+1. Drop monsters fully ("out of year"), not stretch. Stretch invites
+   Q4 creep that under-delivers animals.
+2. Tighten Q3 gate. Category list ≠ ship gate. Recommend ships iff
+   (a) all Q1 style packs extend across Q2 body/clothes/pose at
+   Pascal ≥5 / Rollo-ship, AND (b) a real LLM-tool-call session
+   produces N coherent end-to-end character requests.
+3. Q2 isn't actually unchanged — it's now Q3 substrate. Needs explicit
+   per-style-pack handoff (no generic body grafted on faces).
+
+Also: API hardening (was Q4 lane) silently dropped — where? And
+style-pack-per-animal gets sharper now animals carry Q4 — flag for
+Gary.
+
+Your call. I'd land with 1-3 and Gary-flag the rest.
