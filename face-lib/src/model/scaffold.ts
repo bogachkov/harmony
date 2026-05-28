@@ -1071,12 +1071,25 @@ const buildHair = (
     ((style === 'short' || style === 'medium') &&
      (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped'))
   );
+  // suppressInteriorHairDetail — Timm/flat-fill packs want the cap polygon
+  // (the flat hair-mass shape) but NOT the shadow band or highlight band
+  // (those are tonal modeling — explicit interior detail per Eisner 1985
+  // "Modelling"). Pre-computed up here so the cap-fill block can branch.
+  // (params.ts HairstyleRecipe doc, W2 PR #4.)
+  const suppressHairCapTone = recipe.suppressInteriorHairDetail === true;
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
       kind: 'feature', closed: true, points: cap,
       role: 'hair-top', fill: fillColor, noStroke: true,
     });
+
+    if (suppressHairCapTone) {
+      // Flat-fill pack: cap polygon only — no shadow band, no highlight band.
+      // The single uniform fill IS the Timm canon (research/stylepack-
+      // timmFlat-spec.md §3 + §5). Fall through to the silhouette-outline
+      // stroke below without painting tonal modeling.
+    } else {
 
     // SHADOW REGION — darker tone painted over the LOWER portion of the cap to
     // give the mass real weight. Without this the hair reads as a flat color
@@ -1144,6 +1157,7 @@ const buildHair = (
         fill: highlightColor, noStroke: true,
       });
     }
+    } // end if (!suppressHairCapTone)
   }
 
   // Mass silhouette OUTLINE as inked stroke (perfect-freehand): confident, slightly
@@ -1232,9 +1246,12 @@ const buildHair = (
   // the cranial surface with cubic ease and per-stroke ink weight. Pascal-validated
   // black colour so dark hair doesn't swallow the strokes (round 5 feedback).
   // Suppressed for 'receding' (bald scalp).
+  // Also suppressed when recipe.suppressInteriorHairDetail = true (Timm /
+  // flat-fill packs — params.ts HairstyleRecipe doc, W2 PR #4).
   // Read from recipe.leads (preferred) with fallback to deprecated recipe.flowStrokes.
   const leadsArray = recipe.leads ?? recipe.flowStrokes ?? [];
-  if (drawInteriorStrokes) {
+  const suppressDetail = recipe.suppressInteriorHairDetail === true;
+  if (drawInteriorStrokes && !suppressDetail) {
     const flowSamples = 14;
     for (const fs of leadsArray) {
       const sx = fs.startX * rx;
@@ -1278,7 +1295,12 @@ const buildHair = (
   //   short  — clumps 0.18-0.50 long, low gravity (mass hugs scalp)
   //   medium — clumps 0.40-1.10 long, medium gravity (chin-length fall)
   //   long   — clumps 0.45-2.25 long, high gravity (curtain past shoulders)
-  if (style !== 'none' && style !== 'bald' && fillColor) {
+  //
+  // suppressInteriorHairDetail: gate the entire clump-stroke field so flat-
+  // fill packs (Timm canon) read as a single mass with no interior strand
+  // texture. The cap polygon + silhouette outline still draw, so the hair
+  // is not invisible — just flat. (params.ts HairstyleRecipe doc, W2 PR #4.)
+  if (style !== 'none' && style !== 'bald' && fillColor && !suppressDetail) {
     // Style-dependent stroke generation parameters.
     const isLong = style === 'long';
     const isMedium = style === 'medium';
@@ -1595,7 +1617,14 @@ const buildHair = (
   //
   // Strokes only generated when verticalLift > 0; default 0 leaves all
   // existing hairstyles unaffected (mixture-not-survival rule).
-  if (verticalLift > 0 && fillColor) {
+  // suppressInteriorHairDetail: gate this block too — the sweep field is
+  // interior strand texture, same category as the clump-stroke field. Without
+  // this gate, shortPomp (and any future verticalLift-using flat-fill pack
+  // hairstyle) shows visible swept strands at the lifted volume top even with
+  // the clump field suppressed. The cap fill polygon is built from topSil
+  // (which extends to liftApexY when verticalLift>0), so the lifted mass
+  // still reads as solid black; the missing pieces are just the texture.
+  if (verticalLift > 0 && fillColor && !suppressDetail) {
     const liftApexY = ry + liftMag;         // highest point of the lifted silhouette
     const liftHalfWidth = rx * 0.55;        // horizontal span of the lifted mass
     const sweepStrokeCount = Math.round(35 + verticalLift * 25);  // 35-60 strokes

@@ -1,11 +1,17 @@
-// Render the 16-cell timmFlat must-ship grid + four-corner thumbnail test
-// + two off-grid probes (pointed-jaw / pear-jaw).
+// Render the W2-revised 13-cell timmFlat ship grid + four-corner thumbnail
+// test + two off-grid probes (pointed-jaw / pear-jaw).
+//
+// Cells 6, 7, 11 are EXPLICITLY DROPPED per Claudia's W2 re-plan
+// (SPRINT.md Q1-W2 extended) — long-hair primitive ceiling, deferred to W3.
+// The cell numbering is preserved (1..16 minus 6/7/11) so cross-references
+// with the original 16-cell spec, Pascal's W2 close pass, and the W3 promotion
+// list keep stable indices.
 //
 // Outputs:
-//   /tmp/timmflat-out/grid/01..16-<label>.png      — full-size grid
+//   /tmp/timmflat-out/grid/<NN>-<label>.png        — full-size grid (13 PNGs)
 //   /tmp/timmflat-out/grid/sheet-full.svg          — composite sheet (full size)
-//   /tmp/timmflat-out/grid-96/01..16-<label>.png   — 96×96 thumbnails
-//   /tmp/timmflat-out/grid-96/sheet-thumb.svg      — composite 96×96 sheet
+//   /tmp/timmflat-out/grid-96/<NN>-<label>.png     — 96×96 thumbnails (13 PNGs)
+//   /tmp/timmflat-out/grid-96/sheet-thumb.svg      — composite 96px sheet
 //   /tmp/timmflat-out/grid-96/four-corners.png     — cells 1/4/12/14 at 96×96
 //   /tmp/timmflat-out/probes/pointed-jaw.png       — off-grid Joker register
 //   /tmp/timmflat-out/probes/pear-jaw.png          — off-grid Penguin register
@@ -30,34 +36,44 @@ mkdirSync(outdirProbe, { recursive: true });
 // Dark skin: '#6e3f24' (warm dark brown — Static Shock / John Stewart register).
 const DARK_SKIN = '#6e3f24';
 
-// --- The full "Timm pedagogy contract" enforced at render time ---
+// --- The "Timm pedagogy contract" enforced at the overrides layer ---
 // Cascade order is: defaults → STYLE → presentation → age → HAIRSTYLE → expression → character → overrides.
 // Several timmFlat pack knobs get clobbered by later cascade layers:
-//   - hair.recipe.leads = [] (decision §5: NO interior strokes) — hairstyles like
-//     bobChinLength carry leads that overwrite the pack-level empty array.
 //   - mouth.lipFullness = 0 (decision §3: no vermilion modeling) — presentation:
 //     'feminine' sets lipFullness 0.35, overriding the pack.
 //   - mouth.labiomentalShow = 0 (decision §3: no Faigin sulcus) — presentation:
 //     'masculine' sets labiomentalShow 0.22.
 //   - eyes.lashes = 0 (decision §1: no lash array) — presentation: 'feminine'
 //     sets lashes 0.6.
-//   - hair.recipe.flowStrokes — deprecated-alias field that some hairstyle files
-//     may carry as a secondary lead source (defensive: also clear).
 //
-// Per task instruction to surface this kind of integration bug rather than tune
-// the pack to compensate — these are flagged in handoff. We re-apply the pack's
-// pedagogical contract at the overrides layer (the final cascade step) so the
-// pack's canon reads end-to-end. This mirrors Rollo's per-render skinFill
-// override mechanism. The pack itself remains a declarative-truth statement of
-// the Timm canon at lines 1-4 of the cascade; we just enforce it at line 7.
+// W2 PR #4 (this commit): hair.recipe.leads is NO LONGER part of the override
+// because the interior-strand artifact that Pascal called out wasn't actually
+// driven by leads — the experimental clump-stroke field (~28-50 per-clump
+// strand groups, scaffold.ts:1281+) ran regardless of leads and that's where
+// the bang-strand striping came from. Fix landed as a new primitive flag
+// `recipe.suppressInteriorHairDetail` set at the timmFlat pack level (see
+// src/presets/styles.ts + src/model/params.ts), which short-circuits the
+// leads block AND the clump-stroke field AND the cap shadow/highlight tonal
+// bands at the renderer. So the override no longer needs to defensively
+// clear leads — the pack's declarative truth now reaches the render
+// regardless of what intermediate cascade layers push.
+//
+// The remaining overrides re-apply the pack's mouth/eyes/brows/nose contract
+// because those knobs ARE single scalar/enum values that the cascade
+// correctly replaces — the only reason they need re-asserting is that
+// later layers (presentation, age) push their own values on those same
+// knobs and a pack-as-overrides at line 7 of the cascade wins cleanly.
+// This mirrors Rollo's per-render skinFill override mechanism.
 const TIMM_PEDAGOGY: DeepPartial<FaceParams> = {
-  hair: { recipe: { parting: 'none', leads: [], flowStrokes: [] } },
   mouth: { lipFullness: 0, labiomentalShow: 0, cornerMarks: false, upperCurve: 0 },
   eyes: { lashes: 0, lidLine: 0.6, underlineHint: 0.15 },
   brows: { style: 'single' },
   nose: { style: 'minimal', bridgeVisible: false, showNostrils: false },
 };
-// Backwards-compat alias so the rest of the file reads naturally.
+// Backwards-compat alias so the rest of the file reads naturally. The name
+// no longer reflects what's actually being overridden (the leads suppression
+// moved to the pack primitive flag); kept as an alias to avoid touching
+// every cell-args site in the same PR.
 const TIMM_NO_LEADS = TIMM_PEDAGOGY;
 
 const mergeOverrides = (
@@ -85,7 +101,14 @@ const mergeOverrides = (
 
 const darkSkin: DeepPartial<FaceParams> = { style: { skinFill: DARK_SKIN } };
 
-// --- The 16 cells per task lines 109-126 ---
+// --- The W2-revised 13-cell ship grid ---
+// Cells 6, 7, 11 from the original 16-cell spec are DROPPED here per
+// Claudia's re-plan (SPRINT.md Q1-W2 extended): long-hair primitive ceiling
+// can't be reached without W3 primitive promotion (recipe.strandMode: 'off'
+// or field-tracer-no-ops-when-flat). Pascal scored those three at 2/2/2 on
+// the W2 close pass — not the pack's fault, the primitive's. Numbering is
+// preserved (1,2,3,4,5,8,9,10,12,13,14,15,16) so this script's output stays
+// row-compatible with `research/pascal-w2-timmflat.md` per-cell scores.
 type Cell = { n: number; label: string; args: ComposeArgs };
 const cells: Cell[] = [
   { n: 1,  label: 'adult-masc-square-shortSwept',
@@ -103,12 +126,8 @@ const cells: Cell[] = [
   { n: 5,  label: 'adult-fem-oval-bobChinLength-dark',
     args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'bobChinLength',
             overrides: mergeOverrides(TIMM_NO_LEADS, darkSkin) } },
-  { n: 6,  label: 'adult-fem-oval-longSleek',
-    args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'longSleek',
-            overrides: TIMM_NO_LEADS } },
-  { n: 7,  label: 'adult-fem-oval-longTail',
-    args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'longTail',
-            overrides: TIMM_NO_LEADS } },
+  // n: 6  — adult-fem-oval-longSleek — DROPPED (W3 promotion, long-hair primitive ceiling).
+  // n: 7  — adult-fem-oval-longTail  — DROPPED (W3 promotion, long-hair primitive ceiling).
   { n: 8,  label: 'teen-masc-ovalsoft-shortPomp',
     args: { style: 'timmFlat', age: 'teen', presentation: 'masculine', hairstyle: 'shortPomp',
             overrides: TIMM_NO_LEADS } },
@@ -118,9 +137,7 @@ const cells: Cell[] = [
   { n: 10, label: 'teen-fem-ovalsoft-bobChinLength',
     args: { style: 'timmFlat', age: 'teen', presentation: 'feminine', hairstyle: 'bobChinLength',
             overrides: TIMM_NO_LEADS } },
-  { n: 11, label: 'teen-fem-ovalsoft-longSleek-dark',
-    args: { style: 'timmFlat', age: 'teen', presentation: 'feminine', hairstyle: 'longSleek',
-            overrides: mergeOverrides(TIMM_NO_LEADS, darkSkin) } },
+  // n: 11 — teen-fem-ovalsoft-longSleek-dark — DROPPED (W3 promotion).
   { n: 12, label: 'child-masc-round-shortSwept',
     args: { style: 'timmFlat', age: 'child', presentation: 'masculine', hairstyle: 'shortSwept',
             overrides: TIMM_NO_LEADS } },
@@ -237,8 +254,11 @@ writeFileSync(`${outdirThumb}/sheet-thumb.png`, svgToPng(thumbSheet));
 process.stderr.write(`Wrote thumb sheet: ${outdirThumb}/sheet-thumb.{svg,png}\n`);
 
 // --- The four-corner test composite ---
-// Cells 1, 4, 12, 14 at 96×96 height.
-const fourIdx = [0, 3, 11, 13]; // zero-indexed: cells 1, 4, 12, 14
+// Cells 1, 4, 12, 14 at 96×96 height. Look up by cell.n rather than by
+// zero-indexed position because the W2 re-plan dropped cells 6/7/11 from
+// the grid array — the array is now length 13, but cell numbering is
+// preserved (skip-indexed).
+const fourIdx = [1, 4, 12, 14].map((n) => renders.findIndex((r) => r.n === n));
 const fourCols = 4;
 const fcSlotW = Math.max(...fourIdx.map((i) => Math.round((vbs[i]!.w / vbs[i]!.h) * thumbH)));
 const fcLabelStripH = 22;

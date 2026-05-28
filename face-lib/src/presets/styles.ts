@@ -158,6 +158,20 @@ export const styles = {
         parting: 'none',        // no parting line — silhouette carries identity
         leads: [],              // CRITICAL: NO interior strokes (decision §5)
         // clumpMode defaults to 'flat' from defaults; do not override.
+        //
+        // suppressInteriorHairDetail — the hard "off switch" for inside-the-
+        // hair-mass detail. With this set, the cascade-leak that Pascal
+        // diagnosed (W2 close, research/pascal-w2-timmflat.md) cannot
+        // reach the render: even if a later cascade layer (presentation,
+        // hairstyle file) pushes a non-empty leads array, the renderer
+        // short-circuits the leads block + the clump-stroke field + the
+        // shadow band + the highlight band. The CAP polygon + silhouette
+        // outline + hairline tick remain, so the hair still reads as a
+        // proper flat mass — exactly Timm/DC-animated canon (W1 spec §3,
+        // §5). Per mixture-not-survival: this is a knob, not a deletion;
+        // default packs continue to paint full interior detail. See
+        // params.ts HairstyleRecipe doc for the primitive contract.
+        suppressInteriorHairDetail: true,
       },
     },
   } satisfies DeepPartial<FaceParams>,

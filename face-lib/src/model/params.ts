@@ -120,6 +120,33 @@ export type HairstyleRecipe = {
   // Convex is NOT deleted — per mixture-not-survival, it stays a selectable
   // mode. Ignored when clumpMode === 'flat' (no merger runs).
   hullMode?: 'convex' | 'alpha';
+  // suppressInteriorHairDetail — pack-level hard "off switch" for INSIDE-the-
+  // hair-mass detail strokes. When true:
+  //   - the recipe.leads array is not rendered (the "soul strokes"),
+  //   - the experimental clump-stroke field (the per-clump ~6-20 feature-ink
+  //     strands seeded across the cranial field, lines ~1281+ of scaffold.ts)
+  //     is not rendered,
+  //   - the cap shadow band (darken(fillColor, 0.30) tonal polygon over the
+  //     hairline) is not painted,
+  //   - the cap highlight band (lighten(fillColor, 0.18) catch-light lens) is
+  //     not painted.
+  // The CAP POLYGON itself (the flat hair-mass fill) IS still drawn, as is
+  // the silhouette outline and the hairline tick. So the hair reads as a
+  // single flat shape with a confident contour — exactly Timm/DC-animated
+  // pedagogy (research/stylepack-timmFlat-spec.md §3 + §5: "shape is
+  // everything; flat fills are load-bearing; NO interior strokes").
+  //
+  // Per mixture-not-survival rule: default undefined/false preserves every
+  // existing pack and hairstyle render byte-identical. This is a NEW knob,
+  // not a replacement; tintin / ligneClaire / default packs continue to
+  // render with leads + clumps + shadow + highlight as before.
+  //
+  // W2 PR #4 (cascade-leak fix). The leak Pascal diagnosed was nominally
+  // about `recipe.leads = []` not surviving the cascade — but the actual
+  // bang-strand artifact source is the clump-stroke field, which runs
+  // regardless of leads. A leads-only suppression couldn't have caught it.
+  // Per task fallback authority, promoted to a primitive flag.
+  suppressInteriorHairDetail?: boolean;
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
