@@ -1160,6 +1160,140 @@ const buildHair = (
     } // end if (!suppressHairCapTone)
   }
 
+  // ---- LONG-HAIR FLAT CURTAIN — primitive-level rebuild per Felix W3
+  // (`tasks/felix-longhair-primitive-rebuild.md`).
+  //
+  // Problem: when `suppressInteriorHairDetail = true` AND `style === 'long'`,
+  // the existing primitive has NO geometry left to paint the hair mass —
+  // `drawCap` excludes long-hair (it's strands-only above), and the clump-
+  // stroke field + trailing-mass + sweep blocks are all gated by
+  // `suppressDetail`. Result pre-Felix: cells 6/7/11 (timmFlat × longSleek /
+  // longTail) rendered as bald heads. Pascal Pass 1 (research/pascal-w2-
+  // timmflat.md §Job 1) flagged this category at 2/2/2.
+  //
+  // Fix: a single closed flat polygon (Timm canon: "long hair = one flat
+  // shape"). The polygon's top edge is the standard `topSil` arc. Its sides
+  // drop vertically from the temples to a curtain-bottom Y derived from
+  // `headHeight` + a small `tailMass` boost so the longSleek vs longTail
+  // contrast is preserved (longTail's reachable knob, not deleted). Bottom
+  // edge crosses horizontally. Painter's z-order paints the face silhouette
+  // OVER the central region, so visually only the side curtains + the top
+  // dome + any nape-trailing show.
+  //
+  // Predicate (Felix-lane truth table — analyzed against the 13-hairstyle
+  // catalog before landing):
+  //   fires when: suppressDetail === true AND style === 'long'
+  //   reachable today by: timmFlat × {longSleek, longTail, longCurly,
+  //                                   longWavy, longWitch}
+  //   does NOT fire for: any non-timmFlat pack (suppressDetail undefined
+  //                      everywhere else); timmFlat × non-long; volume-mode
+  //                      long (longCurtain — clumpMode = 'volume', handled
+  //                      by hull-merge pipeline, not this block).
+  // Mixture rule: default/tintin/ligneClaire × every long hairstyle remain
+  // byte-identical (this block is unreachable for them).
+  //
+  // Why a polygon rather than reviving the strand layer with a "flat-render
+  // mode": the Timm pedagogy IS the polygon — flat fills are load-bearing
+  // (research/stylepack-timmFlat-spec.md §3 + §5). Asking the field-tracer
+  // to render a "flat-looking" version of strands would be papering over
+  // the pedagogy gap. The shape primitive is the right primitive.
+  if (fillColor && suppressHairCapTone && style === 'long' && !isVolume) {
+    // Curtain bottom Y. templeY ≈ ry*0.5; chinY ≈ -ry; headHeight ≈ 1.4 in
+    // default units. We want the curtain to fall PAST the chin (Timm canon)
+    // and optionally onto the chest (tailMass).
+    //   baseDrop  = 1.00 * headHeight       → ends ~chest level below temples
+    //                                          (curtainBottomY ≈ templeY − 1.4 ≈ −1.1,
+    //                                          well below chinY ≈ −0.92).
+    //   tailBoost = 0.40 * tailMass * headHeight → extra fall for longTail
+    //                                              (tailMass=0.85 → +0.48 h fall).
+    // Calibrated against the tintin/longSleek and tintin/longTail strand
+    // renders (the reference look) — strands there fall to ~y = −1.1 and
+    // y = −1.4 respectively. The polygon hits the same envelope.
+    const tailMass = recipe.tailMass ?? 0;
+    const baseDrop = headHeight * 1.00;
+    const tailBoost = headHeight * 0.40 * tailMass;
+    const curtainBottomY = templeY - (baseDrop + tailBoost);
+    // Horizontal extent: sit just OUTSIDE the head silhouette so the curtain
+    // reads as visible mass either side of the face. sideFall pushes wider.
+    //   sideFall=0.20 (longCurtain) → ±sx · 1.07
+    //   sideFall=0.45 (longSleek)   → ±sx · 1.12
+    //   sideFall=0.70 (longWitch)   → ±sx · 1.18
+    const curtainHalfX = sx * (1.04 + sideFall * 0.20);
+    // First and last topSil points (right temple → left temple after the
+    // loop walks t = 0..1 across the dome arc).
+    const right = topSil[0] as Vec3;
+    const left = topSil[topSil.length - 1] as Vec3;
+    // Side trajectory: from temple to (curtainHalfX, curtainBottomY) with a
+    // quick outward kick in the first ~25% (so the curtain swings out from
+    // the temple before falling). After the kick, x stays near curtainHalfX
+    // and y descends linearly to curtainBottomY. Bottom corner is rounded
+    // (last sample arcs inward in X while still descending) so the bottom
+    // edge meets the cross-line without a 90° corner.
+    const sideSamples = 8;
+    const cornerRadiusT = 0.85;   // start rounding the corner at 85% down
+    const cornerInset = curtainHalfX * 0.10; // inward inset at the corner
+    const buildSide = (anchor: Vec3, sign: -1 | 1): Vec3[] => {
+      const out: Vec3[] = [];
+      for (let i = 1; i <= sideSamples; i++) {
+        const t = i / sideSamples;
+        // Outward kick: snap from anchor.x toward sign*curtainHalfX in the
+        // first 25%; linger near curtainHalfX after.
+        const kick = Math.min(1, t * 4);
+        let x = anchor[0] + (sign * curtainHalfX - anchor[0]) * kick;
+        let y = anchor[1] + (curtainBottomY - anchor[1]) * t;
+        // Round the corner: above cornerRadiusT pull X inward and ease Y to
+        // the final value via a quarter-circle parameterization.
+        if (t > cornerRadiusT) {
+          const cT = (t - cornerRadiusT) / (1 - cornerRadiusT);  // 0..1 in corner band
+          const ang = cT * Math.PI / 2;
+          x -= sign * cornerInset * (1 - Math.cos(ang));
+          // y already linear to curtainBottomY at t=1; let it sit on the line.
+          y = anchor[1] + (curtainBottomY - anchor[1]) * (cornerRadiusT + (1 - cornerRadiusT) * Math.sin(ang));
+        }
+        out.push([x, y, 0]);
+      }
+      return out;
+    };
+    const leftSide: Vec3[] = buildSide(left, -1);
+    const rightSide: Vec3[] = buildSide(right, 1).reverse();
+    // Bottom edge: gently concave — rises slightly at the centre, suggesting
+    // the curtain's back drape arcs UP behind the head between the two
+    // visible side curtains (rather than reading as a hard horizontal block
+    // at chest level). Concavity sized so the centre rise is small enough
+    // to keep the bottom below chinY even for non-tailMass cells.
+    //   centreRise = headHeight * 0.06  → for the default longSleek/oval
+    //                bottom (curtainBottomY ≈ −1.1) the rise is ≈ 0.08,
+    //                still well below chinY ≈ −0.92.
+    const bottomSamples = 9;
+    const centreRise = headHeight * 0.06;
+    const bottom: Vec3[] = [];
+    for (let i = 1; i < bottomSamples; i++) {
+      const t = i / bottomSamples;
+      const x = -curtainHalfX + (2 * curtainHalfX) * t;
+      // Cosine bump centred at t=0.5, zero at the ends.
+      const rise = centreRise * Math.sin(Math.PI * t);
+      bottom.push([x, curtainBottomY + rise, 0]);
+    }
+    const curtain: Vec3[] = [...topSil, ...leftSide, ...bottom, ...rightSide];
+    curves.push({
+      kind: 'feature', closed: true, points: curtain,
+      role: 'hair-top', fill: fillColor, noStroke: true,
+    });
+    // Outline for the curtain — the visible silhouette boundary (top dome
+    // arc + the two side curtains). The face silhouette painted later in
+    // painter's order covers the central forehead/cheek region in stroke
+    // pass 2 too, so the part of this outline that crosses the face is
+    // hidden — only the dome arc, curtain sides, and the nape-trailing
+    // bottom segments read. Per Leo SM-2 (pass 6) long-hair normally
+    // suppresses the topSil outline because clump strokes do the edge work;
+    // here the clumps are suppressed so the outline MUST come back.
+    curves.push({
+      kind: 'feature-ink', closed: true, points: curtain,
+      role: 'hair-top',
+      ink: { size: 1.5, taperStart: 0.05, taperEnd: 0.05, pressureMid: 0.95 },
+    });
+  }
+
   // Mass silhouette OUTLINE as inked stroke (perfect-freehand): confident, slightly
   // tapered at the temples. This replaces the uniform thin polyline that previously
   // outlined the cap. Per Leo SM-2 (pass 6): SUPPRESS for style='long' — the
