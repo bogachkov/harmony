@@ -1362,15 +1362,20 @@ const buildHair = (
         for (let i = 0; i < tailPerSide; i++) {
           const startTRaw = rng() * rng();   // 0 = top, biased toward upper region
           const startY = templeY * (1 - startTRaw * 0.55);
-          // Bias start positions tight to silhouette (less x jitter than v1).
-          const startX = sign * sx * (0.97 + rng() * 0.04);
+          // Start strands OUTSIDE the silhouette (1.02×sx) so they never
+          // merge with the face outline at print size. Previous 0.97 put
+          // the start point inside the silhouette; at print scale those
+          // strands ran alongside the face boundary and visually merged.
+          const startX = sign * sx * (1.02 + rng() * 0.04);
           const lenRoll = rng();
           const len = tailMaxLen * (lenRoll < 0.30 ? 0.5
                                  : lenRoll < 0.80 ? 0.95
                                  : 1.25);
           // Outward drift is small — strands fall mostly straight down,
           // creating a column-shaped mass on each side instead of a fan.
-          const outward = outwardSpread * (0.3 + rng() * 0.7) * (startTRaw + 0.5);
+          // Minimum outward offset (sx * 0.03) ensures endX stays outside
+          // the silhouette even for low outward rolls.
+          const outward = Math.max(sx * 0.03, outwardSpread * (0.3 + rng() * 0.7) * (startTRaw + 0.5));
           const endX = startX + sign * outward;
           const endY = startY - len;
           const samples = 16;
