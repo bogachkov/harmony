@@ -8,43 +8,82 @@ sections reset.
 
 ---
 
-## Active sprint goal
+## Active sprint — Q1-W1
 
-**Q1-W1 — Hair primitive lands in 3D + 1 new style pack to quality bar.**
+**Goal: lay the two rails Q1 runs on.**
 
-Aligned with ROADMAP Q1 ("faces, really really good — 4-10 style packs
-at quality bar"). This sprint is the bridge between the architectural
-work that just landed (recipe primitive, lead/fill rename, bob-cap fix)
-and the style-pack-variety push that fills the rest of Q1.
+1. **Rail A — engine:** 3D clump-volume refactor lands behind a flag
+   (`clumpMode: 'flat' | 'volume'`, default `'flat'`) without regressing
+   any of the 13 existing hairstyles. Volume mode is exercised on at
+   least Lloyd's three test fixtures, not yet wired into a shipped
+   hairstyle.
+2. **Rail B — style:** one new style pack target chosen and SPEC'd
+   (not implemented). The spec is what Nick consumes in Q1-W2.
 
-Two parallel tracks:
+This is W1 of probably 3-5 sprints inside Q1. Q1 ships iff **N ≥ 4
+style packs land at quality bar with demographic depth** (per ROADMAP
+/ David pass-1 edit #1). The refactor is necessary-not-sufficient;
+shipping a clean refactor without a new pack is not a Q1 win, so we
+start the pack pipeline THIS week even though no pack lands this week.
 
-- **Track A — engine:** Nick implements the 3D clump-volume refactor per
-  Lloyd pass 1 (Tech Lead approved). Lloyd reviews on completion. Holly
-  spawns at the end of the sprint for a regression sweep.
-- **Track B — style:** Rollo + Leo propose ONE new style pack target
-  (research pass; not implementation). Picked from the user's
-  candidates: Disney/Pixar feature, manga (shoujo or shounen), Caniff/
-  Toth ink comics, Bruce Timm flat shape, Studio Ghibli, Schulz/Peanuts.
-  Output is a style-pack-spec md that Nick can implement in Q1-W2.
+Side rail: a Leo audit on **eye/mouth/brow integration** under the
+current `tintin` pack — Pascal's standing finding is that features
+read as "stacked on a face frame, not one drawn thing." We need to
+know whether W2's pack #2 implementation needs primitive fixes before
+it can hit Pascal ≥ 5. Better to find out now than mid-W2.
+
+### Ship gate (what closes Q1-W1)
+
+All four of these must be true:
+
+- [ ] `clumpMode: 'flat'` is the default and renders all 13 existing
+  hairstyles visually equivalent to pre-refactor (per Lloyd pass-1 §5).
+  Lloyd has reviewed the PR.
+- [ ] `clumpMode: 'volume'` produces a clean render of Lloyd's three
+  test cases (`shortBob` flat regression guard, `longCurtain` volume,
+  `coilyHalo` radial). Test fixtures committed.
+- [ ] One style-pack spec md exists in `face-lib/research/` —
+  authored jointly by Leo (pedagogy: what makes this pack a real art
+  tradition with cited sources) and Rollo (asset judgment: NPC slots
+  it fills, demographic axis it must cross, mixture-rule preservation
+  of existing packs). Pack chosen from Gary's candidate list.
+- [ ] Leo's integration audit md exists, identifying whether
+  eye/mouth/brow primitives need work before W2 pack implementation,
+  or whether the current primitives can carry pack #2 as-is. Either
+  answer is acceptable; the unknown is the blocker.
+
+What is explicitly NOT in W1's gate:
+
+- New style pack IMPLEMENTATION (W2).
+- Pascal calibration audit (deferred to first close where Pascal has
+  substantive new output to score — likely Q1-W2 close).
+- Holly regression sweep + test-strategy doc (sprint-close only when
+  there is something meaningful to regress; W1's `flat`-mode promise
+  IS the regression test for this week. Holly runs after W2 lands a
+  new pack and the volume mode has cooked in a real hairstyle).
+- Forelock / fringeBand / highlightCutout primitives (BACKLOG; promote
+  only when a style-pack spec REQUIRES them — Leo+Rollo's W1 pass may
+  flag this).
+- `longSleek` vs `longFlowing` redundancy bug (BACKLOG; not a
+  ship-blocker for W1).
 
 ## In flight
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Claudia | First sprint plan — Q1-W1 against finalized ROADMAP | RUNNING | `tasks/claudia-q1w1-plan.md`. Owns SPRINT.md going forward. Returns spawn order Bob executes. |
+| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | QUEUED (spawn 1) | Longest pole. Spawn first so the loop is running. |
+| Leo+Rollo | `leo-rollo-stylepack-w1-spec.md` — pick + spec one new style pack | QUEUED (spawn 2) | Single joint pass; Leo writes pedagogy half, Rollo writes asset/demographics half. Parallel to Nick. |
+| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration audit | QUEUED (spawn 3) | Same Leo, sequential to the style-pack pass. Done before W1 close so W2 brief can react. |
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Bob    | Land David's 6 ROADMAP edits | Gary's answers on the 4 escalated questions (some edits depend on #1) |
-| Claudia | First sprint plan against revised ROADMAP | Gary's answers + Bob's edits |
-| Nick   | Implement 3D clump-volume primitive | Claudia (will it be IN-Q1 or parallel-infra? Gary's call) |
-| Leo + Rollo | Style-pack candidate selection + spec | Claudia |
-| Lloyd  | Code review of Nick's 3D implementation | Nick's PR |
-| Holly  | Test strategy doc + regression sweep | Sprint close |
-| Pascal | Quality score on post-3D-refactor renders | After Nick + Holly |
+| Lloyd  | Code review of Nick's 3D PR | Nick's implementation landing |
+| Holly  | Test strategy doc + first regression sweep | Q1-W2 close (after a pack actually lands) |
+| Pascal | Quality / calibration audit | Q1-W2 close (no substantive new output yet this week) |
+| Nick   | Implement W2 style pack | Leo+Rollo spec + Leo integration audit landing, then Claudia W2 brief |
+| Claudia | Q1-W2 planning | This sprint closing |
 
 ## Done previous sprints
 
@@ -59,12 +98,12 @@ Two parallel tracks:
 - Nick pass 2 — bob HIGH regression fixed; lead/fill rename with
   deprecation alias.
 - Recipe primitive (`HairstyleRecipe` + 11 hairstyle files).
-- Six-role crew formalized in AGENTS.md.
 - Collab artifacts created: SPRINT / BACKLOG / tasks/.
 - ROADMAP + PROCESS docs created.
-- Nine-role crew (added David CEO, Claudia PM, Holly QA).
-- Mixture-not-survival rule encoded as durable principle.
-- Forest registry initialized in BACKLOG (filed aesthetics).
+- Nine-role crew formalized (added David CEO, Claudia PM, Holly QA).
+- David pass 1 + pass 2 (roadmap audit + scope revision).
+- Mixture-not-survival rule encoded.
+- Forest registry initialized.
 
 ## History
 

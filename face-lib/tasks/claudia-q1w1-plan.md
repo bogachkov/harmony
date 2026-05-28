@@ -70,6 +70,61 @@ Pascal calibration audit is queued for first sprint close per ROADMAP.
 
 ## Handoff
 
-(Claudia fills in.)
+SPRINT.md rewritten. Three task files drafted. Spawn order for Bob:
+
+**Spawn 1 (immediately, longest pole) — Nick.**
+Task: `face-lib/tasks/nick-3d-clump-volume.md`.
+Implements Lloyd pass 1's 3D clump-volume refactor behind
+`clumpMode: 'flat' | 'volume'` flag, default flat. Mixture rule
+preserved. Three test cases. Lloyd reviews on completion. This is
+the longest piece of work in W1 — spawn first so the loop is
+running while research happens in parallel.
+
+**Spawn 2 (in parallel with Nick) — Leo.**
+Task: `face-lib/tasks/leo-rollo-stylepack-w1-spec.md`.
+Leo writes the pedagogy half of a joint style-pack spec — picks
+ONE pack from Gary's candidate list (criteria in the brief), cites
+the tradition, names the 3-5 defining decisions, flags any
+primitive blockers. Writes file in WIP state, hands off to Rollo.
+
+**Spawn 3 (after Leo finishes pedagogy half) — Rollo.**
+Same task file: `face-lib/tasks/leo-rollo-stylepack-w1-spec.md`.
+Rollo appends asset-judgment half: NPC slots, demographic grid,
+adjacent missing points, mixture-rule check. Same file as Leo,
+appended not rewritten. Output is the W2 spec Nick implements.
+
+**Spawn 4 (after Rollo returns; same Leo if context permits, fresh
+otherwise) — Leo.**
+Task: `face-lib/tasks/leo-face-integration-audit.md`.
+Audits eye / mouth / brow integration. Verdict GO / GO-WITH-CAVEATS
+/ STOP per primitive. This is upstream-of-W2 risk discovery — needs
+to land before W1 closes so Claudia can fold the verdict into the
+W2 brief.
+
+**Not queued this sprint:**
+- **Lloyd code review** — automatic on Nick's PR landing; Bob
+  triggers, no Claudia queue needed.
+- **Pascal** — no substantive new output to score this week. Wait
+  for W2 close when pack #2 has actually rendered.
+- **Holly** — sprint-close role, but W1's regression test IS Nick's
+  `flat`-mode promise. Holly's first real spawn is at W2 close (her
+  brief should be the test-strategy doc per AGENTS.md
+  Holly-first-spawn note).
+- **David** — not needed this sprint. Monthly directional review
+  (every ~2.5 human days = roughly end of W2 or W3) is the natural
+  next David touch.
+
+**Sprint-close trigger.** Claudia re-spawns when all four ship-gate
+boxes in SPRINT.md are checked (or when one is provably stuck and
+needs re-scoping). Bob renders a representative output sheet after
+each landed commit (per the share-every-render rule) and shares
+with Gary in the thread.
+
+**Escalations to flag** (non-blocking — keep the queue moving):
+- None today. The David roadmap pass already escalated the
+  open Gary questions; Claudia's W1 plan respects David's
+  recommended edits and doesn't introduce new ones.
+
+Brief return note to Bob is in the spawn-return text, not this file.
 </content>
 </parameter>
