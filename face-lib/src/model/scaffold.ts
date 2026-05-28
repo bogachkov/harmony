@@ -969,7 +969,15 @@ const buildHair = (
   // Without a fill polygon, the swept strokes can't cover the entire lifted bump
   // because the cranial field doesn't extend above v=π/2. Add the cap fill for
   // the lifted case so the zone reads as solid hair mass, not an empty arc.
-  const drawCap = edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0;
+  // Per Leo pass 8 §3: short/medium hair with smooth/flicked/crowSnipped edges
+  // also needs the cap polygon — stroke density alone is too sparse to read as
+  // a hair mass without it. Fixes bobChinLength, shortSwept, shortPompadour,
+  // shortReceding regressions (drawCap was FALSE for those styles since commit
+  // e8b9b52 which dropped the cap for all non-spiked/non-lifted cases).
+  const drawCap =
+    edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0 ||
+    ((style === 'short' || style === 'medium') &&
+     (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped'));
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
