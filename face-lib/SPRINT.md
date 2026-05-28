@@ -30,7 +30,9 @@ Two parallel tracks:
 
 ## In flight
 
-(nothing — sprint just opened)
+| Agent  | Task | Status | Notes |
+| ------ | ---- | ------ | ----- |
+| David  | First spawn — ROADMAP validation against Gary's stated goals | RUNNING | `tasks/david-roadmap-review-1.md`. Gates Claudia's first sprint plan. |
 
 ## Blocked / pending
 
