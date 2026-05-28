@@ -25,7 +25,9 @@ work with appropriate parallelism.
 
 ## In flight
 
-(nothing — all agents idle)
+| Agent  | Task | Status | Notes |
+| ------ | ---- | ------ | ----- |
+| Leo    | Pass 8 — 3D abstraction + lead/fill + bob-regression diagnosis | RUNNING | `tasks/leo-3d-and-lead-fill.md`. Longest pole of the sprint. Unblocks Lloyd + Nick when it returns. |
 
 ## Blocked / pending
 
