@@ -50,6 +50,13 @@ export type HairstyleRecipe = {
   // 0.04-0.07 = wavy, 0.10+ = very curly. waveFrequency = cycles per stroke.
   waviness?: number;
   waveFrequency?: number;
+  // Trailing mass — long hair that falls PAST the head silhouette, visible
+  // around/behind the head extending toward the shoulders. Distinct from
+  // field-traced strokes (which hug the cranium): trailing strokes are
+  // free-falling lines starting at the temple-side silhouette and going
+  // down + slightly outward. 0 = no tail (current default); 1 = heavy
+  // shoulder-length fall.
+  tailMass?: number;
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };

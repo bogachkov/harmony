@@ -1288,6 +1288,71 @@ const buildHair = (
         });
       }
     }
+
+    // TRAILING MASS — long hair that falls PAST the head silhouette, visible
+    // BEHIND/AROUND the head extending toward the shoulders. Distinct from
+    // the field-traced strokes above (which hug the cranium and "die" near
+    // the chin). Trailing strokes start at the side silhouette around temple
+    // Y and continue downward with slight outward drift — no longer
+    // constrained to the cranium surface, so they project as visible mass
+    // OUTSIDE the head silhouette in 2D.
+    //
+    // User-requested fix: "hair that falls behind the head, like a woman
+    // with legit long hair." Reference pencil drawing showed mass clearly
+    // extending past shoulders, visible AROUND the head silhouette.
+    const tailMass = recipe.tailMass ?? 0;
+    if (tailMass > 0) {
+      // Density bumped per first-render feedback (strokes were reading as
+      // radiating rays rather than connected mass). 120 per side, tighter
+      // horizontal spread, thicker bias.
+      const tailPerSide = Math.round(120 * tailMass);
+      const tailMaxLen = headHeight * (0.50 + tailMass * 0.55);
+      const outwardSpread = 0.04 + tailMass * 0.08;       // tighter than v1
+      for (const sign of [-1, 1] as const) {
+        for (let i = 0; i < tailPerSide; i++) {
+          const startTRaw = rng() * rng();   // 0 = top, biased toward upper region
+          const startY = templeY * (1 - startTRaw * 0.55);
+          // Bias start positions tight to silhouette (less x jitter than v1).
+          const startX = sign * sx * (0.97 + rng() * 0.04);
+          const lenRoll = rng();
+          const len = tailMaxLen * (lenRoll < 0.30 ? 0.5
+                                 : lenRoll < 0.80 ? 0.95
+                                 : 1.25);
+          // Outward drift is small — strands fall mostly straight down,
+          // creating a column-shaped mass on each side instead of a fan.
+          const outward = outwardSpread * (0.3 + rng() * 0.7) * (startTRaw + 0.5);
+          const endX = startX + sign * outward;
+          const endY = startY - len;
+          const samples = 16;
+          const pts: Vec3[] = [];
+          for (let s = 0; s <= samples; s++) {
+            const t = s / samples;
+            const xEase = t * t * (3 - 2 * t);
+            const wobAmp = (rng() - 0.5) * 0.012;     // smaller wobble
+            const wob = Math.sin(t * Math.PI * (1.5 + rng())) * wobAmp;
+            const x = startX + (endX - startX) * xEase + wob;
+            const y = startY + (endY - startY) * t;
+            pts.push([x, y, 0]);
+          }
+          const ampJitter = waviness * (0.75 + rng() * 0.50);
+          const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
+          const phase = rng() * Math.PI * 2;
+          const trailed = waviness > 0 ? addWaviness(pts, ampJitter, freqJitter, phase) : pts;
+          // Thicker bias for the bulk strokes; thin wisps still possible.
+          const tSize = 1.2 + rng() * rng() * 2.5;
+          curves.push({
+            kind: 'feature-ink', closed: false, points: trailed,
+            ink: {
+              size: tSize,
+              taperStart: 0.04 + rng() * 0.08,
+              taperEnd: 0.20 + rng() * 0.30,
+              pressureMid: 0.70 + rng() * 0.25,
+              color: fillColor,
+            },
+          });
+        }
+      }
+    }
   }
 
   // (Old short-hair stroke-texture overlay + escape-strokes block deleted
