@@ -222,6 +222,17 @@ illustration." That's a sharper, more reachable target than
 "master-tier confident-pro" framed in the abstract. The team's
 been chasing the wrong ceiling.
 
+**Aspiration vs reachable:** the *aspiration* is Hergé and the
+comic masters. Won't catch them. Worth chasing anyway. Chrono
+Trigger / Suikoden is what we can plausibly reach. Both true at
+once — chase the masters, measure honestly against the reachable.
+
+**The proof point:** Dicebear. Gary looked at their work — not
+his direction, but seeing what they shipped is what made him
+confident he could do better. So we're not in unknown territory.
+A parametric SVG character engine in the indie/web space exists,
+and the bar to clear is "better than dicebear, in Gary's taste."
+
 ### Stop habits
 
 - Don't re-explain back to Gary what he just told me. He's not
