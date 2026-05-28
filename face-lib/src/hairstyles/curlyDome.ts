@@ -23,12 +23,19 @@ const curlyDome: DeepPartial<FaceParams> = {
   hair: {
     style: 'medium',
     frontShape: 'straight',
-    forehead: 0.34,
-    volume: 0.16,
-    templeRecession: 0.05,
-    sideFall: 0.15,
+    // Lower forehead — coily/curly hair sits CLOSE to the forehead because the
+    // halo grows OUT (spring > gravity per hair-theorist HT-1) rather than
+    // back. The hairline is right above the brows.
+    forehead: 0.22,
+    // Big volume — the halo radiates outward; the dome itself is significantly
+    // larger than the cranium. Pascal round 6 said the prior 0.16 read as a
+    // "lumpy beanie." Doubling volume + extending sideFall pushes the dome
+    // outward enough to register as halo rather than cap.
+    volume: 0.30,
+    templeRecession: 0,
+    sideFall: 0.30,
     crownPeakX: 0,
-    napeExtension: 0.10,
+    napeExtension: 0.20,
     edgeKind: 'edgeTextured',
     recipe: {
       parting: 'none',

@@ -25,13 +25,13 @@ const bobChinLength: DeepPartial<FaceParams> = {
     recipe: {
       parting: 'centre',
       flowStrokes: [
-        // LEFT side-curtain — short downward stroke ALONG the side of the bob,
-        // starting outside the parting and falling roughly vertically. (Earlier
-        // attempt went diagonally crown→far-temple, which read as crossed
-        // rays across the face.)
-        { startX: -0.25, startY: 0.60, endX: -0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
+        // LEFT side-curtain — vertical stroke ALONG the side of the bob,
+        // starting near the parting top and falling well past the temple to
+        // suggest hair MASS rather than a thin tick. Pascal round 6: prior
+        // curtains were too short/thin to register.
+        { startX: -0.22, startY: 0.72, endX: -0.32, endY: -0.10, size: 2.4, pressureMid: 1.0 },
         // RIGHT side-curtain — mirror.
-        { startX:  0.25, startY: 0.60, endX:  0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
+        { startX:  0.22, startY: 0.72, endX:  0.32, endY: -0.10, size: 2.4, pressureMid: 1.0 },
       ],
     },
   },

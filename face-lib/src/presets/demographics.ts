@@ -37,6 +37,10 @@ export const ages = {
       frontShape: 'straight', forehead: 0.30, volume: 0.12,
       templeRecession: 0, sideFall: 0.15, crownPeakX: 0,
       napeExtension: 0.10, edgeKind: 'crowSnipped',
+      // Child recipe: no parting, no flow strokes. The crow-snipped silhouette
+      // edge is the entire characterization (Loomis 1956 plate 30; Vashti
+      // Harrison kid canon). Interior strokes on a child read as un-childlike.
+      recipe: { parting: 'none', flowStrokes: [] },
     },
   } satisfies DeepPartial<FaceParams>,
 
@@ -104,6 +108,15 @@ export const ages = {
     hair: {
       frontShape: 'receding', forehead: 0.58, volume: 0.04,
       templeRecession: 0.55, crownPeakX: -0.07, edgeKind: 'smooth',
+      // Default elder recipe: shortReceding-like (no parting, no interior).
+      // Per hair-tooling §6 STOP #3 + pass-5 STOP HS-4: no interior strokes on
+      // a receding scalp (they read as scratches). Pascal feedback (round 6):
+      // the cascade default wasn't using the hairstyle primitive — every
+      // default-demographic face fell back to a parted-with-flicks recipe.
+      recipe: {
+        parting: 'none',
+        flowStrokes: [],
+      },
     },
   } satisfies DeepPartial<FaceParams>,
 } as const;
@@ -135,10 +148,20 @@ export const presentations = {
     ears: { helixProtrusion: 0.048 },
     // Per Leo §8.4 masculine-adult: forward-shifted crown, slight temple
     // recession, no side-fall — reads as "structured, short, parted."
+    // Recipe = shortSwept-like (the prior hardcoded default). Pascal feedback
+    // (round 6): demographic defaults now explicitly carry a hairstyle recipe
+    // so renders without `--hairstyle` still pick up the primitive's variety.
     hair: {
       frontShape: 'parted', forehead: 0.46, volume: 0.07,
       templeRecession: 0.30, sideFall: 0, crownPeakX: 0.10,
       napeExtension: 0, edgeKind: 'flicked',
+      recipe: {
+        parting: 'sideL',
+        flowStrokes: [
+          { startX:  0.04, startY: 0.86, endX:  0.42, endY: 0.55, size: 1.8, pressureMid: 0.95 },
+          { startX: -0.18, startY: 0.70, endX: -0.32, endY: 0.50, size: 1.4, pressureMid: 0.80 },
+        ],
+      },
     },
   } satisfies DeepPartial<FaceParams>,
 
@@ -172,10 +195,20 @@ export const presentations = {
     mouth: { width: 0.25, upperCurve: 0.30, lipFullness: 0.35, cornerLift: 0.003 },
     // Per Leo §8.4 feminine-adult: chin-length bob (Hergé/Tintin supporting-fem
     // default). Mass falls past the temple; no temple recession; smooth edge.
+    // Recipe = bobChinLength-like: centre parting + two short vertical side-curtain
+    // strokes. Pascal feedback (round 6): default fem was inheriting the masculine
+    // sideSwept recipe → fem-adult and masc-adult had visually-identical hair.
     hair: {
       frontShape: 'parted', forehead: 0.33, volume: 0.10,
       templeRecession: 0, sideFall: 0.45, crownPeakX: 0,
       napeExtension: 0.30, edgeKind: 'smooth',
+      recipe: {
+        parting: 'centre',
+        flowStrokes: [
+          { startX: -0.25, startY: 0.60, endX: -0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
+          { startX:  0.25, startY: 0.60, endX:  0.30, endY: 0.10, size: 1.6, pressureMid: 0.90 },
+        ],
+      },
     },
   } satisfies DeepPartial<FaceParams>,
 } as const;
