@@ -97,6 +97,115 @@ Plus: dead code at `hull.ts:71-86` (`theta/cx/cy` with `void` discards)
 
 ## Handoff
 
-(Claudia fills in.)
+W1 closed; W2 open. All four returns folded in.
+
+### W1 → History
+
+SPRINT.md rewritten. W1's four ship-gate boxes archived under
+`## History` with full closure-context (Nick refactor commits +
+LOC drift; Leo+Rollo timmFlat spec halves both signed; Leo
+integration audit eye-STOP + six BACKLOG candidates; Lloyd pass 2
+four verdicts + dead-code flag). W1 carry-overs to W2 enumerated.
+
+### Q1-W2 goal
+
+**Land pack #2 (`timmFlat`) at quality bar across its 16-cell
+demographic grid, with the two prereq primitive fixes that gate it.**
+
+Ship-gate (4 boxes):
+1. Eye-primitive plumbing landed.
+2. `hullMode: 'convex' | 'alpha'` knob landed + bundled Lloyd
+   items 2 (centreU keying) + 3 (debug attr drop).
+3. `timmFlat` pack lands + 16-cell grid renders pass.
+4. Pascal calibration audit on the 16-cell grid (W1-deferred).
+
+**Opinion on scope:** all three Nick prereqs fit W2 because timmFlat
+itself is parameter flips. Eye plumbing + hull cleanups bundle into
+~35 LOC one-PR (half day). Alpha-shape is ~80 LOC + Lloyd review
+(half day to one day). timmFlat is preset data + 16-cell render
+sheet (one to two days). That's 2-3 focused days. Comfortable, not
+tight. I am NOT pushing alpha-shape OR timmFlat to W3 — Lloyd's
+"unshippable artefact" argument on convex-hull is right, and W2 is
+the right time to land alpha while the architecture is fresh in
+Nick's head.
+
+### Spawn order for Bob
+
+1. **Nick** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
+   Three small commits in one PR (~35 LOC): eye plumbing + centreU
+   fix + drop debug attr. No Lloyd review needed. Half day.
+2. **Nick** — `tasks/nick-alpha-shape-hullmode.md`. Alpha-shape
+   merger + `hullMode` knob on `HairstyleRecipe`. Convex stays as
+   a mode per mixture rule. Lloyd reviews on completion. Spawn
+   after #1 lands (same `hull.ts` file; serialize to avoid
+   merge churn).
+3. **Nick** — `tasks/nick-timmflat-pack.md`. Pack parameter delta
+   per W1 spec + 16-cell grid render sheet. Spawn after #1 lands
+   (eye-plumbing PR is a hard prereq for `lidLine: 0.6`). Can
+   start in parallel with #2 if Nick has bandwidth (file overlap
+   zero — pack lives in `styles.ts`, alpha-shape lives in
+   `hull.ts`). Default: serial after #2.
+
+Conditional spawns (after #3 lands):
+4. **Lloyd** code review of #2 — Bob-triggered, no Claudia
+   queue needed.
+5. **Pascal** — 16-cell grid + W1-deferred calibration audit.
+   Closes the sprint.
+
+Not queued this sprint:
+- Holly — sprint-close role; first spawn is the test-strategy
+  doc (per AGENTS.md), not test code. May slip to W3.
+- Rollo / Leo — no audits or specs queued; W3 may need Leo if
+  the next pack pick demands the orbital-socket primitive.
+- David — monthly directional review naturally lands ~W2 close
+  or W3 open.
+
+### BACKLOG curation
+
+Updated. Six Leo BACKLOG candidates triaged:
+- #1 eye plumbing → **PROMOTED to W2** (Nick PR #1).
+- #2 `mouth.philtralBow` → DEFERRED W3+ (filed).
+- #3 categorical `brows.shape` → DEFERRED W3+ (filed).
+- #4 per-feature line-weight multiplier → DEFERRED W3+ (filed,
+  flagged as Pascal-ceiling raiser).
+- #5 orbital socket recess primitive → DEFERRED to first pack
+  that requires it (filed, NEW row).
+- #6 `expressions.ts` resuscitation → DEFERRED W3+ (filed,
+  consolidated with prior expression row).
+
+Two Lloyd next-PR items:
+- Tangent-decay parameter exposure → filed under deferred-features
+  (cheap follow-up; defer until a caller wants it).
+- `hullGroup` centreU keying → **PROMOTED to W2** (bundled in
+  Nick PR #1).
+
+Dead-code cleanup:
+- `hull.ts:71-86` → filed under regressions/bugs as low-priority
+  cleanup (bundle with whatever Nick PR next touches `hull.ts`).
+
+Plus Rollo's adjacent-gap surface items filed:
+- `pointed` / `pear` jaw topology demographic dispatch → filed.
+- TWA × timmFlat promote-together → filed.
+- Swept-back-long hair × Timm → filed.
+
+### Escalations
+
+None. W2 scope is within the Q1 envelope; no human-in-loop
+needed unless Pascal scores collapse and a re-plan is required.
+
+### Risk callouts (non-blocking)
+
+- **Pascal calibration is the W2 wild card.** If Pascal scores the
+  16-cell grid below 5 across the board, the issue could be: (a)
+  pack-level value tuning (fixable in Nick re-spawn), (b) the
+  features-as-decals integration debt biting earlier than Leo's
+  audit predicted (would need an orbital-socket promotion to W3),
+  or (c) Pascal mis-calibration (the historical drift). Plan
+  contingency: if (a), Nick patches and re-renders; if (b), I
+  re-plan W3 around socket primitive; if (c), the calibration
+  audit IS Pascal's spawn and we trust the AGENTS.md anchor.
+- **Render-sheet cadence.** Bob: render `tintin` × 13 + `timmFlat`
+  × 16 after each Nick PR lands. Don't let the share-every-render
+  rule erode through the subagent layer.
 </content>
 </parameter>
