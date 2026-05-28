@@ -2,13 +2,7 @@ import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
 import { darken, lighten } from '../math/color.ts';
-// cranialField and clumpStroke are imported on-demand when future per-school hair
-// characterization strokes are added (Caniff hatching, manga fringe wedges) — see
-// research/hair-tooling.md §4. Not used in the current pass: the parting and the
-// single characterization flick are hand-laid Beziers (the field's parting saddle
-// pushes traces sideways rather than forward; the field is correct for INTERIOR
-// flow strokes, not for boundary lines).
-import { /* cranialField, clumpStroke */ } from './hair-field.ts';
+import { cranialField, clumpStroke } from './hair-field.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
 // `role` lets the renderer identify special curves (silhouette, hair) for fills.
@@ -1114,6 +1108,73 @@ const buildHair = (
         ink: {
           size: fs.size, taperStart: 0.55, taperEnd: 0.45,
           pressureMid: fs.pressureMid, color: '#000000',
+        },
+      });
+    }
+  }
+
+  // ---- EXPERIMENT (user's "stop bucket-filling, draw FLOWING strands"):
+  // Long hair built as TWO LAYERS:
+  //   1. A "fall" polygon hanging from each temple down past the chin —
+  //      provides the dark mass that lets the hair register as actual hair
+  //      instead of wisps over a face. Filled with hairFill, no stroke
+  //      (otherwise we get a hat-like polygon outline).
+  //   2. Dense, varied flow strokes ON TOP, traced through the cranial field —
+  //      provide the strand texture and direction, plus escape strokes that
+  //      extend past the polygon boundary as wisps.
+  //
+  // Per user: every parameter randomized via deterministic seeded RNG. Stroke
+  // length, thickness, pressure, taper, seed position all vary.
+  if (style === 'long' && fillColor) {
+    // Density-only approach: the STROKES are the mass. No fall polygon —
+    // polygons read as fabric. Instead, render ~400 strokes whose density,
+    // length, and thickness vary so the visual mass emerges from overlapping
+    // strokes near the top (dense thatch) and the wisps emerge as fewer long
+    // strokes reach the bottom.
+    const field = cranialField(rx, ry, rz, {
+      crown: { u: 0, v: 0.85 * Math.PI / 2 },
+      gravity: 1.1,
+    });
+    // Mulberry32 seeded RNG — deterministic, no per-call drift. Seed should
+    // come from style.jitterSeed eventually; hardcoded 1 for the experiment
+    // (changing the seed re-shuffles the hair without changing the recipe).
+    let rngState = 1 >>> 0;
+    const rng = (): number => {
+      rngState = (rngState + 0x6d2b79f5) >>> 0;
+      let t = rngState;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const totalStrokes = 420;
+    for (let i = 0; i < totalStrokes; i++) {
+      // Seeds biased toward the front + crown of the scalp (gaussian-ish via
+      // two-pull sum). This puts most strokes ORIGINATING near the top where
+      // hair gathers, with progressively fewer at the sides.
+      const u = (rng() + rng() - 1) * Math.PI * 0.85;
+      const vBase = 0.55 * Math.PI / 2;
+      const v = vBase + (rng() - 0.5) * 0.55 * Math.PI / 2;
+      // Length distribution: 35% short, 45% medium, 20% long.
+      // Short strokes near the top create dense thatch; long strokes are
+      // the visible falling strands.
+      const lengthRoll = rng();
+      const length = lengthRoll < 0.35 ? 0.55
+                   : lengthRoll < 0.80 ? 1.10
+                   : 1.70;
+      // Thickness: bump up; many strokes need to be thick to overlap-dominate.
+      const thickRoll = rng();
+      const size = thickRoll < 0.55 ? 2.4
+                 : thickRoll < 0.90 ? 1.5
+                 : 0.7;
+      const pressureMid = 0.65 + rng() * 0.35;
+      const surfaceOffset = 0.018 + rng() * 0.014;
+      const stroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset);
+      if (stroke.length < 4) continue;
+      curves.push({
+        kind: 'feature-ink', closed: false, points: stroke,
+        ink: {
+          size, taperStart: 0.02 + rng() * 0.06, taperEnd: 0.25 + rng() * 0.40,
+          pressureMid, color: fillColor,
         },
       });
     }

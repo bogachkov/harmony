@@ -16,6 +16,7 @@ import shortPompadour from './shortPompadour.ts';
 import spikyShort from './spikyShort.ts';
 import bobChinLength from './bobChinLength.ts';
 import curlyDome from './curlyDome.ts';
+import longFlowing from './longFlowing.ts';
 
 export const hairstyles = {
   shortSwept,
@@ -24,6 +25,7 @@ export const hairstyles = {
   spikyShort,
   bobChinLength,
   curlyDome,
+  longFlowing,
   // Future (need primitives not yet wired):
   //   evenBowl        — needs fringeBand
   //   sideForelock    — needs forelockMass
