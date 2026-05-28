@@ -22,12 +22,14 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 | Orbital socket recess primitive | Eye sits in a recessed socket on a mandibular plane (not as a decal on the front-projected sphere). Load-bearing for packs 3-4 (Caniff socket shadow + cheekbone plane; manga shoujo heavy upper-lid + cheek highlight + iris ring; realistic / Vilppu Asaro planes). Medium effort — Leo brief + Nick impl. **Defer to the first pack that requires it (W3+ pack pick).** timmFlat dodges (Timm canon IS decals). | Leo face-integration audit BACKLOG #5 (NEW) |
 | `mouth.philtralBow` knob | Hardcoded cupid-bow in `buildMouth:582-596` fires regardless of `lipFullness`. Caps mouth-on-Joker / Two-Face register at Pascal ~7. ~5 LOC to expose as a knob. Defer W3+. | Leo face-integration audit BACKLOG #2 |
 | `expressions.ts` resuscitation pass | Pascal flagged: happy/sad/angry/surprised barely change the face. Mouth `cornerLift` amplitude is similar to the hardcoded cupid-bow pulse (~0.013 vs ~0.008), so expressions barely register on the seam. Uses the philtralBow knob above + amplified cornerLift. Defer W3+. | Leo face-integration audit BACKLOG #6 + Pascal prior rounds |
-| `pointed` / `pear` jaw topology dispatch | Both topologies are wired in the topology enum (Leo's `leo-jaw.md` §2) but NOT dispatched by any demographic preset. timmFlat reaches Batman/Catwoman/Alfred cleanly but cannot reach the Joker / Penguin axis without ad-hoc parameter overrides at render time. Demographics-data gap, not a pack gap. Needs a `villain` / `character` / archetype axis dispatching these. Defer W3+. | Rollo, `stylepack-timmFlat-spec.md` adjacent-gap #1 |
+| `pointed` / `pear` jaw topology dispatch | Both topologies are wired in the topology enum (Leo's `leo-jaw.md` §2) but NOT dispatched by any demographic preset. **Partial close W3:** Lloyd Q2 design folds in `elderMascPear` + `adultFemPointed` as private demographic-data fixtures (NOT public enum additions — avoids combinatorial pack-expansion). Grid script opts in for off-grid probes. **A `villain` / `character` / archetype public axis remains deferred** to whenever a future pack pick demands it. | Rollo, `stylepack-timmFlat-spec.md` adjacent-gap #1 + Lloyd Q2 design |
 | Tangent-decay parameter exposure | `clumpStroke()`'s tangent-decay `1 - 0.8 * gravity * t` magic constant. Expose as `spec.tangentDecay?: number` (default 0.8) so a future curl-mechanics pass can tune per regime (straight / wave / curl have different decay rates per HT §5). Lloyd APPROVED-WITH-EDITS in pass 2. ~5 LOC. Defer until a caller wants it. | Lloyd pass-2 §1 |
 | Alpha-shape `ALPHA_FACTOR` parameter exposure | `hull.ts`'s alpha-shape merger uses `ALPHA_FACTOR = 1.5 × median NN-distance` (Lloyd §7 starting guess, held up first try across the three W1 fixtures + grid pre-dedup stabilises NN distribution). Expose as `recipe.hullAlpha?: number` (default 1.5) when a W3 volume pack wants tighter/looser tuning. Lloyd APPROVED-AS-IS in pass 3 for v1. ~5 LOC. Defer until a caller wants it. | Lloyd pass-3 §3 |
 | Swept-back-long hair × Timm gap | Rollo pass-1 top-3 missing axis — period-drama matriarch, severe antagonist (Batman Beyond Bruce-as-elder, Mrs. Crock, Maleficent register). Hair primitive not built. When it lands, pair through `timmFlat` first. | `stylepack-timmFlat-spec.md` adjacent-gap #4 |
-| `recipe.strandMode: 'off'` knob (long-hair primitive) | `style: 'long'` field-tracer's multi-strand layer cannot be reached by the override cascade — fires below it. Cells 6/7/11 of the timmFlat grid (longSleek + longTail at the Timm flat-shape register). Per mixture rule: add as a knob; default preserves current strand behavior; timmFlat sets it off. Pascal's reco at `research/pascal-w2-timmflat.md` §sprint-close. ~30-50 LOC field-tracer + Lloyd touch. **W3 first row.** | Pascal W2 timmFlat NO-SHIP verdict |
-| timmFlat cells 6/7/11 re-render + score | Three cells dropped from the W2 ship grid pending the long-hair primitive promotion above. Re-render + Pascal re-score after the strandMode knob lands. Closes the original 16-cell spec. **W3 closeout.** | Claudia W2 re-plan |
+| ~~`recipe.strandMode: 'off'` knob (long-hair primitive)~~ | **PROMOTED TO Q1-W3** (`tasks/longhair-primitive-rebuild.md`). Closes cells 6/7/11. Conditional owner per David's graphics-specialist hire decision. | Pascal W2 timmFlat NO-SHIP verdict |
+| ~~timmFlat cells 6/7/11 re-render + score~~ | **PROMOTED TO Q1-W3** as part of the full 16-cell re-render + Pascal re-score row (`tasks/pascal-w3-close-rescore.md`). Closes the original 16-cell spec. | Claudia W2 re-plan |
+| `pack.proportionScale` knob | Optional pack-level scalar over demographic jaw proportions. Lloyd Q2 §debt-left: land ONLY if W3 Q2 demographic-data push regresses `tintin` × demographic renders. Default 1.0 (no-op). Pascal's `tintin × 4` regression re-score is the trigger. Defer unless trigger fires. | Lloyd Q2 design |
+| Late-pass for expression / character presets | Lloyd Q1 §debt-left: the same `pack.declares` manifest mechanism extends naturally to other preset layers (expression, character-archetype). Flag for W4 pack-spec when Rollo + Leo consider expression / archetype packs. | Lloyd Q1 design |
 
 ## Known regressions / bugs
 
@@ -66,51 +68,35 @@ chaos like exp-wavy-1, 1 = current locked clumps).
 
 ## Architectural calls (open)
 
-- **Cascade-order architecture for pack-level pedagogy knobs (DESIGN
-  IN W2).** Lloyd architectural design pass scoped — pack-level knobs
-  (`mouth.lipFullness`, `eyes.lashes`, `eyes.lidLine`, and notably
-  `recipe.leads = []`) get clobbered by demographic layers downstream
-  in the current cascade. Pascal's W2 read confirmed: the cascade-
-  order surprise is now visible in shipping output (bob/pomp interior
-  strand striping). Lloyd writes design ONLY in W2; Nick implements
-  in W3. Filed task: `tasks/lloyd-cascade-architecture.md`.
-  Output: `research/lloyd-cascade-architecture.md`. The design must
-  cover both halves:
-  - **(a) cascade-merge architecture.** Pack-as-declarative-truth vs
-    pack-as-overrides-asserted-at-render-time (Pascal's framing).
-    Possible designs: re-order so STYLE wins on overlapping knobs;
-    type-level pin on load-bearing pedagogy knobs; new `recipe.lock`
-    or `recipe.suppressLeads` primitive; multiple of the above.
-  - **(b) demographic-topology gap.** Cells 9/12/14/15 + four-corner
-    test failure. Does this close at the cascade-merge layer (push
-    pack pedagogy harder onto demographic-topology proportions) or
-    at the demographic-preset-data layer (push jaw topology
-    proportions harder in `demographics.ts` — adult-square /
-    child-round / elder-jowled need to actually diverge at
-    silhouette level)?
-  Lloyd names the layer-of-fix for each symptom and sizes the W3
-  Nick implementation work.
+- **Cascade-order architecture for pack-level pedagogy knobs
+  (IMPLEMENT IN W3 per Lloyd's W2 design).** Lloyd's W2 design
+  pass at `research/lloyd-cascade-architecture.md` named the layer-
+  of-fix: **Option 4 hybrid** — re-order STYLE to a NEW slot 6
+  (post-hairstyle, pre-expression) AND ship per-pack `declares:
+  string[]` manifest naming the contested knob paths. Default
+  `[]` → byte-identical on existing packs. Type-system enforces
+  engine-vs-style separation (demographic-only paths inadmissible).
+  Subsumes Nick PR #4's `suppressInteriorHairDetail` flag (delete
+  in same commit). ~65 LOC. **Filed Q1-W3 row (`tasks/nick-q1-
+  cascade-merge-manifest.md`).** **Row stays open in this section
+  until the W3 manifest lands** — once Nick's PR ships and Lloyd
+  reviews, this row closes and any residual late-pass design
+  (expression / character preset layers) moves to the deferred-
+  features section.
 
-- **Long-hair primitive register conflict (PROMOTE TO W3).** The
-  `style: 'long'` field-tracer's multi-strand layer fights Timm
-  canon ("long hair = one flat shape"). Pascal scored cells 6/7/11
-  at 2/2/2 — dead-procedural-hair-test fires. Cannot be override-
-  worked-around (strand layer is below the override cascade).
-  ~30-50 LOC in `src/render/field-tracer.ts` + Lloyd touch. Pascal's
-  reco: `recipe.strandMode: 'off'` knob OR field-tracer no-ops when
-  `clumpMode: 'flat'` AND no leads configured. Per mixture rule:
-  add as a knob, default preserves current strand behavior, timmFlat
-  pack sets it off. W3 first Nick row.
+- ~~**Long-hair primitive register conflict.**~~ **MOVED TO W3
+  (`tasks/longhair-primitive-rebuild.md`).** Field-tracer rebuild
+  closes cells 6/7/11. Owner conditional on David's graphics-
+  specialist hire decision. Row will close on W3 ship.
 
-- **Demographic-topology silhouette divergence (PROMOTE TO W3, per
-  Lloyd design).** Cells 9/12/14/15 + four-corner failure. Adult-
-  square / child-round / elder-jowled produce similar broad-bottomed
-  silhouettes at 96px. Fix path depends on Lloyd's W2 design pass —
-  could be a demographic-preset-data push (Nick edits
-  `demographics.ts` `bigonialWidth` / `mentalWidth` / `gonialAngle`
-  spread for round vs jowled vs square) OR a cascade-merge fix
-  (pack pedagogy gets to push topology proportions harder). Sized
-  W3 after Lloyd's design.
+- ~~**Demographic-topology silhouette divergence.**~~ **MOVED TO
+  W3 (`tasks/nick-q2-demographic-topology.md`)** per Lloyd Q2
+  design. Fix lands in `demographics.ts` data layer (not cascade-
+  merge): push `bigonialWidth`/`mentalWidth`/`gonialAngle`/`jowl`
+  spread across child/masculine/elder. Two private fixtures
+  (`elderMascPear`, `adultFemPointed`) fold in the Rollo BACKLOG
+  `pointed`/`pear` row. Mixture-rule guard via Pascal `tintin × 4`
+  regression re-score. Row will close on W3 ship.
 
 ## Tech-debt notes
 
