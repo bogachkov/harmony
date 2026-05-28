@@ -164,9 +164,24 @@ which is the right trade per the rule.
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Nick  | `tasks/nick-cascade-leak-fix.md` (PR #4) | running | Cascade-leak fix. Lloyd observed Nick chose the Option C primitive-flag path (`recipe.suppressInteriorHairDetail`) — uncommitted at last check. Lloyd's W3 manifest design subsumes the flag (delete in W3). |
+| Pascal | `tasks/pascal-w2-revised-rescore.md` | spawning | Wave 2: re-score the revised 13-cell grid post-Nick PR #4. Closes the sprint. |
 
 ## Done this sprint (W2)
+
+- **Nick PR #4 — cascade-leak fix** —
+  `tasks/nick-cascade-leak-fix.md`. Two commits on vector-draw:
+  `8a9b5f0` WIP checkpoint (pre-stop-hook save before session
+  limit), `f0c1a5e` final handoff + 13-cell grid re-render. Nick
+  chose **Option C primitive-flag promotion**:
+  `recipe.suppressInteriorHairDetail` (params.ts type field +
+  scaffold.ts 4 gates + styles.ts pack-level setting). Lloyd's W3
+  manifest design subsumes the flag (two-line delete in W3 commit
+  that lands the manifest). Nick's honest pre-Pascal read: "six
+  primary fix targets (4, 5, 8, 10, 13, 16) all read as 'no
+  visible procedural-strand artifact at the bang line' per my own
+  bar — NOT predicting Pascal scores, stating the symptom Pascal
+  named is gone." 50/50 regression byte-identical on the existing
+  packs. **Box 3 cascade-leak portion ready for Pascal re-score.**
 
 - **Lloyd cascade-architecture design pass** —
   `research/lloyd-cascade-architecture.md` (commit `74792f5`).
