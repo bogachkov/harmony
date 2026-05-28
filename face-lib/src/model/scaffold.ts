@@ -2,7 +2,8 @@ import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
 import { darken, lighten } from '../math/color.ts';
-import { cranialField, clumpStroke } from './hair-field.ts';
+import { cranialField, clumpStroke, clumpStrokeLegacy } from './hair-field.ts';
+import type { ClumpTrace } from './hair-field.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
 // `role` lets the renderer identify special curves (silhouette, hair) for fills.
@@ -1334,7 +1335,11 @@ const buildHair = (
           }
           return pt[1] < bestY - headHeight * 0.005;
         };
-        const rawStroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset, stopAt);
+        // Legacy shim: pre-Lloyd-pass-1 surface-bound polyline. Dies at the
+        // end of this PR; the volume path (added below) is the new home for
+        // clumpMode === 'volume'. The shim keeps flat mode bit-for-bit
+        // identical to pre-refactor while the diff is bounded.
+        const rawStroke = clumpStrokeLegacy(field, { u, v }, length, 28, surfaceOffset, stopAt);
         if (rawStroke.length < 4) continue;
         const ampJitter = waviness * (0.75 + rng() * 0.50);
         const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
