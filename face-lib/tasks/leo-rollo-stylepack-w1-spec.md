@@ -158,6 +158,52 @@ Step 4 — **joint spec output**. Single md at
 
 ## Handoff
 
-(Leo + Rollo fill in. Expected: "spec md written at
-`research/stylepack-<name>-spec.md`. Implementability flagged as
-X. Primitive blockers: Y. Forest impact: Z.")
+### Leo pass — pedagogy half complete
+
+- **Pack picked:** `timmFlat` (Bruce Timm / DC Animated Universe
+  flat-shape).
+- **Spec file:** `face-lib/research/stylepack-timmFlat-spec.md`.
+  Leo's half written and signed; Rollo's half stubbed under
+  `## Rollo's half` with explicit expected-sections from the brief.
+- **Implementability:** W2-implementable as pure parameter flips in
+  `src/presets/styles.ts` against existing primitives + Nick's
+  `clumpMode: 'flat'` (which is the canonical default for this pack
+  anyway). **Zero BACKLOG promotions required.**
+- **Primitive blockers (read-as-tradition):** none. Pack reads as
+  Timm with current engine.
+- **Would-be-nicer (defer, NOT blockers):**
+  - `highlightCutout` (already BACKLOG) — for the optional cel-shadow
+    on hair; pack ships at Pascal-5 without it, ceiling rises with it.
+  - **NEW BACKLOG CANDIDATES (Claudia, please file):**
+    - per-feature line-weight multiplier — Timm upper-lid line is
+      2-3× the contour weight; current `style.lineWeight` is a
+      single scalar. ~30 LOC.
+    - categorical brow-shape enum — Timm brows are shape-categorical
+      (block / arched / diamond / tapered), not smooth-parameter.
+      Would benefit Timm + likely shounen + likely Caniff packs. ~40 LOC.
+- **Why this pack vs. other six candidates:** Timm is the only pick
+  that satisfies all four ordered criteria simultaneously — maximally
+  orthogonal to ligne claire (flat fill + categorical jaw topology vs.
+  uniform thin line), reachable today (no new primitives), demographic-
+  axis-real (Timm's whole design ethos IS jaw topology across
+  demographics), and forest-expanding (opens flat-fill territory no
+  existing pack touches).
+- **Unexpected findings:** the pick *validates* the
+  `head.jaw.topology` enum Leo prescribed in `leo-jaw.md` — without
+  that prescription already wired, Timm flat-shape would have been a
+  poor W1 choice. The pack picks itself, in a sense, given what the
+  engine already has.
+- **Forest impact (Leo preliminary, Rollo to confirm asset-side):**
+  no filed aesthetic at risk. `timmFlat` is a sibling key in
+  `styles.ts`, not a parent of `default`/`tintin`/`ligneClaire`.
+  Adds reachable parameter-surface points; deletes none.
+
+### Rollo pass — asset half
+
+(Rollo to fill in on next spawn. The spec file
+`research/stylepack-timmFlat-spec.md` has the `## Rollo's half`
+section reserved with expected sub-sections enumerated. The
+proposed-parameter-delta block in the same file is the LEO half
+only; Rollo to append color/background choices + concrete
+demographic grid + adjacent-missing-points list + asset-side
+mixture-rule confirmation.)
