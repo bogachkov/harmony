@@ -120,33 +120,34 @@ export type HairstyleRecipe = {
   // Convex is NOT deleted — per mixture-not-survival, it stays a selectable
   // mode. Ignored when clumpMode === 'flat' (no merger runs).
   hullMode?: 'convex' | 'alpha';
-  // suppressInteriorHairDetail — pack-level hard "off switch" for INSIDE-the-
-  // hair-mass detail strokes. When true:
-  //   - the recipe.leads array is not rendered (the "soul strokes"),
-  //   - the experimental clump-stroke field (the per-clump ~6-20 feature-ink
-  //     strands seeded across the cranial field, lines ~1281+ of scaffold.ts)
-  //     is not rendered,
-  //   - the cap shadow band (darken(fillColor, 0.30) tonal polygon over the
-  //     hairline) is not painted,
-  //   - the cap highlight band (lighten(fillColor, 0.18) catch-light lens) is
-  //     not painted.
-  // The CAP POLYGON itself (the flat hair-mass fill) IS still drawn, as is
-  // the silhouette outline and the hairline tick. So the hair reads as a
-  // single flat shape with a confident contour — exactly Timm/DC-animated
-  // pedagogy (research/stylepack-timmFlat-spec.md §3 + §5: "shape is
-  // everything; flat fills are load-bearing; NO interior strokes").
+  // fillStyle — declarative hair-mass fill pedagogy. The renderer reads this
+  // to gate INSIDE-the-hair-mass detail (clump-stroke field, sweep field, cap
+  // shadow band, cap highlight band). The flat-fill pedagogy (Timm/DC canon —
+  // research/stylepack-timmFlat-spec.md §3 + §5: "shape is everything; flat
+  // fills are load-bearing; NO interior strokes") is reached by setting
+  // `fillStyle: 'flat'`. The pack-late-pass manifest (per Lloyd Q1 design —
+  // research/lloyd-cascade-architecture.md §Q1) is the cascade-traversal
+  // mechanism that lets timmFlat assert this declarative state past
+  // demographic/hairstyle/expression layers.
   //
-  // Per mixture-not-survival rule: default undefined/false preserves every
-  // existing pack and hairstyle render byte-identical. This is a NEW knob,
-  // not a replacement; tintin / ligneClaire / default packs continue to
-  // render with leads + clumps + shadow + highlight as before.
+  //   'standard' (default — undefined treated as 'standard'): full interior
+  //     detail. The cap polygon carries shadow + highlight tonal bands; the
+  //     clump-stroke field paints per-clump strands; recipe.leads renders the
+  //     explicit "soul strokes"; verticalLift sweep strokes paint.
+  //   'flat': the cap polygon is a single uniform fill — no shadow, no
+  //     highlight, no clump-stroke field, no sweep strokes. The silhouette
+  //     outline + hairline tick + recipe.leads (if any) still render, but
+  //     timmFlat asserts leads = [] declaratively so the result reads as a
+  //     pure flat shape with a confident contour. For style === 'long' the
+  //     companion long-hair flat curtain polygon (Felix W3 primitive,
+  //     scaffold.ts L1208) carries the side/below-chin curtain mass.
   //
-  // W2 PR #4 (cascade-leak fix). The leak Pascal diagnosed was nominally
-  // about `recipe.leads = []` not surviving the cascade — but the actual
-  // bang-strand artifact source is the clump-stroke field, which runs
-  // regardless of leads. A leads-only suppression couldn't have caught it.
-  // Per task fallback authority, promoted to a primitive flag.
-  suppressInteriorHairDetail?: boolean;
+  // W3 Q1 — replaced `suppressInteriorHairDetail?: boolean` (Nick PR #4) with
+  // declarative-enum naming. The pack declares `hair.recipe.fillStyle` via
+  // the manifest mechanism so the assertion survives the cascade. Default
+  // undefined preserves byte-identical rendering for every existing pack and
+  // every hairstyle that doesn't explicitly opt in.
+  fillStyle?: 'standard' | 'flat';
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
@@ -508,4 +509,93 @@ export const mergeParams = (...patches: Array<DeepPartial<FaceParams> | undefine
   let out: FaceParams = defaults;
   for (const p of patches) out = deepMerge(out, p);
   return out;
+};
+
+// ----- Q1 cascade-merge hybrid manifest (Lloyd W2 design pass — research/
+// lloyd-cascade-architecture.md §Q1). Packs may carry a `declares: string[]`
+// manifest naming the knob paths they assert as truth past the cascade. The
+// manifest is applied as a SECOND pack pass at slot 6 (post-hairstyle, pre-
+// expression) — see api.ts:composeFace. Default `[]` is a no-op late pass:
+// existing packs (default, tintin, ligneClaire) ship `declares: []` and
+// render byte-identical to pre-Q1.
+//
+// AllowedDeclarePath is the type-system enforcement of the engine-vs-style
+// separation rule (styles.ts:11-26 header). Demographic-only paths (head.*,
+// eyes.spacing/size, nose.length/width, brows.fullness/length, mouth.width,
+// ears.*, neck.*) are inadmissible by construction — a pack declaring such
+// a path is a TypeScript ERROR at compile time, not a runtime check.
+//
+// The union is intentionally narrow: only knobs packs already touch in
+// styles.ts (or that Lloyd's §Q1 named explicitly as the contested timmFlat
+// pedagogy set). Adding a new admissible path = add a literal to the union.
+export type AllowedDeclarePath =
+  // hair recipe — leads (soul strokes), parting, plus the fill-style pedagogy
+  // (Q1 subsumes Nick PR #4's suppressInteriorHairDetail flag through this
+  // declarative knob, declared via the manifest).
+  | 'hair.recipe.leads'
+  | 'hair.recipe.parting'
+  | 'hair.recipe.fillStyle'
+  // mouth — the contested vermilion/sulcus/corner set (Pascal W2 cascade-leak
+  // diagnosis: presentation/age layers clobber the pack's mouth pedagogy).
+  | 'mouth.lipFullness'
+  | 'mouth.labiomentalShow'
+  | 'mouth.cornerMarks'
+  | 'mouth.upperCurve'
+  // eyes — almond-vs-dots discrete is already pack-owned via eyes.style;
+  // these are the modeling toggles (lid line, lashes, underline hint).
+  | 'eyes.lashes'
+  | 'eyes.lidLine'
+  | 'eyes.underlineHint'
+  // brows / nose — discrete style picks. Note `brows.style` and `nose.style`
+  // are ENUMS owned by the pack; demographic packs never touch them.
+  | 'brows.style'
+  | 'nose.style'
+  | 'nose.bridgeVisible'
+  | 'nose.showNostrils';
+
+// applyDeclares — filter a deep-partial pack patch down to the declared
+// paths and return a fresh DeepPartial that overwrites ONLY those paths.
+// Used by composeFace to build the slot-6 late-pass patch.
+//
+// Semantics:
+//   - For each path "a.b.c" in declares, read pack.a.b.c (if present) and
+//     build a thin DeepPartial { a: { b: { c: <value> } } }.
+//   - Paths whose value is missing in the pack are skipped (the pack hasn't
+//     asserted that knob; nothing to write at the late pass).
+//   - Array values (recipe.leads) are written verbatim — the deepMerge in
+//     mergeParams replaces arrays wholesale, which is what we want.
+//   - Boolean / scalar / enum values all just replace at the leaf.
+//
+// Mixture-rule guard: when `declares` is empty / undefined the returned
+// patch is `undefined`, so mergeParams short-circuits — byte-identical.
+export const applyDeclares = (
+  pack: DeepPartial<FaceParams> | undefined,
+  declares: readonly AllowedDeclarePath[] | undefined,
+): DeepPartial<FaceParams> | undefined => {
+  if (!pack || !declares || declares.length === 0) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const path of declares) {
+    const parts = path.split('.');
+    // Walk the pack to read the asserted value (if any). If any segment is
+    // missing we skip the path — declares is a wish-list; only paths the
+    // pack actually sets get re-asserted.
+    let src: unknown = pack;
+    let missing = false;
+    for (const seg of parts) {
+      if (!isPlainObject(src) || !(seg in src)) { missing = true; break; }
+      src = (src as Record<string, unknown>)[seg];
+    }
+    if (missing) continue;
+    // Build the nested DeepPartial path { a: { b: { c: src } } }.
+    let cursor: Record<string, unknown> = out;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i] as string;
+      const existing = cursor[seg];
+      const next = isPlainObject(existing) ? (existing as Record<string, unknown>) : {};
+      cursor[seg] = next;
+      cursor = next;
+    }
+    cursor[parts[parts.length - 1] as string] = src;
+  }
+  return out as DeepPartial<FaceParams>;
 };

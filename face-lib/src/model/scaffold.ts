@@ -1066,12 +1066,14 @@ const buildHair = (
   // silhouette. Flat mode (the default for all 13 existing hairstyles) keeps
   // them unchanged.
   const isVolume = recipe.clumpMode === 'volume';
-  // suppressInteriorHairDetail — Timm/flat-fill packs want the cap polygon
-  // (the flat hair-mass shape) but NOT the shadow band or highlight band
-  // (those are tonal modeling — explicit interior detail per Eisner 1985
-  // "Modelling"). Pre-computed up here so the cap-fill block can branch.
-  // (params.ts HairstyleRecipe doc, W2 PR #4.)
-  const suppressHairCapTone = recipe.suppressInteriorHairDetail === true;
+  // fillStyle: 'flat' — Timm/flat-fill packs want the cap polygon (the flat
+  // hair-mass shape) but NOT the shadow band or highlight band (those are
+  // tonal modeling — explicit interior detail per Eisner 1985 "Modelling").
+  // Pre-computed up here so the cap-fill block can branch. (params.ts
+  // HairstyleRecipe.fillStyle doc, W3 Q1 — replaces PR #4's
+  // recipe.suppressInteriorHairDetail flag; pedagogy reaches the renderer
+  // through the slot-6 declarative manifest in api.ts:composeFace.)
+  const suppressHairCapTone = recipe.fillStyle === 'flat';
   // Felix W3 (`tasks/felix-longhair-primitive-rebuild.md`): when interior
   // detail is suppressed AND style === 'long', the cap polygon MUST draw —
   // long-hair normally relies on the clump-stroke field for its top-of-head
@@ -1171,7 +1173,7 @@ const buildHair = (
   // ---- LONG-HAIR FLAT CURTAIN — primitive-level rebuild per Felix W3
   // (`tasks/felix-longhair-primitive-rebuild.md`).
   //
-  // Problem: when `suppressInteriorHairDetail = true` AND `style === 'long'`,
+  // Problem: when `fillStyle === 'flat'` AND `style === 'long'`,
   // the existing primitive has NO geometry left to paint the hair mass —
   // `drawCap` excludes long-hair (it's strands-only above), and the clump-
   // stroke field + trailing-mass + sweep blocks are all gated by
@@ -1388,11 +1390,13 @@ const buildHair = (
   // the cranial surface with cubic ease and per-stroke ink weight. Pascal-validated
   // black colour so dark hair doesn't swallow the strokes (round 5 feedback).
   // Suppressed for 'receding' (bald scalp).
-  // Also suppressed when recipe.suppressInteriorHairDetail = true (Timm /
-  // flat-fill packs — params.ts HairstyleRecipe doc, W2 PR #4).
+  // Also suppressed when recipe.fillStyle === 'flat' (Timm / flat-fill packs —
+  // params.ts HairstyleRecipe.fillStyle doc, W3 Q1; the assertion reaches the
+  // renderer through the slot-6 declarative manifest in api.ts:composeFace,
+  // subsuming PR #4's suppressInteriorHairDetail flag).
   // Read from recipe.leads (preferred) with fallback to deprecated recipe.flowStrokes.
   const leadsArray = recipe.leads ?? recipe.flowStrokes ?? [];
-  const suppressDetail = recipe.suppressInteriorHairDetail === true;
+  const suppressDetail = recipe.fillStyle === 'flat';
   if (drawInteriorStrokes && !suppressDetail) {
     const flowSamples = 14;
     for (const fs of leadsArray) {
@@ -1438,10 +1442,11 @@ const buildHair = (
   //   medium — clumps 0.40-1.10 long, medium gravity (chin-length fall)
   //   long   — clumps 0.45-2.25 long, high gravity (curtain past shoulders)
   //
-  // suppressInteriorHairDetail: gate the entire clump-stroke field so flat-
-  // fill packs (Timm canon) read as a single mass with no interior strand
-  // texture. The cap polygon + silhouette outline still draw, so the hair
-  // is not invisible — just flat. (params.ts HairstyleRecipe doc, W2 PR #4.)
+  // fillStyle: 'flat' — gate the entire clump-stroke field so flat-fill packs
+  // (Timm canon) read as a single mass with no interior strand texture. The
+  // cap polygon + silhouette outline still draw, so the hair is not invisible
+  // — just flat. (params.ts HairstyleRecipe.fillStyle doc, W3 Q1 — replaces
+  // PR #4's suppressInteriorHairDetail flag via the slot-6 manifest.)
   if (style !== 'none' && style !== 'bald' && fillColor && !suppressDetail) {
     // Style-dependent stroke generation parameters.
     const isLong = style === 'long';
@@ -1759,13 +1764,13 @@ const buildHair = (
   //
   // Strokes only generated when verticalLift > 0; default 0 leaves all
   // existing hairstyles unaffected (mixture-not-survival rule).
-  // suppressInteriorHairDetail: gate this block too — the sweep field is
-  // interior strand texture, same category as the clump-stroke field. Without
-  // this gate, shortPomp (and any future verticalLift-using flat-fill pack
-  // hairstyle) shows visible swept strands at the lifted volume top even with
-  // the clump field suppressed. The cap fill polygon is built from topSil
-  // (which extends to liftApexY when verticalLift>0), so the lifted mass
-  // still reads as solid black; the missing pieces are just the texture.
+  // fillStyle: 'flat' — gate this block too. The sweep field is interior
+  // strand texture, same category as the clump-stroke field. Without this
+  // gate, shortPomp (and any future verticalLift-using flat-fill pack
+  // hairstyle) shows visible swept strands at the lifted volume top even
+  // with the clump field suppressed. The cap fill polygon is built from
+  // topSil (which extends to liftApexY when verticalLift>0), so the lifted
+  // mass still reads as solid black; the missing pieces are just the texture.
   if (verticalLift > 0 && fillColor && !suppressDetail) {
     const liftApexY = ry + liftMag;         // highest point of the lifted silhouette
     const liftHalfWidth = rx * 0.55;        // horizontal span of the lifted mass

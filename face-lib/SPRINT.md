@@ -38,15 +38,28 @@ Five boxes:
   knob only if `tintin` slides. **LANDED — Nick handoff in
   `tasks/nick-q2-demographic-topology.md`. Open for Lloyd review.**
 
-- [ ] **Q1 — cascade-merge hybrid manifest lands.** Lloyd's design
-  §Q1. Re-order STYLE to a NEW slot 6 (post-hairstyle, pre-expression)
-  AND ship per-pack `declares: string[]` manifest. Default `[]` →
-  byte-identical on `default`/`tintin`/`ligneClaire`. Type-system
-  enforces engine-vs-style separation (demographic-only knob paths
-  inadmissible). `timmFlat.declares` covers the contested set
-  (leads / parting / lipFullness / lashes / lidLine / etc).
-  **Subsumes Nick PR #4's `recipe.suppressInteriorHairDetail` flag —
-  delete in the same commit.** ~65 LOC.
+- [x] **Q1 — cascade-merge hybrid manifest lands.** Lloyd's design
+  §Q1. Re-ordered STYLE to a NEW slot 6 (post-hairstyle, pre-expression)
+  AND shipped per-pack `declares: readonly AllowedDeclarePath[]`
+  manifest. `AllowedDeclarePath` string-literal-union (in
+  `model/params.ts`) excludes `head.*` / `eyes.spacing` / `eyes.size`
+  / `nose.length`/`width` / `brows.fullness`/`length` /
+  `mouth.width` / `ears.*` / `neck.*` AT COMPILE TIME — verified
+  with a `declares-disallowed-path` fixture (11/11 forbidden paths
+  produce TypeScript errors). `timmFlat.declares` covers 14 paths
+  (leads / parting / fillStyle / lipFullness / labiomentalShow /
+  cornerMarks / upperCurve / lashes / lidLine / underlineHint /
+  brows.style / nose.style / bridgeVisible / showNostrils).
+  Default `[]` shipped on `default`/`tintin`/`ligneClaire` → 816-
+  cell broad regression sweep (`scripts/felix-broad-regression.ts`)
+  byte-identical pre vs post; tintin × 4 demographic regression
+  sheet byte-identical. Nick PR #4's
+  `recipe.suppressInteriorHairDetail` flag DELETED in same commit,
+  replaced by declarative `recipe.fillStyle: 'standard' | 'flat'`
+  knob declared via the manifest. TIMM_PEDAGOGY override workaround
+  in `scripts/timmflat-grid.ts` collapsed to empty object (~30 LOC
+  removed). **LANDED — Nick handoff in `tasks/nick-q1-cascade-
+  merge-manifest.md`. Open for Lloyd review.**
 
 - [ ] **Long-hair primitive rebuild lands.** Closes cells 6/7/11
   (longSleek/longTail at Timm flat-shape register). Field-tracer
@@ -96,6 +109,62 @@ Five boxes:
 | Felix | Long-hair primitive rebuild | in flight (parallel) | Working tree shows scaffold.ts edits + scripts/felix-longhair-probe.ts present pre-Nick-Q2; Nick did NOT touch the file. Felix to commit separately. |
 
 ## Done this sprint (W3)
+
+- **Nick — Q1 cascade-merge hybrid manifest** (`tasks/nick-q1-cascade-
+  merge-manifest.md`). Lloyd Q1 §Pick landed verbatim. Three engine
+  files + one script: `model/params.ts` adds `AllowedDeclarePath`
+  string-literal-union (14 admissible paths; demographic paths
+  inadmissible at compile time) + `applyDeclares` filter helper +
+  swaps `recipe.suppressInteriorHairDetail?: boolean` for
+  declarative `recipe.fillStyle?: 'standard' | 'flat'`.
+  `presets/styles.ts` adds `Pack` type (`DeepPartial<FaceParams> &
+  { declares?: readonly AllowedDeclarePath[] }`); `timmFlat.declares`
+  populated with 14 paths Lloyd named in §Q1 §Pick; `default`,
+  `tintin`, `ligneClaire` ship `declares: []` (mixture-rule guard).
+  `api.ts:composeFace` adds slot 6 late pass (post-hairstyle,
+  pre-expression) via `applyDeclares(substrate, declares)`.
+  `model/scaffold.ts` swaps 4 gate sites
+  `recipe.suppressInteriorHairDetail === true` →
+  `recipe.fillStyle === 'flat'`; Felix's long-hair flat-curtain
+  primitive (cells 6/7/11) verified byte-identical post-swap.
+  `scripts/timmflat-grid.ts` collapses TIMM_PEDAGOGY override block
+  (~30 LOC removed) — `TIMM_NO_LEADS` now empty `{}` because the
+  manifest carries the pedagogy through the cascade.
+  **Regression guards (all passing):**
+    - 816-cell broad regression (`scripts/felix-broad-regression.ts`):
+      `default` × all hairstyles × all demographics IDENTICAL pre vs
+      post; same for `tintin`, `ligneClaire`. Only `timmFlat` cells
+      drift — by design (manifest re-asserts contested pedagogy past
+      hairstyle clobber, e.g. shortSwept's parting='sideL' now
+      correctly rolls back to 'none' at slot 6).
+    - tintin × 4 demographic regression sheet: 4/4 byte-identical.
+    - timmFlat 16-cell grid vs Felix-shipped (`/tmp/felix-shipped/grid/`):
+      8/16 byte-identical (cells 3, 6, 7, 8, 9, 11, 14, 15); 8/16
+      differ on the parting-curve interior-leak fix (cells 1, 2, 4,
+      5, 10, 12, 13, 16) — visual inspection confirms the diff is
+      removal of a tiny dark parting-tick at the hair-top that
+      pre-Q1 leaked through from hairstyle's parting='sideL' /
+      'centre'. Comparable or improved silhouette read across the
+      board; Pascal Wave 3 calls the absolute score.
+  **Test fixtures from Lloyd §Sizing post-impl review:**
+  `declares-empty` (no-op patch — returns undefined; verified);
+  `declares-narrow` (one-path manifest writes only that path;
+  verified); `declares-disallowed-path` (11/11 demographic paths
+  produce TypeScript errors; verified); 12-hairstyle × 3-pack
+  regression diff = 0 (verified across 17 hairstyles × 3 packs ×
+  4 ages × 4 presentations = 816 cells, zero drift on non-timmFlat).
+  Render paths: `/tmp/nick-q1-shipped/grid/` (16 full PNGs +
+  sheet-full.png), `/tmp/nick-q1-shipped/grid-96/four-corners.png`
+  (Pascal four-corner test), `/tmp/nick-q1-shipped/tintin-regression/`
+  (4 cells + sheet), `/tmp/post-q1-manifest/manifest.txt` (816-cell
+  hashes). LOC: +284 / -111 = +173 net diff stat; code-only
+  +94 / -25 = +69 net (within shouting distance of Lloyd's ~+50
+  estimate; +~104 of the diff is inline pedagogy comment on the
+  `AllowedDeclarePath` union, `applyDeclares` helper, the new
+  `recipe.fillStyle` knob, and the `Pack` type — honest comment-
+  heaviness, not algorithm bloat). Flagged in handoff for Lloyd
+  to thin if desired. **Open for Lloyd review** (architectural
+  surface = cascade order + type system change).
 
 - **Nick — Q2 demographic-topology push** (`tasks/nick-q2-demographic-
   topology.md`). Lloyd Q2 §Pick landed verbatim in `demographics.ts`:

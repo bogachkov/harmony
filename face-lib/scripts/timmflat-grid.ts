@@ -50,45 +50,27 @@ mkdirSync(outdirTintin, { recursive: true });
 // Dark skin: '#6e3f24' (warm dark brown — Static Shock / John Stewart register).
 const DARK_SKIN = '#6e3f24';
 
-// --- The "Timm pedagogy contract" enforced at the overrides layer ---
-// Cascade order is: defaults → STYLE → presentation → age → HAIRSTYLE → expression → character → overrides.
-// Several timmFlat pack knobs get clobbered by later cascade layers:
-//   - mouth.lipFullness = 0 (decision §3: no vermilion modeling) — presentation:
-//     'feminine' sets lipFullness 0.35, overriding the pack.
-//   - mouth.labiomentalShow = 0 (decision §3: no Faigin sulcus) — presentation:
-//     'masculine' sets labiomentalShow 0.22.
-//   - eyes.lashes = 0 (decision §1: no lash array) — presentation: 'feminine'
-//     sets lashes 0.6.
+// --- Timm pedagogy override (W3 Q1 — empty by design) ---
+// Cascade order is: defaults → STYLE (substrate) → presentation → age → HAIRSTYLE
+//   → STYLE (declarative late pass) → expression → character → overrides.
 //
-// W2 PR #4 (this commit): hair.recipe.leads is NO LONGER part of the override
-// because the interior-strand artifact that Pascal called out wasn't actually
-// driven by leads — the experimental clump-stroke field (~28-50 per-clump
-// strand groups, scaffold.ts:1281+) ran regardless of leads and that's where
-// the bang-strand striping came from. Fix landed as a new primitive flag
-// `recipe.suppressInteriorHairDetail` set at the timmFlat pack level (see
-// src/presets/styles.ts + src/model/params.ts), which short-circuits the
-// leads block AND the clump-stroke field AND the cap shadow/highlight tonal
-// bands at the renderer. So the override no longer needs to defensively
-// clear leads — the pack's declarative truth now reaches the render
-// regardless of what intermediate cascade layers push.
+// W3 Q1 (this commit, tasks/nick-q1-cascade-merge-manifest.md): the slot-6
+// declarative late pass implements Lloyd's hybrid manifest design (research/
+// lloyd-cascade-architecture.md §Q1). timmFlat now ships a `declares` manifest
+// (src/presets/styles.ts) naming hair.recipe.leads / parting / fillStyle +
+// mouth.lipFullness / labiomentalShow / cornerMarks / upperCurve + eyes.lashes /
+// lidLine / underlineHint + brows.style + nose.style / bridgeVisible /
+// showNostrils. The cascade re-asserts these AFTER demographic / age / hairstyle
+// have rolled by, so the per-render override layer no longer needs the prior
+// `TIMM_PEDAGOGY` defensive-override block (~30 LOC removed per Lloyd §Q1
+// sizing). Subsumes Nick PR #4's recipe.suppressInteriorHairDetail flag too
+// (now declared as recipe.fillStyle = 'flat' in the manifest).
 //
-// The remaining overrides re-apply the pack's mouth/eyes/brows/nose contract
-// because those knobs ARE single scalar/enum values that the cascade
-// correctly replaces — the only reason they need re-asserting is that
-// later layers (presentation, age) push their own values on those same
-// knobs and a pack-as-overrides at line 7 of the cascade wins cleanly.
-// This mirrors Rollo's per-render skinFill override mechanism.
-const TIMM_PEDAGOGY: DeepPartial<FaceParams> = {
-  mouth: { lipFullness: 0, labiomentalShow: 0, cornerMarks: false, upperCurve: 0 },
-  eyes: { lashes: 0, lidLine: 0.6, underlineHint: 0.15 },
-  brows: { style: 'single' },
-  nose: { style: 'minimal', bridgeVisible: false, showNostrils: false },
-};
-// Backwards-compat alias so the rest of the file reads naturally. The name
-// no longer reflects what's actually being overridden (the leads suppression
-// moved to the pack primitive flag); kept as an alias to avoid touching
-// every cell-args site in the same PR.
-const TIMM_NO_LEADS = TIMM_PEDAGOGY;
+// `TIMM_NO_LEADS` is preserved as an empty placeholder so the cell-args sites
+// below read naturally without a churn-PR touching every line. Future cleanup
+// (W4+) can drop the field and the `overrides:` argument entirely from each
+// cell where it's now redundant.
+const TIMM_NO_LEADS: DeepPartial<FaceParams> = {};
 
 const mergeOverrides = (
   ...parts: Array<DeepPartial<FaceParams> | undefined>

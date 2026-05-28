@@ -1,4 +1,4 @@
-import type { DeepPartial, FaceParams } from '../model/params.ts';
+import type { AllowedDeclarePath, DeepPartial, FaceParams } from '../model/params.ts';
 
 // Art-style presets — RENDERING-ONLY layer.
 //
@@ -25,15 +25,39 @@ import type { DeepPartial, FaceParams } from '../model/params.ts';
 //
 // These rules were added after a brutal review revealed every Tintin-styled face
 // was structurally identical — only hair color/length varied.
+//
+// W3 Q1 — packs may carry a `declares: readonly AllowedDeclarePath[]` manifest
+// naming the knob paths the pack ASSERTS as truth past the cascade. The
+// AllowedDeclarePath union (in model/params.ts) is type-system-enforced to
+// exclude the forbidden demographic-only paths above — a pack declaring
+// `head.jaw.gonialAngle` is a TypeScript ERROR at compile time. The manifest is
+// applied as a SECOND pack pass at slot 6 (post-hairstyle, pre-expression) in
+// composeFace. Default `declares: []` (or undefined) is a no-op late pass —
+// every existing pack renders byte-identical. See research/lloyd-cascade-
+// architecture.md §Q1 + tasks/nick-q1-cascade-merge-manifest.md.
+
+// Pack — a style preset object plus its optional declarative manifest. The
+// substrate pass (slot 2) merges `params` into the cascade as today; the
+// late pass (slot 6) re-writes only the paths in `declares`.
+export type Pack = DeepPartial<FaceParams> & {
+  declares?: readonly AllowedDeclarePath[];
+};
 
 export const styles = {
   // The default rendering style: generic stylized-line-art with subtle hand-drawn wobble.
-  default: {} as DeepPartial<FaceParams>,
+  // declares: [] — no late-pass assertion; substrate pass is the whole pack contribution
+  // and the slot-6 late pass is a no-op. Byte-identical regression guard.
+  default: { declares: [] } as Pack,
 
   // Tintin / Hergé rendering: dot eyes, button nose, single confident brow stroke,
   // zero jitter, cream page. Proportion settings deliberately omitted so demographic
   // presets retain their per-character variation.
+  // declares: [] — pack pedagogy reaches the render via the slot-2 substrate pass
+  // today (no contested-leak cells in tintin's mixture-rule sweep). If a future
+  // Pascal pass shows a tintin knob being clobbered by demographics, promote that
+  // path into declares here.
   tintin: {
+    declares: [],
     style: {
       lineWeight: 2.4,
       jitter: 0,
@@ -74,12 +98,14 @@ export const styles = {
       trapShow: 0,                 // Hergé doesn't draw trapezius
       laryngealProminence: 0,
     },
-  } satisfies DeepPartial<FaceParams>,
+  } satisfies Pack,
 
   // Ligne-claire (Tintin/Asterix/Spirou tradition) generic: confident uniform lines,
   // zero wobble, flat saturated fills, almond eyes, minimalist features. Same rules:
   // no proportion overrides here.
+  // declares: [] — same rationale as tintin; substrate-only pack today.
   ligneClaire: {
+    declares: [],
     style: {
       lineWeight: 2.6,
       jitter: 0,
@@ -98,7 +124,7 @@ export const styles = {
       lipFullness: 0,
       cornerMarks: false,
     },
-  } satisfies DeepPartial<FaceParams>,
+  } satisfies Pack,
 
   // Timm flat-shape (Bruce Timm / DC Animated Universe tradition). Per W1 joint
   // spec (research/stylepack-timmFlat-spec.md). Pedagogy: shape-is-everything +
@@ -109,7 +135,47 @@ export const styles = {
   // faint underline, no lashes. Per styles.ts header rule: no proportion writes.
   // Colors at pack level are DEFAULTS — per-render skinFill / hairFill override
   // (e.g. for "dark" cells in the 16-cell grid) MUST win over these.
+  //
+  // W3 Q1 — the contested pedagogy set is now declared via the slot-6 manifest
+  // (per Lloyd Q1 design — research/lloyd-cascade-architecture.md §Q1). The
+  // substrate pass (slot 2) drops the substrate values; the late pass (slot 6)
+  // re-asserts the SAME values on the declared paths AFTER demographic / age /
+  // hairstyle have rolled by. Subsumes Nick PR #4's suppressInteriorHairDetail
+  // flag — now expressed declaratively as hair.recipe.fillStyle: 'flat' which
+  // the renderer reads to gate clump-stroke / cap-tone / sweep blocks.
   timmFlat: {
+    declares: [
+      // Hair recipe — leads were the original Pascal-diagnosed cascade-leak path
+      // (recipe.leads = [] clobbered by hairstyle files). parting is the
+      // companion knob (Timm "shape-is-everything" pedagogy: no parting line).
+      // fillStyle is the new declarative replacement for the PR #4 primitive
+      // flag — declared so demographic/hairstyle layers can't push the renderer
+      // back into standard (interior-strand) mode.
+      'hair.recipe.leads',
+      'hair.recipe.parting',
+      'hair.recipe.fillStyle',
+      // Mouth — the four-knob vermilion / sulcus / corner / curve set that
+      // presentation:'feminine' (lipFullness 0.35) and presentation:'masculine'
+      // (labiomentalShow 0.22) reach in and overwrite.
+      'mouth.lipFullness',
+      'mouth.labiomentalShow',
+      'mouth.cornerMarks',
+      'mouth.upperCurve',
+      // Eyes — Sito p.40 "lid more than the pupil": lidLine 0.6 + underline 0.15
+      // + lashes 0. presentation:'feminine' pushes lashes 0.6 — declare to keep
+      // the Timm read clean.
+      'eyes.lashes',
+      'eyes.lidLine',
+      'eyes.underlineHint',
+      // Brows / nose — discrete style enum picks. Single brow stroke, minimal
+      // nose with no bridge / nostrils. Hairstyle files don't touch these but
+      // future character presets might; declared as a forward-looking guard
+      // (Lloyd §Q1 §Pick listed these as the contested pedagogy set).
+      'brows.style',
+      'nose.style',
+      'nose.bridgeVisible',
+      'nose.showNostrils',
+    ],
     style: {
       lineWeight: 3.0,          // medium-heavy contour, animation-clean (heavier than tintin's 2.4)
       jitter: 0,                // zero wobble — cel-clean
@@ -159,25 +225,35 @@ export const styles = {
         leads: [],              // CRITICAL: NO interior strokes (decision §5)
         // clumpMode defaults to 'flat' from defaults; do not override.
         //
-        // suppressInteriorHairDetail — the hard "off switch" for inside-the-
-        // hair-mass detail. With this set, the cascade-leak that Pascal
-        // diagnosed (W2 close, research/pascal-w2-timmflat.md) cannot
-        // reach the render: even if a later cascade layer (presentation,
-        // hairstyle file) pushes a non-empty leads array, the renderer
-        // short-circuits the leads block + the clump-stroke field + the
-        // shadow band + the highlight band. The CAP polygon + silhouette
-        // outline + hairline tick remain, so the hair still reads as a
-        // proper flat mass — exactly Timm/DC-animated canon (W1 spec §3,
-        // §5). Per mixture-not-survival: this is a knob, not a deletion;
-        // default packs continue to paint full interior detail. See
-        // params.ts HairstyleRecipe doc for the primitive contract.
-        suppressInteriorHairDetail: true,
+        // fillStyle: 'flat' — declarative replacement for Nick PR #4's
+        // recipe.suppressInteriorHairDetail boolean (now deleted, W3 Q1).
+        // The renderer reads this to gate the clump-stroke field, sweep
+        // strokes, cap shadow band, and cap highlight band. With the
+        // companion declares entry the assertion survives any demographic /
+        // hairstyle / expression cascade layer pushing back to 'standard'.
+        // See model/params.ts HairstyleRecipe.fillStyle doc.
+        fillStyle: 'flat',
       },
     },
-  } satisfies DeepPartial<FaceParams>,
+  } satisfies Pack,
 } as const;
 
 export type StyleName = keyof typeof styles;
 export const styleNames = Object.keys(styles) as StyleName[];
 
-export const stylePreset = (name: StyleName): DeepPartial<FaceParams> => styles[name];
+// stylePreset returns the SUBSTRATE pass: the pack object minus the `declares`
+// manifest. This is what feeds the slot-2 substrate merge in composeFace.
+// Splitting `declares` off keeps the FaceParams cascade typed cleanly (the
+// manifest is metadata, not face state).
+export const stylePreset = (name: StyleName): DeepPartial<FaceParams> => {
+  const { declares: _declares, ...substrate } = styles[name] as Pack;
+  return substrate as DeepPartial<FaceParams>;
+};
+
+// stylePackDeclares returns the slot-6 late-pass manifest for a pack. Default
+// `[]` for packs that don't ship one explicitly. composeFace consumes this to
+// build the late-pass patch via applyDeclares (model/params.ts).
+export const stylePackDeclares = (name: StyleName): readonly AllowedDeclarePath[] => {
+  const pack = styles[name] as Pack;
+  return pack.declares ?? [];
+};

@@ -1,7 +1,7 @@
 // Public API surface for face-lib.
 
 import type { DeepPartial, FaceParams } from './model/params.ts';
-import { defaults, mergeParams } from './model/params.ts';
+import { applyDeclares, defaults, mergeParams } from './model/params.ts';
 import { buildScaffold, allCurves } from './model/scaffold.ts';
 import { projectCurve } from './render/project.ts';
 import { renderSvg } from './render/svg.ts';
@@ -24,6 +24,7 @@ import {
 import {
   styles,
   stylePreset,
+  stylePackDeclares,
   styleNames,
   type StyleName,
 } from './presets/styles.ts';
@@ -59,7 +60,17 @@ export const generateFace = (params: FaceParams): string => {
 
 // Convenience: compose presets + overrides and render in one call.
 // Cascade order (each layer overrides previous):
-//   defaults → STYLE → presentation → age → HAIRSTYLE → expression → character → overrides
+//   defaults → STYLE (substrate) → presentation → age → HAIRSTYLE → STYLE (declarative late pass) → expression → character → overrides
+//
+// W3 Q1 — STYLE is applied TWICE (Lloyd cascade-architecture design pass,
+// research/lloyd-cascade-architecture.md §Q1). The substrate pass at slot 2
+// is unchanged from prior behaviour. The declarative pass at slot 6 (post-
+// hairstyle, pre-expression) re-writes ONLY the paths named in the pack's
+// `declares` manifest. Default `declares: []` → no-op late pass → byte-
+// identical for every existing pack. timmFlat ships a non-empty manifest
+// (research/stylepack-timmFlat-spec.md pedagogy: leads = [], lidLine = 0.6,
+// fillStyle = 'flat', etc.) so its assertions survive past demographic /
+// hairstyle layers that would otherwise clobber them.
 //
 // Order rationale:
 // - STYLE first: rendering substrate. Sets line weight, eye style, etc.
@@ -73,6 +84,10 @@ export const generateFace = (params: FaceParams): string => {
 //   hair-knob defaults; therefore applied AFTER demographic so it wins on hair
 //   conflicts. Hairstyle files touch only the `hair` block, so demographics
 //   still drive everything else (jaw, eyes, brows, ...).
+// - STYLE declarative late pass: per-pack `declares` manifest re-asserts the
+//   contested-knob paths so demographic/hairstyle wins on those paths roll
+//   back to the pack's pedagogy. Substrate-only packs (default/tintin/
+//   ligneClaire ship []) get a no-op late pass.
 // - EXPRESSION: emotion overlay.
 // - CHARACTER: identity, the most specific data.
 // - OVERRIDES: user always wins.
@@ -87,14 +102,19 @@ export type ComposeArgs = {
 };
 
 export const composeFace = (args: ComposeArgs): string => {
+  // Slot-2 substrate + slot-6 late-pass — see header comment.
+  const substrate = args.style ? stylePreset(args.style) : undefined;
+  const declares = args.style ? stylePackDeclares(args.style) : undefined;
+  const lateStyle = applyDeclares(substrate, declares);
   const params = mergeParams(
-    args.style ? stylePreset(args.style) : undefined,
-    args.presentation ? presentationPreset(args.presentation) : undefined,
-    args.age ? agePreset(args.age) : undefined,
-    args.hairstyle ? hairstylePreset(args.hairstyle) : undefined,
-    args.expression ? expressionPreset(args.expression) : undefined,
-    args.character ? characterPreset(args.character) : undefined,
-    args.overrides,
+    substrate,                                                                                  // slot 2 — pack substrate
+    args.presentation ? presentationPreset(args.presentation) : undefined,                      // slot 3 — presentation
+    args.age ? agePreset(args.age) : undefined,                                                 // slot 4 — age
+    args.hairstyle ? hairstylePreset(args.hairstyle) : undefined,                               // slot 5 — hairstyle
+    lateStyle,                                                                                  // slot 6 — pack declarative late pass
+    args.expression ? expressionPreset(args.expression) : undefined,                            // slot 7 — expression
+    args.character ? characterPreset(args.character) : undefined,                               // slot 8 — character
+    args.overrides,                                                                             // slot 9 — overrides (user always wins)
   );
   return generateFace(params);
 };
