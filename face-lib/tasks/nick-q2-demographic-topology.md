@@ -322,3 +322,41 @@ or "looks like Alfred." Pascal scores the register.
   via overrides).
 
 — Nick
+
+---
+
+## Lloyd Pass 4 review
+
+Full write-up appended to `research/lloyd-cascade-architecture.md`
+(`## Pass 4 — Nick Q2 implementation review`). Per-concern verdicts:
+
+1. **§Pick delta fidelity** — APPROVED-AS-IS. Verbatim, every comment
+   anchored back to Lloyd §Q2.
+2. **Private fixtures stay private** — APPROVED-AS-IS. `export const`
+   named partials only; grepped: `api.ts` does NOT re-export;
+   `ages`/`presentations` enums unchanged; cascade unaffected.
+3. **Mixture-rule on tintin × 4** — APPROVED-AS-IS. Independently
+   re-rendered the 9e03a7f^ baseline and visually diffed; all three
+   demographic-axis tintin cells drift in the intended direction
+   (adult-fem byte-identical anchor); tintin register preserved on
+   every cell. No `pack.proportionScale` escalation.
+4. **default + ligneClaire drift** — APPROVED-AS-IS. Per-SVG byte-
+   diff across {default, ligneClaire, tintin} × {age} × {pres}:
+   Q2-untouched demographics (adult-fem, teen-{m,f}) IDENTICAL across
+   all three packs; Q2-touched demographics DIFFER on jaw-geometry
+   axis only. Nick's interpretation that Lloyd's design (data layer
+   unconditionally upstream of every pack) overrides the task brief's
+   stricter "only tintin drifts" reading is correct — the data layer
+   cannot selectively drift one pack without pack-level demographic
+   overrides we explicitly DIDN'T design.
+5. **Four-corner test at 96px** — APPROVED-AS-IS. Four distinguishable
+   topologies — Pascal Pass 2's four-corner failure mode is
+   mechanically closed. Pascal Wave 3 still calls the absolute score.
+
+**Overall: APPROVED-AS-IS.** Q2 ships. Hand to Pascal Wave 3.
+
+No Q1 design-touchback required — nothing in Nick's grid-script
+overrides shape conflicts with the planned `pack.declares` manifest +
+late-pass slot.
+
+*— Lloyd, Pass 4 (commit 9e03a7f).*

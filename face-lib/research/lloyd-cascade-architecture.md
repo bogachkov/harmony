@@ -175,3 +175,84 @@ engine-vs-style separation enforced at the type system.
    Q1: STYLE late-slot + `pack.declares` manifest. ~65 LOC.
    Q2: demographic-preset-data push. ~50 LOC.
    Independent; land Q2 first.*
+
+## Pass 4 — Nick Q2 implementation review
+
+Reviewed commit `9e03a7f`. Three files (`demographics.ts`,
+`timmflat-grid.ts`, `SPRINT.md`). Architectural surface only — Felix's
+parallel scaffold WIP is out of scope; did not read or touch it.
+
+### 1. §Pick delta fidelity — APPROVED-AS-IS
+
+Verbatim. `child.bigonialWidth 0.55→0.62`, `mentalWidth 0.55→0.60`;
+`masculine.bigonialWidth 0.82→0.86`, `mentalWidth 0.46→0.42`,
+`gonialAngle 0.25→0.18`; `elder.bigonialWidth 0.70→0.74`,
+`jowl 0.38→0.48`. Every comment block back-references Lloyd §Q2 §Pick
+and names the load-bearing builder mechanism (e.g., `buildJowledJaw`'s
+`jowlHalfX = bigonialHalf * (1.08 + 0.18 * jowl)`). Zero invented
+deviations.
+
+### 2. Private fixtures — APPROVED-AS-IS
+
+`elderMascPear` + `adultFemPointed` are `export const` named partials,
+NOT folded into `ages`/`presentations`. Grepped: only consumer is
+`timmflat-grid.ts`. `api.ts` does NOT re-export them. `AgeName`,
+`PresentationName`, `ageNames`, `presentationNames` arrays unchanged.
+Cascade pipeline does not know they exist. Combinatorial pack-expansion
+space is byte-identical to pre-W3. Architectural design intent met
+fully.
+
+### 3. Mixture-rule guard (tintin × 4) — APPROVED-AS-IS
+
+Verified independently: re-rendered tintin × adult-masc / elder-masc /
+child-fem against the 9e03a7f^ baseline. All three drift in the
+designed direction — cusp sharper on adult-masc (Hergé-direction, not
+parody), jowl-bulge now visible on elder (prior read oddly youthful),
+soft-U wider on child (more clearly child vs. teen). Adult-fem byte-
+identical (untouched demographic). Tintin register vocabulary
+(interior-line density, dot eyes, low-lash brows) preserved on every
+cell. **No regression; no `pack.proportionScale` escalation required.**
+
+### 4. default + ligneClaire drift — APPROVED-AS-IS
+
+Per-SVG byte-diff vs 9e03a7f^ baseline across {default, ligneClaire,
+tintin} × {adult, child, elder, teen} × {masc, fem}:
+
+- adult-fem + teen-fem + teen-masc (Q2-untouched demographics):
+  IDENTICAL across all three packs.
+- adult-masc, child-{m,f}, elder-{m,f} (Q2-touched): DIFFER, on the
+  jaw-geometry axis only.
+
+This is exactly the design contract — demographic-data layer is
+upstream of every pack. Nick's interpretation of the task brief (Lloyd
+design overrides task's stricter one-pack-only reading) is the
+correct call; data layer can't selectively drift one pack without
+adding pack-level demographic overrides we explicitly DIDN'T design.
+**No Gary escalation. `pack.proportionScale` stays in the debt-left
+list, not lifted.**
+
+### 5. Four-corner thumbnail — APPROVED-AS-IS
+
+`/tmp/timmflat-out/grid-96/four-corners.png`: cell 1 reads cusped-square
+(Bridgman direction, not parody), cell 4 soft-oval (anchor),
+cell 12 soft-U round (visibly wider bottom than cell 4), cell 14
+jowled (clear gonial swell outside cheek line). Four distinguishable
+topologies at 96px — Pascal Pass 2's four-corner failure mode is
+resolved. Pascal's absolute-score call still pending but the topology
+gap that capped cells 12-16 at 4 is mechanically closed.
+
+### Q1 design-touchback
+
+None. Q2 deltas didn't surface anything that requires re-cutting the
+Q1 manifest. Allowed-path union still must exclude `head.jaw.*` +
+`head.face.*` (already specified). Nothing in Nick's grid-script
+private-fixture shape (named-partial → `mergeOverrides` layering)
+conflicts with the late-pass manifest mechanism — overrides slot is
+still slot 7, demographic-data fixtures don't ride the pack-late-pass.
+
+### Verdict
+
+**APPROVED-AS-IS across all five concerns.** Q2 box landed clean.
+Hand to Pascal for Wave 3 re-score.
+
+*— Lloyd, Pass 4 review of Nick Q2 (commit 9e03a7f).*
