@@ -361,6 +361,16 @@ like in six months when we have 3x more presets."
   the in-stream context that helps the user reason about where Fred is.
   Reading a render and silently re-iterating is breaking the commit.
 
+  **Tech-lead delegation amendment:** when subagents are doing the code
+  work, the Tech Lead is no longer the one rendering — Nick / Lloyd /
+  etc. render in their own contexts and the user sees nothing visual.
+  This regresses the "share every render" rule by default. The fix:
+  the Tech Lead must periodically render the current state independently
+  and share with the user even when no Tech-Lead code-edit has happened.
+  "Subagent reported text-summary X" is NOT a substitute for the actual
+  image. Default cadence: after any commit that materially changes
+  rendering, the Tech Lead renders a representative subset and shares.
+
 - **Mixture, not survival-of-fittest. The core engine-design rule.**
   Liftoff is NOT "one render hits 8/10" — it is "the engine can produce
   6/10 across a random set of user instructions WITHOUT further code
