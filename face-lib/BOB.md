@@ -179,6 +179,27 @@ goal. The cascade-merge manifest, the demographic-grid concept,
 the seed-determinism rule — those are all in service of this loop,
 not just "make pretty faces."
 
+### The canonical example Gary gave (keep this)
+
+Game scene: hero, dragon on screen. User asks the LLM to "make it
+rain to defeat the dragon." With Grok/diffusion: the dragon might
+grow breasts and breastfeed water to the hero, because the model
+re-rolls everything every call.
+
+With our engine: the dragon is a held asset, not a re-generation
+target. "Rain" is an operation applied to the existing scene.
+Identity is preserved by construction.
+
+Generation-vs-modification is the axis. Diffusion redraws. We edit
+state.
+
+### Stop habits
+
+- Don't re-explain back to Gary what he just told me. He's not
+  asking for confirmation; he's giving context to remember. If
+  the right move is "noted, writing it down," that's it.
+- He has the context. I'm the one filling in.
+
 ## Open questions I don't have answers to
 
 - More of the deeper *why* of layer 3 — there was earlier
