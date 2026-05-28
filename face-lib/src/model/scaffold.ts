@@ -991,10 +991,17 @@ const buildHair = (
   // a hair mass without it. Fixes bobChinLength, shortSwept, shortPompadour,
   // shortReceding regressions (drawCap was FALSE for those styles since commit
   // e8b9b52 which dropped the cap for all non-spiked/non-lifted cases).
-  const drawCap =
+  // Per Lloyd pass 1 §4: in clumpMode === 'volume' the cap polygon + shadow
+  // band + highlight band are SUBSUMED by the projected hull of the clump-
+  // volume curves. Delete them all here so we don't double-paint the
+  // silhouette. Flat mode (the default for all 13 existing hairstyles) keeps
+  // them unchanged.
+  const isVolume = recipe.clumpMode === 'volume';
+  const drawCap = !isVolume && (
     edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0 ||
     ((style === 'short' || style === 'medium') &&
-     (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped'));
+     (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped'))
+  );
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
@@ -1351,15 +1358,60 @@ const buildHair = (
           }
           return pt[1] < bestY - headHeight * 0.005;
         };
-        // Legacy shim: pre-Lloyd-pass-1 surface-bound polyline. Dies at the
-        // end of this PR; the volume path (added below) is the new home for
-        // clumpMode === 'volume'. The shim keeps flat mode bit-for-bit
-        // identical to pre-refactor while the diff is bounded.
-        const rawStroke = clumpStrokeLegacy(field, { u, v }, length, 28, surfaceOffset, stopAt);
-        if (rawStroke.length < 4) continue;
+        // Branch on clumpMode. FLAT path uses the legacy shim — identical to
+        // pre-refactor. VOLUME path uses the new ClumpSpec API: 3D integrator
+        // produces a centreline + per-point radius; we push a clump-volume
+        // curve (hull contribution) AND a feature-ink curve (the visible
+        // inked centreline stroke). Per Lloyd pass 1 §2 stages B/C/F.
+        let rawStroke: Vec3[];
+        let traceRadii: number[] | null = null;
+        if (isVolume) {
+          // Map recipe.clumpVolume → ClumpSpec. radius is world-space (cranium
+          // radius units, same as rx/ry/rz). Per-stroke jitter on length and
+          // radius via the existing rng so a clump still reads as multiple
+          // strands of varied weight, not a single fat tube.
+          const cv = recipe.clumpVolume ?? { gravity: 0, radial: 0, radius: 0 };
+          const baseRadius = cv.radius * rx * (0.6 + rng() * 0.8); // ±intra-clump
+          const trace = clumpStroke(field, {
+            rootUV: { u, v },
+            length,
+            samples: 28,
+            gravity: cv.gravity,
+            radial: cv.radial,
+            radius0: baseRadius,
+            radius1: baseRadius * 0.35, // taper toward the tip
+            surfaceOffset,
+            stopAt,
+          });
+          if (trace.length < 4) continue;
+          rawStroke = trace.map((s) => s.p);
+          traceRadii = trace.map((s) => s.r);
+        } else {
+          // Legacy shim: pre-Lloyd-pass-1 surface-bound polyline. Dies at the
+          // end of this PR; keeps flat mode bit-for-bit identical.
+          rawStroke = clumpStrokeLegacy(field, { u, v }, length, 28, surfaceOffset, stopAt);
+          if (rawStroke.length < 4) continue;
+        }
         const ampJitter = waviness * (0.75 + rng() * 0.50);
         const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
         const stroke = addWaviness(rawStroke, ampJitter, freqJitter, clumpPhase);
+        // VOLUME: push the clump-volume curve (hull contribution) keyed by
+        // side. Three groups — 'front' (forehead clumps), 'left', 'right'.
+        // Same id = same merged hull. Per Lloyd §4 ("hullGroup keyed by side
+        // / front / left / right / nape").
+        if (isVolume && traceRadii) {
+          const hullGroup =
+            sideRoll < frontShare ? 'front'
+            : sideRoll < frontShare + sideSeedShare * 0.5 ? 'right'
+            : 'left';
+          curves.push({
+            kind: 'clump-volume', closed: false, points: stroke,
+            radiusProfile: traceRadii,
+            hullGroup,
+            fill: fillColor,
+            role: 'hair-top',
+          });
+        }
         curves.push({
           kind: 'feature-ink', closed: false, points: stroke,
           ink: {
