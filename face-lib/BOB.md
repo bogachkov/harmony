@@ -143,6 +143,42 @@ actually wants to use." Every decision should route through "does
 this help Gary get from idea to asset faster, with the look he
 controls?"
 
+## The LLM-driven loop (where this is heading)
+
+The engine is the bottom of a stack, not the whole product. The
+real product is something like:
+
+> Gary describes a scene in plain language to an LLM. The story has
+> preset characters and a visual register. The LLM, knowing those
+> presets, calls the engine as a tool with the right knobs, and the
+> engine returns visuals that are *consistent with the story so far.*
+>
+> Same character → same face. Same world → same register. New
+> character → consistent with the rules Gary set for that story.
+
+That's why determinism + parametric control matters so much. A
+diffusion model can produce a great single image but can't promise
+"the protagonist looks the same in panel 17 as in panel 3." Our
+engine can, by construction.
+
+So the engine's job is:
+- Expose a clean, narrow knob surface an LLM can reason about.
+- Deterministic — seed in, image out, same every time.
+- Composable — character presets + scene presets + per-shot
+  overrides layer cleanly.
+- Honest about its register — what kind of look it produces, what
+  it can't reach.
+
+This also reframes the "what's a pack" question. A pack isn't just
+a visual style — it's a *story's visual contract.* Gary picks one
+when starting a story, then everything in that story is in that
+register.
+
+The team has been building bits of this without naming it as the
+goal. The cascade-merge manifest, the demographic-grid concept,
+the seed-determinism rule — those are all in service of this loop,
+not just "make pretty faces."
+
 ## Open questions I don't have answers to
 
 - More of the deeper *why* of layer 3 — there was earlier
