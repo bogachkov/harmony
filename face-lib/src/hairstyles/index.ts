@@ -27,6 +27,14 @@ import longTail from './longTail.ts';
 import shortBob from './shortBob.ts';
 import longCurtain from './longCurtain.ts';
 import coilyHalo from './coilyHalo.ts';
+// Alpha-shape sibling fixtures — Lloyd pass 2 §4. Same volume primitives as
+// the convex-mode siblings above, but with hullMode: 'alpha'. The two pairs
+// exist side-by-side under the mixture-not-survival rule: convex stays as
+// the regression-history record of the v1 hull artefact; alpha is the
+// eventual default for new volume-mode adoption (W3+ packs).
+// shortBob has no Alpha sibling — flat mode bypasses the hull merger.
+import longCurtainAlpha from './longCurtainAlpha.ts';
+import coilyHaloAlpha from './coilyHaloAlpha.ts';
 
 export const hairstyles = {
   shortSwept,
@@ -46,6 +54,10 @@ export const hairstyles = {
   shortBob,
   longCurtain,
   coilyHalo,
+  // Lloyd pass 2 §4 alpha-shape sibling fixtures (also outside the catalog
+  // budget per HS-8). Same mass primitives, alpha merger.
+  longCurtainAlpha,
+  coilyHaloAlpha,
   // Future (need primitives not yet wired):
   //   evenBowl        — needs fringeBand
   //   sideForelock    — needs forelockMass
