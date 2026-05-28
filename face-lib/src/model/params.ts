@@ -44,6 +44,12 @@ export type FlowStroke = {
 export type HairstyleRecipe = {
   parting: PartingKind;
   flowStrokes: readonly FlowStroke[];
+  // Waviness applied to field-traced strokes (only used by the experimental
+  // style='long' renderer for now — adds sinusoidal perpendicular displacement
+  // to each stroke, envelope-windowed so endpoints stay fixed). 0 = straight,
+  // 0.04-0.07 = wavy, 0.10+ = very curly. waveFrequency = cycles per stroke.
+  waviness?: number;
+  waveFrequency?: number;
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };

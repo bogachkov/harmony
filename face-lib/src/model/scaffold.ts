@@ -1028,8 +1028,9 @@ const buildHair = (
   });
 
   // Hairline as a discrete inked stroke (skipped on receding so there's no scar across
-  // the bald forehead). Tapered at both ends so it sinks into the temples gracefully.
-  if (!isReceding) {
+  // the bald forehead; skipped on long because the forelock strokes cover the forehead
+  // and a hairline arc would draw a stray horizontal line through them).
+  if (!isReceding && style !== 'long') {
     curves.push({
       kind: 'feature-ink', closed: false, points: hairline,
       ink: { size: 0.9, taperStart: 0.25, taperEnd: 0.25, pressureMid: 0.70 },
@@ -1146,30 +1147,77 @@ const buildHair = (
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-    const totalStrokes = 420;
+    // Per-hairstyle waviness: how much each stroke deviates perpendicularly
+    // from the field direction. 0 = straight (flat hair), 0.04-0.07 = wavy,
+    // 0.10+ = very curly. Sourced from a new optional recipe field (added
+    // below); default is straight.
+    const waviness = recipe.waviness ?? 0;
+    const waveFrequency = recipe.waveFrequency ?? 3.5;  // cycles per stroke
+    const addWaviness = (pts: Vec3[], amp: number, freq: number, phase: number): Vec3[] => {
+      if (amp === 0 || pts.length < 3) return pts;
+      const out: Vec3[] = [];
+      for (let i = 0; i < pts.length; i++) {
+        const t = pts.length === 1 ? 0 : i / (pts.length - 1);
+        const p = pts[i] as Vec3;
+        // Tangent (XY component) for perpendicular direction.
+        const prev = pts[Math.max(0, i - 1)] as Vec3;
+        const next = pts[Math.min(pts.length - 1, i + 1)] as Vec3;
+        const tx = next[0] - prev[0];
+        const ty = next[1] - prev[1];
+        const len = Math.hypot(tx, ty) || 1;
+        // Perpendicular in XY (rotate tangent 90°).
+        const px = -ty / len;
+        const py = tx / len;
+        // Envelope: 0 at endpoints, max at middle, so the stroke connects to
+        // its origin point cleanly and tapers the wave at the tip.
+        const env = Math.sin(Math.PI * t);
+        const w = amp * env * Math.sin(freq * Math.PI * t + phase);
+        out.push([p[0] + px * w, p[1] + py * w, p[2]]);
+      }
+      return out;
+    };
+    const totalStrokes = 480;
     for (let i = 0; i < totalStrokes; i++) {
-      // Seeds biased toward the front + crown of the scalp (gaussian-ish via
-      // two-pull sum). This puts most strokes ORIGINATING near the top where
-      // hair gathers, with progressively fewer at the sides.
-      const u = (rng() + rng() - 1) * Math.PI * 0.85;
-      const vBase = 0.55 * Math.PI / 2;
-      const v = vBase + (rng() - 0.5) * 0.55 * Math.PI / 2;
-      // Length distribution: 35% short, 45% medium, 20% long.
-      // Short strokes near the top create dense thatch; long strokes are
-      // the visible falling strands.
-      const lengthRoll = rng();
-      const length = lengthRoll < 0.35 ? 0.55
-                   : lengthRoll < 0.80 ? 1.10
-                   : 1.70;
-      // Thickness: bump up; many strokes need to be thick to overlap-dominate.
-      const thickRoll = rng();
-      const size = thickRoll < 0.55 ? 2.4
-                 : thickRoll < 0.90 ? 1.5
-                 : 0.7;
+      // Seed distribution — split across the visible scalp so strokes
+      // originate from front AND sides, not just front-top. Real long hair
+      // covers the sides of the head; strokes seeded at u≈±PI/2 fall straight
+      // down along the side silhouette (per the field, gravity dominates at
+      // the equator). 50/50 split between front-biased and side-biased seeds.
+      let u: number;
+      let v: number;
+      const seedRoll = rng();
+      if (seedRoll < 0.50) {
+        // Front-biased (the falls-from-scalp portion).
+        u = (rng() + rng() - 1) * Math.PI * 0.6;
+        v = 0.55 * Math.PI / 2 + (rng() - 0.5) * 0.50 * Math.PI / 2;
+      } else if (seedRoll < 0.78) {
+        // Right-side seeds (u close to +PI/2). Spread over a v range so
+        // strokes start at multiple latitudes on the side, fall down together.
+        u = (0.55 + rng() * 0.35) * Math.PI / 2;
+        v = (0.05 + rng() * 0.70) * Math.PI / 2;
+      } else {
+        // Left-side seeds.
+        u = -(0.55 + rng() * 0.35) * Math.PI / 2;
+        v = (0.05 + rng() * 0.70) * Math.PI / 2;
+      }
+      // Continuous length distribution (no discrete buckets — those produced
+      // visible horizontal lines where many strokes ended at the same y).
+      // Two-pull bias toward shorter strokes with a long tail.
+      const length = 0.40 + rng() * rng() * 1.80;
+      // Continuous thickness too — most strokes around 1.5, with thin wisps
+      // and bold anchors at the extremes.
+      const size = 0.5 + rng() * rng() * 3.0;
       const pressureMid = 0.65 + rng() * 0.35;
       const surfaceOffset = 0.018 + rng() * 0.014;
-      const stroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset);
-      if (stroke.length < 4) continue;
+      const rawStroke = clumpStroke(field, { u, v }, length, 30, surfaceOffset);
+      if (rawStroke.length < 4) continue;
+      // Per-stroke wave amplitude varies (some strokes wavier than others) so
+      // waviness doesn't look synchronized. Phase also random so adjacent
+      // strokes don't peak together.
+      const ampJitter = waviness * (0.6 + rng() * 0.8);
+      const freqJitter = waveFrequency * (0.8 + rng() * 0.4);
+      const phase = rng() * Math.PI * 2;
+      const stroke = addWaviness(rawStroke, ampJitter, freqJitter, phase);
       curves.push({
         kind: 'feature-ink', closed: false, points: stroke,
         ink: {
