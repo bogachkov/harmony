@@ -116,7 +116,8 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| —     | —    | —      | Nick PR #2 done; awaiting Lloyd review trigger from Bob. |
+| Lloyd | Pass 3 — review Nick PR #2 alpha-shape | running | Three concerns flagged: LOC overrun, decision-1 default direction, ALPHA_FACTOR constant. |
+| Nick  | `tasks/nick-timmflat-pack.md` (PR #3) | running | Pack delta in `styles.ts` + 16-cell grid. File overlap with PR #2 is zero — parallel-safe. |
 
 ## Done this sprint (W2)
 
