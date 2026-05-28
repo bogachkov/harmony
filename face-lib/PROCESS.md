@@ -71,6 +71,8 @@ TICKETS         Live in tasks/*.md. One per substantive piece of work.
 | Spawn an agent | Bob (per Claudia's queue) | — |
 | Architecture / library / tech pivot | Bob co-CTO + Gary | Gary final |
 | Engineering implementation choices | Nick / Lloyd | Bob reviews |
+| Architecture / type / cascade design | Lloyd | Bob reviews |
+| Graphics-math interior of a primitive | Felix | Bob reviews |
 | Pedagogy / approach correctness | Leo | Bob reviews |
 | Output quality (publishable comic art) | Pascal | — |
 | Asset judgment (commercial-grade) | Rollo | — |
@@ -89,6 +91,17 @@ TICKETS         Live in tasks/*.md. One per substantive piece of work.
 - Leo + Lloyd disagree on architecture → Lloyd's call within engineering
   scope, BUT if the disagreement is about a primitive's PEDAGOGY, Leo's
   call. Bob mediates.
+- Lloyd + Felix disagree on a primitive design → split by lane: if the
+  call is about types / module boundaries / cascade ordering, Lloyd. If
+  it's about algorithm class, input-scale sizing, or graphics-math
+  correctness, Felix. Bob mediates if the call straddles both lanes.
+  Default: when in doubt, co-design — both write their section, Bob
+  signs off on the combined design.
+- Felix + Leo disagree on a primitive → Leo owns "does this match
+  pedagogy" (symbolic spec); Felix owns "given that spec, what's the
+  right math." Conflict typically means the symbolic spec is
+  under-determined for the math — Leo refines the spec, Felix sizes
+  the math to it. Bob mediates if it stalls.
 - Anyone (incl. Bob) believes the active quarter goal is wrong → escalate
   to David; David may escalate to Gary for re-set.
 
