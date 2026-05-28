@@ -112,6 +112,27 @@ Your task is to **audit, not fix**. Specifically:
 
 ## Handoff
 
-(Leo fills in. Expected: "Audit md written. Verdicts: eyes=X,
-mouth=Y, brows=Z, integration=W. BACKLOG candidates: A, B. STOP
-flags raised: 0 / 1 / 2. W2 implications: <one sentence>.")
+Audit md written: `face-lib/research/leo-face-integration-audit.md`.
+Probe sheet at `/tmp/leo-probe-styles/` (12 cross-product PNGs) +
+`/tmp/leo-audit-probe/` (8 gallery samples).
+
+Verdicts: **eyes = STOP (small, ~25 LOC)**, **mouth = GO-WITH-CAVEATS**,
+**brows = GO-WITH-CAVEATS**, **integration = GO-WITH-CAVEATS** (W2
+only; packs 3-4 will hit the orbital-socket / brow-ridge debt).
+
+STOP flags raised: **1** — `buildEye` (almond branch) ignores
+`lidLine` / `lashes` / `underlineHint`. The timmFlat spec's load-
+bearing `eyes.style: 'almond', lidLine: 0.6` would silently render
+as a thin unweighted almond. Pack would ship visibly wrong without
+this fix.
+
+BACKLOG candidates: 6 items numbered in audit §"BACKLOG candidates"
+— #1 (eye plumbing) is recommended for W2 promotion as the Nick
+prereq; #2-#6 defer to W3+ (already-flagged items in W1 spec are
+restated for traceability; #5 orbital-socket is new).
+
+W2 implications: ONE small Nick task (eye plumbing, ½ day) lands
+BEFORE the timmFlat implementation. After that, W2 ships as
+parameter flips per the W1 spec — no W3 bump.
+
+*— Leo, returned.*

@@ -71,12 +71,13 @@ What is explicitly NOT in W1's gate:
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | RUNNING | ~40-50% through Lloyd's design per visible in-flight changes. |
-| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | RUNNING | Spawn 4. |
+| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | RUNNING | Spawn 4. Last box (4) to close W1. |
+| Lloyd  | `lloyd-pass-2-review.md` — code review of Nick's 3D implementation | RUNNING | Bob-triggered post Nick PR. Four concerns to verdict (3 Nick-flagged + 1 Bob-from-renders). |
 
 **Done this sprint (W1):**
 - Leo W1 stylepack pedagogy half (timmFlat picked + spec'd) — closes half of box 3.
 - Rollo W1 stylepack asset half (NPC slots + demographic grid + mixture check) — closes box 3 fully.
+- **Nick 3D clump-volume refactor (7 commits ending 909244c) — closes boxes 1+2.** All 13 existing styles bit-for-bit identical in flat mode. Volume mode renders three fixtures (`shortBob` byte-identical, `longCurtain` gravity, `coilyHalo` radial). Net +444 LOC engine + 148 fixtures. Convex-hull artefact more dramatic than Lloyd §7 predicted — Bob raising with Lloyd review whether alpha-shape moves earlier than "deferred until adoption."
 
 ## Blocked / pending
 
