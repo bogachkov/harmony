@@ -1287,6 +1287,38 @@ const buildHair = (
       }
       return pt[1] < bestY - headHeight * 0.005;
     };
+    // ESCAPE STROKES — short downward strokes spilling past the hairline so
+    // the cap's bottom edge stops reading as a hard horizontal brim (Pascal
+    // pass 7 §1 — "cap polygon's bottom edge is a horizontal brim"). 14
+    // escape strokes distributed along the hairline; each starts ON the
+    // hairline and drops short distance below, varying in length and offset.
+    const escapeCount = 14;
+    for (let i = 0; i < escapeCount; i++) {
+      const arcT = (i + 0.5) / escapeCount;
+      const idx = Math.floor(arcT * (hairline.length - 1));
+      const anchor = hairline[idx] as Vec3;
+      const jitterX = (srng() - 0.5) * 0.030;
+      const startX = anchor[0] + jitterX;
+      const startY = anchor[1] + headHeight * 0.005;     // just above hairline
+      // Some escape strokes longer than others; bias short.
+      const dropLen = headHeight * (0.015 + srng() * srng() * 0.060);
+      const endX = startX + (srng() - 0.5) * 0.020;
+      const endY = anchor[1] - dropLen;
+      const pts: Vec3[] = [
+        [startX, startY, anchor[2]],
+        [endX, endY, anchor[2]],
+      ];
+      curves.push({
+        kind: 'feature-ink', closed: false, points: pts,
+        ink: {
+          size: 0.8 + srng() * 1.2,
+          taperStart: 0.05,
+          taperEnd: 0.80,    // strong taper at the tip = wispy escape
+          pressureMid: 0.75,
+          color: fillColor,
+        },
+      });
+    }
     for (let i = 0; i < shortStrokeCount; i++) {
       // Distribute across the FRONT of the scalp (above the hairline).
       const u = (srng() + srng() - 1) * Math.PI * 0.55;

@@ -30,6 +30,11 @@ const longFlowing: DeepPartial<FaceParams> = {
     recipe: {
       parting: 'centre',
       flowStrokes: [],
+      // longFlowing differs from longSleek by subtle wave + amplitude — not
+      // perfect waves, just enough breathing for the strokes to feel less
+      // like an architectural curtain. Without this they're pixel-identical.
+      waviness: 0.012,
+      waveFrequency: 1.6,
     },
   },
 };
