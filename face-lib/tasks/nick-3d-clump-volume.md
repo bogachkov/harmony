@@ -121,6 +121,115 @@ Soft asks (do these if you can, but don't block on them):
 
 ## Handoff
 
-(Nick fills in. Expected: "PR merged. 13-hairstyle regression sheet
-attached. Three Lloyd test cases attached. Lloyd review thread
-linked. Net LOC: X. Known issues: Y. BACKLOG follow-ups added: Z.")
+**Shipped.** Lloyd pass 1 implemented to the brief. Six commits, one per
+logical unit (per process.md "one commit per logical unit — Bob can revert
+per piece"):
+
+1. `hair-field: clumpStroke takes ClumpSpec, returns ClumpTrace` — new
+   signature + integrator. Legacy 6-arg shape lives one commit via
+   `clumpStrokeLegacy` shim.
+2. `types: Curve gains clump-volume kind + radiusProfile + hullGroup;
+   recipe gains clumpMode/clumpVolume` — type surface plumbing.
+3. `render: hull.ts + projectVolume helper + svg hull-merge pass` — new
+   pure-function `src/render/hull.ts` (convex hull + capsule expand), one
+   helper in `project.ts`, hull-merge pass in `svg.ts`.
+4. `scaffold: wire clumpMode === 'volume' through the clump loop` — the
+   actual volume integration in the clump loop + cap/shadow/highlight
+   suppression in volume mode.
+5. `hair-field: delete clumpStrokeLegacy shim` — final form, single API.
+6. `hairstyles: add 3 Lloyd pass 1 §6 test fixtures` —
+   `shortBob` / `longCurtain` / `coilyHalo`.
+
+**Net LOC.** +307 added, −47 removed → net **+260**. Above Lloyd's
+projected +150 (§4). Differences:
+- `src/render/hull.ts` came in at ~160 LOC, in line with Lloyd's "~150."
+- The `clumpStroke` 3D integrator is ~70 LOC because the tangent-blend +
+  jitter + flat-fast-path each need a few lines; Lloyd's estimate didn't
+  count flat-fast-path comments + the radius/jitter logic.
+- Cap/shadow/highlight deletion is **gated** (`if (!isVolume && drawCap)`)
+  rather than physically removed — the flat path keeps the code path
+  alive. This is the mixture-rule cost Lloyd flagged in §4. ~90 LOC of
+  cap/shadow/highlight stays alive for `flat` mode.
+
+Per the "+250 → flag for re-spawn" soft ask: at +260 I am within sight
+but Lloyd should look at the diff before merge. The drift is mostly
+honest mixture-cost (keeping flat alive) and the `expandCapsule` body
+being a hair longer than estimated.
+
+**Regression test.** All 13 hairstyles (× 2 presentations = 26 renders)
+were captured pre-refactor at `/tmp/baseline` and re-rendered after every
+commit. SVG output is **bit-for-bit identical** to baseline at every step.
+This is stricter than the brief asked (it allowed visually-equivalent;
+the flat fast-path turned out to be identical). The cap polygon path,
+the leads loop, the verticalLift loop, and the tailMass loop all
+unchanged.
+
+**Three Lloyd fixtures.** Rendered cleanly:
+
+- `shortBob` (flat regression guard): pixel-identical to `bobChinLength`
+  modulo the explicit `clumpMode: 'flat'` field — diff is zero. The flat
+  fast-path identity guarantee holds.
+- `longCurtain` (volume, gravity=0.8): hull silhouette extends visibly
+  past the chin without `tailMass`. The promise is met. The shape is
+  blocky on the outer edges — convex hull aggregating side-curtain
+  capsules into one trapezoid — exactly the Lloyd §7 tech-debt symptom.
+- `coilyHalo` (volume, radial=+0.6): hull projects a radial halo
+  visibly larger than the cranium silhouette. Edge texture comes from
+  per-clump `baseRadius * (0.6 + rng() * 0.8)` variance, NOT from
+  `edgeJitter()` (`edgeKind` stays `'smooth'`). The sign-flippable
+  radial term works.
+
+**Surprises.**
+
+1. The `addWaviness()` post-processing step kept working as-is on volume
+   centrelines because it operates on `Vec3[]` not on the radius array.
+   I considered whether waviness should perturb the radius (rationale:
+   on a curly head the visible silhouette texture IS the radius
+   variance), but per "examples-are-not-targets" + "don't expand scope"
+   I left it. Future hairstyle work can wire that.
+2. `clumpStroke()`'s flat fast-path needed careful handling of
+   `samples + 1` vs `samples` iteration counts to stay bit-for-bit
+   identical with the old function — the old loop was `for (i = 0; i <= samples; i++)`
+   producing 29 points for `samples = 28`. Preserved exactly.
+3. Convex hull's flat-edge collapse on `coilyHalo` is worse than I
+   expected at first render — the top of the halo reads as a hexagon
+   rather than a textured boundary. This is the documented v1 cost
+   (Lloyd §7); alpha-shape filed in BACKLOG.
+
+**Did NOT do (per brief).**
+
+- Alpha-shape merger (Lloyd §7; filed in BACKLOG).
+- Lead/fill coupling (still off; explicit pending row in BACKLOG).
+- Anything to the existing 13 hairstyle files (touched none; brief said
+  "do not touch their contents in this PR").
+- Forelock / fringeBand / highlightCutout (BACKLOG; not promoted).
+
+**BACKLOG follow-ups added.**
+
+- New row: `Hull-merge → alpha-shape` filed under Deferred features
+  (~80 LOC; promote when a shipped hairstyle adopts `clumpMode: 'volume'`
+  and the parting-gap-collapse artefact bites).
+- Existing row `Lead/fill coupling (behaviour)` still applies — type
+  plumbing now lives alongside `clumpMode` plumbing; both are wired
+  through, neither is active behaviour-wise except for `clumpMode:
+  'volume'` on the three test fixtures.
+
+**Lloyd review.** Ready. Suggested focus areas (the spots most likely
+to need a structural call rather than line-level tweaks):
+
+1. `clumpStroke()`'s tangent-decay term `1 - 0.8 * spec.gravity * t`.
+   Pulled from intuition (hair-theorist's "spring vs weight" framing in
+   §5), not measured. Lloyd may want a different formula or a
+   parameter exposing it.
+2. `hullGroup` keying by `sideRoll`-bucket (front / left / right). This
+   loses fidelity vs. a per-clump 3D-position-based bucket (e.g., split
+   the front group at the centre parting). May need a fourth `nape`
+   bucket once back-of-head views matter (Q2+).
+3. The `data-hull-group` SVG attribute uses the `avgZ` for debugging.
+   Strip if Lloyd thinks it leaks information.
+
+**Visual sheet for the user.** Pre/post 13-hairstyle render sheet
+captured at `/tmp/baseline/*.svg` and `/tmp/refactored/*.svg` (identical
+by content; share post for clarity). Three fixtures at
+`/tmp/lloyd-fixtures/{shortBob, longCurtain, coilyHalo}.png`.
+

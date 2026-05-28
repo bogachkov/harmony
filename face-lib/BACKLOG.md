@@ -17,6 +17,7 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 | Tight-coily / TWA hairstyle | Largest demographic gap per Rollo. Needs `haloSilhouette` + edge-textured boundary primitive that's distinct from current `curlyDome`. | `research/rollo-pass-1.md` |
 | `shortMessy` preset | Short-disheveled — the "just woke up" / "active" character slot. Already named in `src/hairstyles/index.ts` comments. Needs regional-bedhead primitive per hair-theorist HT-4. | Rollo + hair-theory.md |
 | Lead/fill coupling (behaviour) | Type plumbing done (Nick pass 2): `leads` replaces `flowStrokes`, `flowWeight` per-lead, `fillBias` on recipe. Actual fill-clump seeding from leads is OFF pending Lloyd's 3D clump-volume architecture. Wire when that lands. | Leo pass 8 §2 |
+| Hull-merge → alpha-shape | v1 clump-volume merger uses convex hull (`src/render/hull.ts`). Collapses concavities: parting gaps disappear, side-and-front separation reads as one bulge. Alpha-shape is the honest fix (~80 LOC, alpha auto-tuned from clump spacing). Deferred per Lloyd pass 1 §7 — promote when curly/long volume renders show "merged silhouette ate my parting gap" artefacts (estimate: within 2 sprints once a shipped hairstyle adopts `clumpMode: 'volume'`). | Lloyd pass 1 §7 (filed by Nick pass 3) |
 
 ## Known regressions / bugs
 
