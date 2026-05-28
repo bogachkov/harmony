@@ -1478,13 +1478,18 @@ const buildHair = (
         const stroke = addWaviness(rawStroke, ampJitter, freqJitter, clumpPhase);
         // VOLUME: push the clump-volume curve (hull contribution) keyed by
         // side. Three groups — 'front' (forehead clumps), 'left', 'right'.
-        // Same id = same merged hull. Per Lloyd §4 ("hullGroup keyed by side
-        // / front / left / right / nape").
+        // Same id = same merged hull. Per Lloyd pass 2 §2: key on centreU
+        // quadrant (after the centre is rolled) rather than the sideRoll
+        // bucket — the bucket-based key merged two FRONT clumps in different
+        // 3D regions into one silhouette and ate the centre parting gap
+        // (longCurtain wimple artefact). centreU is the actual angular
+        // position around the cranium, so 'front' / 'left' / 'right' track
+        // the projected clump geometry instead of the seeding distribution.
         if (isVolume && traceRadii) {
           const hullGroup =
-            sideRoll < frontShare ? 'front'
-            : sideRoll < frontShare + sideSeedShare * 0.5 ? 'right'
-            : 'left';
+            centreU < -Math.PI * 0.10 ? 'left'
+            : centreU >  Math.PI * 0.10 ? 'right'
+            : 'front';
           curves.push({
             kind: 'clump-volume', closed: false, points: stroke,
             radiusProfile: traceRadii,
