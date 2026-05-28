@@ -1254,6 +1254,58 @@ const buildHair = (
     }
   }
 
+  // ---- SHORT-HAIR STROKE TEXTURE (Pascal pass 7 §1 — "the six non-long
+  // styles are still Microsoft Paint"). Overlay 40-60 short strokes on the
+  // cap polygon for any non-long style, color-matched to the hair fill but
+  // SLIGHTLY DARKER (darken 0.15) so they read as interior texture rather
+  // than additional fill. Strokes follow the cranial field so they have
+  // believable hair-fall direction. No clumping (short hair doesn't form
+  // long visible locks); just textured fill.
+  if (style !== 'long' && style !== 'none' && style !== 'bald' && fillColor && !isReceding) {
+    const shortField = cranialField(rx, ry, rz, {
+      crown: { u: 0, v: 0.85 * Math.PI / 2 },
+      gravity: 0.5,
+    });
+    let shortRng = 23 >>> 0;
+    const srng = (): number => {
+      shortRng = (shortRng + 0x6d2b79f5) >>> 0;
+      let t = shortRng;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const shortTextureColor = darken(fillColor, 0.18);
+    const shortStrokeCount = 50;
+    // Stop short strokes at the hairline so they don't leak onto the forehead
+    // (visible artifact on bobChinLength v1 where some strokes hung below).
+    const stopAtHairline = (pt: Vec3): boolean => {
+      let bestY = hairlineY;
+      let bestDist = Infinity;
+      for (const h of hairline) {
+        const dist = Math.abs(h[0] - pt[0]);
+        if (dist < bestDist) { bestDist = dist; bestY = h[1]; }
+      }
+      return pt[1] < bestY - headHeight * 0.005;
+    };
+    for (let i = 0; i < shortStrokeCount; i++) {
+      // Distribute across the FRONT of the scalp (above the hairline).
+      const u = (srng() + srng() - 1) * Math.PI * 0.55;
+      const v = 0.55 * Math.PI / 2 + srng() * 0.40 * Math.PI / 2;
+      const length = 0.20 + srng() * 0.35;
+      const surfaceOffset = 0.020;
+      const stroke = clumpStroke(shortField, { u, v }, length, 16, surfaceOffset, stopAtHairline);
+      if (stroke.length < 3) continue;
+      const size = 0.6 + srng() * srng() * 1.4;
+      curves.push({
+        kind: 'feature-ink', closed: false, points: stroke,
+        ink: {
+          size, taperStart: 0.10, taperEnd: 0.45,
+          pressureMid: 0.70 + srng() * 0.25, color: shortTextureColor,
+        },
+      });
+    }
+  }
+
   return curves;
 };
 
