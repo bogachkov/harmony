@@ -149,4 +149,68 @@ The 13 retained cells:
 
 ## Handoff
 
-(Pascal fills in on completion.)
+### Verdict — NEEDS-WORK / SHIP-WITH-KNOWN-GAPS
+
+**8 / 13 cells at Pascal ≥ 5.** Box 3 strict-13/13 does NOT close.
+But the right call is probably **ship-with-known-gaps**, not a third
+W2 Nick spawn — the 5 short cells are exactly the demographic-topology
+gap Lloyd's W3 Q2 row already owns (~50 LOC in demographic preset data).
+
+### Per-cell summary
+
+- **Pascal ≥ 5 (8 cells):** 1, 2, 3, 4, 5, 8, 9, 10.
+- **Pascal 4 (5 cells):** 12, 13, 14, 15, 16. All demographic-topology gap.
+
+### Six primary fix targets — all confirmed clean
+
+Cells 4, 5, 8, 10, 13, 16 all show clean flat-fill hair with no
+interior strand striping at the bang line. Nick's PR #4 fully landed
+the symptom Pascal Pass 1 named. Cells 4, 5, 8, 10 land at ≥ 5
+(scoring honestly against the anchor). Cells 13 and 16 land at 4
+because the demographic-topology gap dominates the read once the
+hair is clean — child-fem barely differentiated from teen-fem,
+elder-fem has no age tells.
+
+### Four-corner test — still fails per the demographic-topology gap
+
+Per brief, this was acknowledged in advance as expected-to-fail
+without blocking. Noted; not a gate.
+
+### What I'm flagging
+
+- **No regression on the previously register-correct cells (1, 2, 3).**
+  Hold at 5; the gated clump-stroke removal actually cleaned up the
+  trace-of-strand at the bang underside, marginal cleanup not a bump.
+- **No calibration drift.** No ≥ 5 cell fires any of the three
+  sniff-tests. Pass 1 calibration holds.
+- **No mixture-rule violation observed.** I did not directly inspect
+  `default` / `tintin` / `ligneClaire` renders this pass; trusting
+  Nick's 50/50 byte-identical regression sweep on the diff math.
+- **Incidental cleanup bump:** cell 9 (teen-masc spikyShort dark)
+  moved from Pass 1 = 4 to Pass 2 = 5. The gated clump-stroke
+  removal incidentally tidied a side-fringe artifact I'd called out;
+  honest +1.
+- **Diagnosis confirmation for Pass 1:** my "cascade-leak" symptom
+  framing was right; my mechanism guess (`recipe.leads` surviving
+  cascade) was upstream of the true root cause (unconditional
+  clump-stroke + sweep-stroke + cap-tone blocks). Nick's handoff is
+  the authoritative diagnosis.
+
+### Recommendation to Claudia
+
+**Path 1 (recommended): ship W2 with known gaps; W3 Q2 row closes
+the full 13/13.** Honest framing for Gary: cascade-leak fix landed
+clean (8 cells register-correct including all 6 primary fix
+targets); 5 cells held at Pascal 4 are the demographic-topology
+gap, W3 Q2 row closes them at ~50 LOC in the demographic preset
+data per Lloyd's landed design.
+
+**Path 2: pull Lloyd's W3 Q2 row forward into a W2 extension.**
+~50 LOC Nick work + a Pascal re-score of 5 cells + tintin
+regression re-score per Lloyd's mixture-rule caveat. Half-day
+to a day. Saves the gate-name, not the work.
+
+Full per-cell table + diagnosis + recommendation at
+`research/pascal-w2-timmflat.md` §Pass 2.
+
+*— Pascal, Q1-W2 revised re-score, Pass 2.*

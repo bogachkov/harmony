@@ -396,3 +396,102 @@ is coming. I'm not pausing work — just flagging the surface area.
    Job 1 verdict: NO-SHIP at the W2 gate (3 / 16 cells at Pascal ≥ 5).
    Job 2 verdict: calibration holds.
    Sprint-close recommendation: Nick re-spawn + Claudia re-plan + Lloyd architectural call, all three.*
+
+---
+
+## Pass 2 — W2 revised 13-cell re-score
+
+*Post Nick PR #4 (`recipe.suppressInteriorHairDetail` knob promotion).
+Cells 6, 7, 11 out of scope this pass (W3 long-hair primitive promotion).
+Calibration audit closed in Pass 1 — not re-litigated. Anchor table absolute.*
+
+### Per-cell scoring table (13 retained)
+
+| # | Cell                                       | Pascal | One-line read                                                                                                                                       |
+| - | ------------------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | adult-masc-square shortSwept               | 5      | Holds; the prior trace-of-strand at the bang underside is gone, contour is uniformly clean flat fill. Register-correct Timm-masc-protagonist.       |
+| 2 | adult-masc-square shortSwept dark          | 5      | Holds; dark-skin swap clean, cap reads even cleaner on dark fill without the prior incidental clump-stroke spill.                                   |
+| 3 | adult-masc-square spikyShort               | 5      | Holds; spike envelope is silhouette-only now (no interior noise), 6 confident terminations. Strict cleanup vs Pass 1, score band same.              |
+| 4 | adult-fem-oval bobChinLength               | 5      | **PRIMARY FIX CONFIRMED.** Bang line clean, no interior striping, parting tick reads as a confident structural pen-stroke. Bob is now Timm-register.|
+| 5 | adult-fem-oval bobChinLength dark          | 5      | **PRIMARY FIX CONFIRMED.** Equivalent to cell 4 with dark-skin swap; clean and internally consistent.                                               |
+| 8 | teen-masc-ovalsoft shortPomp               | 5      | **PRIMARY FIX CONFIRMED.** Pomp lift is now one closed flat mass — no sweep-stroke texture; reads as styled volume the way Timm canon wants.        |
+| 9 | teen-masc-ovalsoft spikyShort dark         | 5      | Incidental cleanup bump from Pass 1 (was 4). Spike cluster confident, side-fringe tidier than before, face holds. Honest +1 vs prior.               |
+|10 | teen-fem-ovalsoft bobChinLength            | 5      | **PRIMARY FIX CONFIRMED.** Clean teen bob; differentiation from cell 4 still whisper-thin (teen vs adult is hair-shape only) but the bob is register.|
+|12 | child-masc-round shortSwept                | 4      | Demographic-topology gap unchanged: round cranium barely diverges from adult-square at silhouette; ears + frame doing all child work. Per anchor 3-4.|
+|13 | child-fem-round bobChinLength dark         | 4      | **PRIMARY FIX (HAIR) CONFIRMED**, but child-fem demographic differentiation from cell 10 (teen-fem) remains whisper-thin. Hair clean; topology gap.  |
+|14 | elder-masc-jowled shortReceding            | 4      | Hair-strand cleanup landed (scalp now uniformly clean); jowled jaw still reads as chamfered chin, not forward-protruding mass. Topology gap holds.   |
+|15 | elder-masc-jowled shortReceding dark       | 4      | Same as cell 14 with dark skin; same topology-gap diagnosis. Score holds.                                                                            |
+|16 | elder-fem-jowled bobChinLength             | 4      | **PRIMARY FIX (HAIR) CONFIRMED**; elder-fem face still has no age tells (no sag, no cartilage cue). Bob does all the demographic work. Topology gap. |
+
+**Tally:** Cells at Pascal ≥ 5 (8): **1, 2, 3, 4, 5, 8, 9, 10.**
+Cells at Pascal 4 (5): **12, 13, 14, 15, 16.**
+**Final: 8 / 13 cells at Pascal ≥ 5.**
+
+### Diagnosis confirmation
+
+All six primary-fix-target cells (4, 5, 8, 10, 13, 16) read clean at
+the bang line / side-curtain. Pass 1 symptom diagnosis ("interior
+strand striping reading as procedural") was correct; the *mechanism*
+I miscalled (it wasn't `recipe.leads` cascade-surviving — it was the
+unconditional clump-stroke + sweep-stroke + cap-tone blocks in
+`scaffold.ts`, no pack off-switch). See Nick PR #4 handoff for the
+authoritative root-cause. Net: primitive-flag promotion was the
+correct landing.
+
+Cells 12, 14, 15 read unchanged — incidental gated-block cleanup
+didn't move the demographic-topology read. Cells 13 and 16 land at 4
+once the hair artifact stops dominating: the demographic-topology gap
+is the dominant signal. **The Pass 1 diagnosis ("demographic data not
+exercising topology") holds verbatim and routes correctly to Lloyd's
+W3 Q2 demographic-preset-data fix.**
+
+### Four-corner test — STILL FAILS, not a gate this round
+
+Cells 1 vs 4 at 96px still read as the same broad-bottomed silhouette;
+12 vs 14 still read as "two adults with different hairlines." Same
+demographic-topology gap; W3 Q2 owns it. Per brief: noting for record
+only.
+
+### Pack-level verdict — NEEDS WORK (8/13 short by 5 cells)
+
+All 5 short cells are the demographic-topology gap → Lloyd's W3 Q2
+design (`research/lloyd-cascade-architecture.md`, ~50 LOC). **NOT a
+Nick re-spawn need for W2** — the cascade-leak fix landed; the
+remaining shortfall is W3-owned.
+
+**Sprint-close call: strict 13/13 does NOT close, but the right
+answer is ship-with-known-gaps.** Two paths:
+
+1. **Ship W2 with known gaps; W3 closes the full grid (recommended).**
+   timmFlat at register on 8/13 (all 6 primary fix targets); 5 cells
+   at 4 are the demographic-topology gap, W3 Q2 closes them. Honest
+   "depth > pack count" trade — W2 ships its scope, W3 ships its.
+2. **Pull W3 Q2 forward into a W2 extension.** ~50 LOC Nick + Pascal
+   re-score of 5 cells + tintin regression re-score per Lloyd's
+   mixture-rule caveat. Saves the gate-name, not the work.
+
+Recommend path 1 to Claudia. The brief itself flagged the
+demographic-topology gap was anticipated to persist; the fix is
+already W3-owned by landed design.
+
+### No calibration drift, no mixture-rule alarm
+
+No ≥ 5 cell fires any of the three sniff-tests. Pass 1 calibration
+holds. I did not directly inspect `default` / `tintin` / `ligneClaire`
+renders; trusting Nick's 50/50 byte-identical regression sweep.
+
+### Movement signal vs Pass 1
+
+- **Cascade-leak axis: strict progress.** Cells 4, 5, 8, 10 moved
+  3 → 5 (the bob/pomp register lands). Cell 9 incidental +1 (4 → 5).
+  Cell 13 moved 3 → 4 (hair clean but demographic gap dominates).
+  Cell 16 held at 3 → 4 same reason. Cells 1, 2, 3 hold at 5 — no
+  regression on the register-correct cells.
+- **Demographic-topology axis: no change.** Cells 12, 14, 15 hold at
+  4; cells 13 and 16 join the cluster post-hair-fix. Clean five-cell
+  category for W3 Q2 to target.
+
+*— Pascal, Q1-W2 revised re-score, Pass 2.
+   Verdict: 8 / 13 cells at Pascal ≥ 5; box 3 strict-13/13 does NOT
+   close; recommend ship-with-known-gaps + W3 Q2 row owns the
+   demographic-topology gap (per Lloyd's landed design).*
