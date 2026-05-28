@@ -62,6 +62,30 @@ during long-hair iteration before clumping was added. To re-file as a
 preset would require exposing clump-coherence as a recipe knob (0 =
 chaos like exp-wavy-1, 1 = current locked clumps).
 
+## Architectural calls (open)
+
+- **Cascade-order issue for pack-level pedagogy knobs.** Nick
+  discovered during timmFlat PR #3 that pack-level knobs outside
+  the `hair` block (`mouth.lipFullness`, `eyes.lashes`,
+  `eyes.lidLine`, and notably `recipe.leads = []` even inside the
+  hair block) get **clobbered by demographic layers downstream** in
+  the current cascade (presentation → age → hairstyle, with
+  hairstyle winning on hair conflicts per the `index.ts` header
+  rule HS-3). Style packs are the right place to declare pedagogy
+  (Timm wants `lidLine: 0.6` load-bearing, `recipe.leads = []` to
+  kill interior strand striping); they currently don't reach the
+  renderer through the cascade without re-asserting at the
+  `overrides` layer. Nick worked around in
+  `scripts/timmflat-grid.ts` via a `TIMM_PEDAGOGY` overrides const.
+  The architectural fix lives at the cascade layer — should style
+  packs sit AFTER demographic + hairstyle (with explicit knob
+  win)? Or should pedagogy knobs be marked load-bearing at the
+  type level so demographic can't clobber? Lloyd + Claudia to
+  scope. **Promote to W3 once Pascal scores timmFlat.** Per
+  AGENTS.md mixture rule — pack pedagogy is exactly the kind of
+  "declarative truth statement" that must reach the renderer to
+  honor the intent.
+
 ## Tech-debt notes
 
 - Stroke-count ceiling near 500 per render. Beyond that, SVG file size

@@ -116,9 +116,29 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Nick  | `tasks/nick-timmflat-pack.md` (PR #3) | running | Pack delta in `styles.ts` + 16-cell grid. File overlap with PR #2 is zero — parallel-safe. |
+| Pascal | `tasks/pascal-w2-timmflat-scoring.md` | spawning | Two jobs: 16-cell grid score + W1-deferred calibration audit. Closes the sprint. |
 
 ## Done this sprint (W2)
+
+- **Nick PR #3** — `tasks/nick-timmflat-pack.md`. `timmFlat` pack
+  lands in `src/presets/styles.ts` (+62 LOC); grid script at
+  `scripts/timmflat-grid.ts`; full 16-cell sheet rendered at
+  `/tmp/timmflat-out/`. Four-corner test PASSES (Nick's read):
+  cells 1/4/12/14 read as clearly-different characters AND
+  clearly-different ages at 96×96. Mixture-rule regression
+  byte-identical (50/50 across `default`/`tintin`/`ligneClaire`).
+  Two pre-Pascal flags filed: (a) longSleek/longTail cells (6, 7,
+  11) fight Timm canon at the engine ceiling Leo's spec already
+  triaged — not pack drift; (b) **cascade-order spec-drift
+  surprise** — pack-level pedagogy knobs (`recipe.leads = []`,
+  `mouth.lipFullness`, `eyes.lashes`, `eyes.lidLine`) get
+  clobbered by demographic layers downstream. Nick worked around
+  in the grid script via a `TIMM_PEDAGOGY` overrides const so the
+  renders honor pack intent; **architectural fix filed for Lloyd
+  + Claudia (W3-class, see BACKLOG)**. PR #3 committed across
+  `4c1caee` (pack data, parallel-edit collision into Lloyd-Pass-3
+  commit — Nick verified diff correct) + `236fd8a` (grid script
+  + handoff).
 
 - **Lloyd Pass 3** — `research/lloyd-pass-1.md`. Code review of Nick
   PR #2. Verdicts: LOC overrun APPROVED-AS-IS (§7 projection was
