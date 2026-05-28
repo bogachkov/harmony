@@ -1440,7 +1440,7 @@ const buildHair = (
       const startX = liftHalfWidth * (2 * fanT - 1) * 0.85;   // left-to-right fan
       const startY = hairlineY + headHeight * (0.01 + liftRng() * 0.04);
       // Peak: converges toward x=0 at the apex.
-      const peakOnX = startX * (0.15 + liftRng() * 0.20);     // strongly pulls toward centerline
+      const peakOnX = startX * (0.40 + liftRng() * 0.30);     // wider spread — avoids topknot/starburst at apex
       const peakOnY = liftApexY * (0.82 + liftRng() * 0.16);  // 82-98% of apex height
       // End: past the apex, toward the back of the dome, slightly past center.
       const endX = -startX * (0.10 + liftRng() * 0.15);       // slight mirror of start (swept back)
