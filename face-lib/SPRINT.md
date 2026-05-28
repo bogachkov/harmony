@@ -8,233 +8,274 @@ sections reset.
 
 ---
 
-## Active sprint — Q1-W2
+## Active sprint — Q1-W2 (extended, re-planned post-Pascal NO-SHIP)
 
-**Goal: land pack #2 (`timmFlat`) at quality bar across its 16-cell
-demographic grid, with the two prereq primitive fixes that gate it.**
+**Goal (revised): land `timmFlat` at quality bar across a 13-cell
+demographic grid, with the cascade-leak primitive fix that unblocks
+the bob/pomp register and a Lloyd architectural-design pass on the
+cascade-merge vs demographic-data fix path.**
 
-Q1-W1 laid the rails (3D refactor under flag; pack spec written; eye
-integration audited). Q1-W2 ships the first new pack since the engine
-went under structured process. The W1 returns surfaced two prereqs
-that are non-negotiable before timmFlat renders:
+Pascal scored 3/16 cells at ≥ 5 on the original 16-cell grid and
+called NO-SHIP at the W2 gate. Three failure clusters: cascade-leak
+(6 cells — bob/pomp), engine-ceiling long-hair (3 cells —
+longSleek/longTail), demographic-topology gap (4 cells + four-corner
+fail). Pascal's recommendation: all three concurrent moves. Claudia's
+W2 re-plan: **ship 13 cells (drop 6/7/11), land the cascade-leak fix
++ Lloyd architectural design, slip the long-hair primitive and the
+cascade-merge implementation to W3.**
 
-1. **Eye-primitive plumbing** (Leo STOP, ~25 LOC). `buildEye` almond
-   branch silently drops `lidLine` / `lashes` / `underlineHint`.
-   timmFlat depends on `lidLine: 0.6` as load-bearing per Sito 2004
-   p.40 ("the eye is the lid more than the pupil"). Without the fix,
-   the pack ships with the opposite of its canon. Half-day Nick.
+Why option B sharpened over A / C / D:
 
-2. **Alpha-shape `hullMode` knob** (Lloyd item 4, ~80 LOC). Convex
-   hull v1 produces a hexagon for `coilyHalo` and a nun's wimple for
-   `longCurtain` — unshippable. Per mixture rule: add `hullMode:
-   'convex' | 'alpha'` to `HairstyleRecipe`, convex stays as a mode,
-   alpha becomes default for new volume-mode adoption. timmFlat
-   itself runs in `clumpMode: 'flat'` so this is not gating timmFlat
-   READING right — but the W3 packs Rollo flagged (TWA / coily) lose
-   their volume-mode option without it, so we land it now while the
-   architecture is fresh in Nick's head. **Bundle** with the two
-   small Lloyd-item-2/3 fixes (centreU quadrant keying; drop
-   `data-hull-group` debug attr).
+- **A (all three in W2)** — runs W2 long by 2-3 more days on top of
+  the 1.5 already consumed. Q1 has four weeks. Burning a full extra
+  week on one pack hurts demographic-depth across packs (ROADMAP
+  scope-cut: pack count would slip from 4 to 3).
+- **C (3-cell ship)** — ROADMAP "demographic depth > pack count"
+  reads against. Hard to defend Gary-facing.
+- **D (defer pack to W3, architectural foundation in W2)** —
+  reasonable but loses momentum. timmFlat IS landing where it gets
+  the chance (Pascal: cells 1/2/3 are register-correct). Burning W2
+  on architecture-with-no-render-gate risks the architecture going
+  unconstrained. The cascade-leak fix in (B) is itself a small
+  architectural foundation step: it forces us to discover whether
+  the simple override-const extension holds OR whether we need a
+  `recipe.suppressLeads: true` primitive promotion — which is Lloyd
+  cascade-merge surface area, exposed cheaply.
+- **B sharpened** — ships timmFlat × 13 cells at quality this week;
+  Lloyd's architectural design lands as a *written design* (not
+  implementation) covering both the cascade-merge question AND the
+  demographic-topology layer-of-fix question; long-hair primitive
+  + cascade-merge implementation + demographic-preset push go to W3.
 
-3. **timmFlat implementation.** Pack parameters per the W1 spec
-   (`research/stylepack-timmFlat-spec.md`), rendered across Rollo's
-   16-cell must-ship grid. Parameter flips against existing
-   primitives + the eye-plumbing fix; no BACKLOG primitive promotion
-   needed.
+**Cells dropped from W2 ship grid (explicitly NOT silently — preserved
+in the original 16-cell spec as W3 promotion targets):**
 
-W2 sequencing: 1 + 2 land BEFORE 3 starts. 1 + 2 are bundleable into
-one PR if Nick prefers (small + small + small). 3 is its own PR.
+- Cell 6: adult-fem-oval × longSleek
+- Cell 7: adult-fem-oval × longTail
+- Cell 11: teen-fem-ovalsoft × longSleek dark
 
-### Ship gate (what closes Q1-W2)
+Pascal scored these 2/2/2 — primitive-level long-hair field-tracer
+fights Timm canon. Pack pedagogy can't reach them without a
+primitive-level toggle. **Honest framing for Gary if he asks:
+timmFlat ships in 13 demographic cells; long-hair Timm register
+needs a W3 engine-primitive promotion to reach Wonder Woman / Catwoman
+silhouettes. The pack is not the bug; the long-hair primitive is.**
 
-All four must be true:
+### Revised ship gate (what closes Q1-W2)
 
-- [x] **Eye plumbing landed.** `buildEye` almond branch honors
-  `lidLine` / `lashes` / `underlineHint`; existing `tintin`-style
-  dots renders unchanged (mixture rule: new behavior is plumbed
-  through, default values of 0 preserve current renders). Lloyd
-  review not required (size + simplicity). **Landed PR #1 — three
-  commits `25dc884` / `ce19a47` / `b1ee33a` on vector-draw. 30/30
-  catalog renders byte-identical in dots mode; 26/30 flat-mode
-  byte-identical post-centreU fix (longCurtain wimple gone;
-  coilyHalo hexagon retained for PR #2). Nick flagged Leo's
-  "presets are all 0 on almond" was slightly wrong — demographic
-  presets DO set non-zero `lidLine` that was being silently
-  dropped pre-fix; default/ligneClaire renders with demographic
-  presets now honor those knobs. Catalog unaffected. Filed for
-  Pascal/Holly.**
-- [x] **`hullMode: 'convex' | 'alpha'` knob landed.** Alpha-shape
-  merger in `src/render/hull.ts` (Bowyer-Watson Delaunay +
-  α-complex; α auto-tuned from clump spacing × 1.5 per Lloyd §7).
-  Convex stays as a mode. **Decision (Nick): leave W1 fixtures
-  undefined → 'convex' as regression-history record; add sibling
-  `longCurtainAlpha` / `coilyHaloAlpha` fixtures with
-  `hullMode: 'alpha'` so alpha is REACHABLE as a preset.** No
-  `shortBobAlpha` (flat mode bypasses merger). 30/30 original
-  catalog SVGs byte-identical; alpha fixtures determinism-checked
-  (identical SVG on repeat). longCurtain wimple gone; coilyHalo
-  hexagon gone. LOC drift to ~340 vs Lloyd's ~80 projection
-  flagged in handoff. Bundled items (centreU key + debug attr)
-  landed earlier in PR #1. **Landed PR #2 — two commits on
-  vector-draw; awaiting Lloyd review.**
-- [~] **`timmFlat` pack lands in `src/presets/styles.ts`** per the
-  W1 spec. **Pack DATA landed (PR #3); RENDER QUALITY did not
-  close the gate** — Pascal scored 3/16 cells at ≥ 5 (cells 1, 2,
-  3 — adult-masc-square × short hair). Four-corner test FAILED on
-  Pascal's read (cells 1/4 not clearly different characters at
-  96px; cells 12/14 not clearly different ages — the
-  demographic-not-exercising-topology failure mode Rollo spec
-  lines 506-511 explicitly tested for). Three failure clusters:
-  cascade-leak (6 cells, override layer didn't suppress
-  hairstyle-level `leads`), engine-ceiling long-hair primitive
-  (3 cells, multi-strand field-tracer fights flat canon),
-  demographic-topology gap (4 cells + four-corner failure).
-  **Claudia owns the W2 re-plan call.**
-- [x] **Pascal calibration audit** — **calibration holds.** Pascal
-  walked all ≥ 5 cells against the dead-procedural-hair /
-  flat-line / features-don't-integrate sniff-tests; none fires.
-  Anchor table maps cleanly onto all 16 scores. One forward note:
-  "Timm pedagogy register is the first time the engine has tested
-  a tradition where zero jitter is the right answer — sniff-tests
-  are register-sensitive, not absolute." Operating-manual
-  clarification for future flat-fill packs, not a recalibration.
-  **W1-deferred outcome filed at
-  `research/pascal-w2-timmflat.md` §Calibration.**
+Five boxes (the original four plus the cascade-leak fix; long-hair
+slides to W3 explicitly; architectural design lands as deliverable
+not implementation):
 
-What is explicitly NOT in W2's gate:
+- [x] **Eye plumbing landed.** (PR #1.) Unchanged from prior gate.
+- [x] **`hullMode` knob landed.** (PR #2.) Unchanged from prior gate.
+- [~] **`timmFlat` pack lands + renders at quality on the revised
+  13-cell grid.** Pack DATA landed (PR #3). Cascade-leak fix (Nick
+  re-spawn PR #4) needs to land before re-render. **Acceptance:
+  Pascal ≥ 5 on cells 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 15, 16
+  (the 13 retained). Cells 6, 7, 11 deferred to W3 — not scored
+  this round.**
+- [x] **Pascal calibration audit — calibration holds.** Unchanged.
+  Filed at `research/pascal-w2-timmflat.md` §Calibration. The
+  Job 1 verdict (NO-SHIP at original 16-cell gate) is what
+  triggered this re-plan; the Job 2 verdict (calibration holds)
+  is the W1-deferred outcome.
+- [ ] **Lloyd architectural design pass landed** — written design
+  covering (a) cascade-merge architecture: does pack-pedagogy fix
+  at the cascade-layer level (re-order so packs win on overlapping
+  pedagogy knobs) or at the type level (mark knobs load-bearing)
+  or via a new "lock" primitive; (b) demographic-topology gap:
+  does the cells-9/12/14/15 + four-corner failure close at the
+  cascade-merge layer or at the demographic-preset-data layer
+  (push jaw topology proportions harder in `demographics.ts`).
+  **Design ONLY. No Nick implementation in W2 per this gate —
+  Nick implements per Lloyd's design in W3.** Filed at
+  `research/lloyd-cascade-architecture.md`.
 
-- Holly regression sweep + test strategy doc → W2 close OR W3.
-  Holly's first real spawn lands once timmFlat is in (per
-  AGENTS.md Holly-first-spawn note + W1 plan deferral). May slip
-  to W3 if W2 closes tight.
-- Per-feature line-weight multiplier (Leo+Rollo flagged as W3+
-  ceiling-raiser for villain register). NOT a W2 blocker — pack
-  ships hero/protagonist register cleanly without it.
+What is explicitly NOT in W2's revised gate (slid to W3):
+
+- **Long-hair primitive promotion** (`recipe.strandMode: 'off'` OR
+  field-tracer-no-ops-when-flat). Cells 6, 7, 11 in the original
+  grid. ~30-50 LOC in field-tracer + Lloyd touch. **W3 first row.**
+- **Cascade-merge architectural implementation** (Nick implements
+  per Lloyd's design). Whatever scope Lloyd's design lands at.
+  **W3 second row.**
+- **Demographic-preset push for topology** (cells 9, 12, 14, 15 +
+  four-corner). If Lloyd's design routes it to the demographic-
+  preset-data layer, Nick implements deltas in `demographics.ts`.
+  **W3 third row.**
+- **Re-render of the full 16-cell grid + Pascal re-score for cells
+  6, 7, 11, 9, 12, 14, 15.** Closes the original 16-cell spec.
+  **W3 closeout, after the three W3 rows land.**
+
+What is explicitly NOT in W2's gate (already deferred, unchanged):
+
+- Holly regression sweep + test strategy doc → W3 or later (her
+  first spawn should be a test-strategy doc per AGENTS.md, not
+  test code). Pushed further: **deferred to W3 close at earliest,
+  may slip to W4** given W3 is now Nick-heavy.
+- Per-feature line-weight multiplier (Leo+Rollo flagged W3+).
 - Categorical `brows.shape` enum (Leo+Rollo flagged W3+).
-- Orbital socket recess primitive (Leo cross-cutting — packs 3-4
-  will need it; timmFlat dodges, so deferred).
-- `mouth.philtralBow` knob (BACKLOG #2; deferred W3+).
-- `expressions.ts` resuscitation (BACKLOG; deferred W3+).
+- Orbital socket recess primitive (Leo cross-cutting — defer to
+  first pack pick that requires it; timmFlat dodges).
+- `mouth.philtralBow` knob (BACKLOG #2; defer W3+).
+- `expressions.ts` resuscitation (BACKLOG; defer W3+).
 - `pointed` / `pear` jaw topology dispatch through demographic
-  presets (Rollo adjacent-gap #1 — files a backlog row, not in W2).
-- Tangent-decay parameter exposure (Lloyd item 1 next-PR work —
-  cheap, but no caller needs it in W2; defer).
-- `hull.ts:71-86` dead `theta/cx/cy` cleanup — deferred as a low-
-  priority refactor row.
+  presets (Rollo adjacent-gap #1 — filed; **note: this is now
+  in scope for Lloyd's W2 design pass as a possible part of the
+  demographic-topology fix story for cells 9/12/14/15**).
+- Tangent-decay parameter exposure (Lloyd item 1 — cheap, no
+  caller needs it; defer).
+- `hull.ts:71-86` dead `theta/cx/cy` cleanup — landed inline
+  (`dda5d0b`).
+
+**ROADMAP scope-cut declaration:** The slip of (a) long-hair
+primitive promotion, (b) cascade-merge architectural implementation,
+and (c) demographic-preset topology push into W3 consumes most of
+W3's Nick budget. I am **explicitly cutting the W3 next-pack-spec
+slot** (Leo+Rollo write the spec for pack #3) and **sliding it to
+W4**. Q1 pack count: default + tintin + ligneClaire + timmFlat = 4
+packs minimum at end of Q1 (the ROADMAP N ≥ 4 floor). W3 close = 4
+packs at full demographic depth (the original 16-cell grid for
+timmFlat closes in W3 once the three W3 rows land + Pascal re-scores
+cells 6/7/11/9/12/14/15). W4 = spec + implement pack #5 if there's
+budget, otherwise polish + first Holly sweep + Q1 closeout. The
+ROADMAP rule (demographic depth > pack count) is preserved: we are
+trading W3's pack-spec buffer for W3's depth-completion of pack #2,
+which is the right trade per the rule.
 
 ## In flight
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Claudia | W2 re-plan triggered by Pascal NO-SHIP | spawning | Pascal scored 3/16 ≥ 5; sprint does not close. Three concurrent moves needed per Pascal's reco — Claudia owns the call. |
+| (none — Claudia returning W2 re-plan) | | | Next spawns queued below. |
 
 ## Done this sprint (W2)
 
-- **Pascal W2 close pass** — `research/pascal-w2-timmflat.md`.
-  Two jobs in one file. Job 1: 3/16 cells at Pascal ≥ 5 — **NO-SHIP
-  at the W2 gate.** Job 2: calibration holds. Four-corner test
-  FAILED on Pascal's read; pushes back on Nick's PASSES with named
-  diagnosis (cells 1/4 not distinct chars at 96px; cells 12/14
-  not distinct ages; the demographic-not-exercising-topology
-  failure mode the spec explicitly tested for). Sprint-close
-  recommendation: three concurrent moves — (a) Nick re-spawn to
-  extend `TIMM_PEDAGOGY` for `bobChinLength`/`shortPomp`
-  hairstyle-level leads (smallest-fix on 6 cells); (b) Claudia
-  promote a primitive-level flat-clump-disables-strand-layer
-  toggle (cells 6/7/11, ~30-50 LOC in field-tracer); (c) Lloyd
-  architectural call on cascade-merge-vs-demographic-data fix
-  path (cells 9/12/14/15 + four-corner). All three needed; none
-  sufficient alone. **Claudia owns the W2 re-plan call.**
+- **Claudia W2 re-plan** — `tasks/claudia-q1w2-replan-pascal-no-ship.md`.
+  Re-planned W2 post Pascal's NO-SHIP. Decision: ship 13-cell timmFlat
+  in W2 (drop 6/7/11), land cascade-leak fix + Lloyd architectural
+  design pass; slide long-hair primitive + cascade-merge implementation
+  + demographic-preset topology push to W3; explicit ROADMAP scope-cut
+  on W3's next-pack-spec slot (slides to W4). Spawn order documented
+  below.
+
+- **Pascal W2 close pass** — `research/pascal-w2-timmflat.md`. Two
+  jobs in one file. Job 1: **3/16 cells at Pascal ≥ 5 — NO-SHIP at
+  the original 16-cell W2 gate.** Job 2: **calibration holds.**
+  Four-corner test FAILED on Pascal's read; pushed back on Nick's
+  PASSES with named diagnosis (cells 1/4 not distinct chars at 96px;
+  cells 12/14 not distinct ages; the
+  demographic-not-exercising-topology failure mode the spec
+  explicitly tested for). Three failure clusters: cascade-leak (6),
+  long-hair primitive ceiling (3), demographic-topology gap (4 +
+  four-corner). Calibration audit: sniff-tests are register-
+  sensitive, not absolute — operating-manual clarification for
+  future flat-fill packs, NOT a recalibration. **Escalation flag
+  filed for Gary's awareness (no pause): pack as declarative truth
+  vs pack as overrides at render time is the directional surface
+  for Lloyd's W3 architectural pass.**
 
 - **Nick PR #3** — `tasks/nick-timmflat-pack.md`. `timmFlat` pack
   lands in `src/presets/styles.ts` (+62 LOC); grid script at
   `scripts/timmflat-grid.ts`; full 16-cell sheet rendered at
-  `/tmp/timmflat-out/`. Four-corner test PASSES (Nick's read):
-  cells 1/4/12/14 read as clearly-different characters AND
-  clearly-different ages at 96×96. Mixture-rule regression
-  byte-identical (50/50 across `default`/`tintin`/`ligneClaire`).
-  Two pre-Pascal flags filed: (a) longSleek/longTail cells (6, 7,
-  11) fight Timm canon at the engine ceiling Leo's spec already
-  triaged — not pack drift; (b) **cascade-order spec-drift
-  surprise** — pack-level pedagogy knobs (`recipe.leads = []`,
-  `mouth.lipFullness`, `eyes.lashes`, `eyes.lidLine`) get
-  clobbered by demographic layers downstream. Nick worked around
-  in the grid script via a `TIMM_PEDAGOGY` overrides const so the
-  renders honor pack intent; **architectural fix filed for Lloyd
-  + Claudia (W3-class, see BACKLOG)**. PR #3 committed across
-  `4c1caee` (pack data, parallel-edit collision into Lloyd-Pass-3
-  commit — Nick verified diff correct) + `236fd8a` (grid script
-  + handoff).
+  `/tmp/timmflat-out/`. Nick's four-corner test PASSES read was
+  pushed back by Pascal post-rendering. Cascade-order spec-drift
+  surprise filed for architectural fix (now Lloyd W2 design pass
+  per this re-plan). PR #3 committed across `4c1caee` (pack data,
+  parallel-edit collision into Lloyd-Pass-3 commit — Nick verified
+  diff correct) + `236fd8a` (grid script + handoff).
 
-- **Lloyd Pass 3** — `research/lloyd-pass-1.md`. Code review of Nick
-  PR #2. Verdicts: LOC overrun APPROVED-AS-IS (§7 projection was
-  naive about input scale, honest bill was always ~200 not 80);
-  decision-1 default split APPROVED-AS-IS (preserves byte-identical
-  baseline, mixture rule satisfied); ALPHA_FACTOR=1.5
-  APPROVED-AS-IS for v1, exposure deferred to W3-when-bitten
-  (filed in BACKLOG); dead-code at `hull.ts:71-86` NEEDS-CHANGES,
-  surgical 11-line drop landed inline by Bob (PROCESS.md exception)
-  as `dda5d0b`. No re-review.
+- **Lloyd Pass 3** — code review of Nick PR #2. Verdicts:
+  LOC overrun APPROVED-AS-IS, decision-1 default split APPROVED-
+  AS-IS, ALPHA_FACTOR=1.5 APPROVED-AS-IS for v1, dead-code at
+  `hull.ts:71-86` NEEDS-CHANGES → surgical 11-line drop landed
+  inline by Bob as `dda5d0b`.
 
-- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Three commits
-  on vector-draw: engine (`hull.ts` alpha-shape + `params.ts` hullMode
-  + `svg.ts` dispatch) + fixtures (`longCurtainAlpha`, `coilyHaloAlpha`,
-  index registration) + handoff. 30/30 original catalog byte-identical
-  (convex default unchanged). longCurtain wimple eliminated; coilyHalo
-  hexagon eliminated. ALPHA_FACTOR = 1.5 (Lloyd's §7 starting guess
-  held up). LOC ~340 vs Lloyd's ~80 projection — Lloyd accepted as
-  honest at input scale. **Box 2 fully closed.**
+- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Alpha-shape
+  + `hullMode` knob landed. 30/30 byte-identical; longCurtain
+  wimple + coilyHalo hexagon eliminated. **Box 2 fully closed.**
 
 - **Nick PR #1** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
-  Three commits on vector-draw: `25dc884` (eye plumbing),
-  `ce19a47` (centreU keying fix), `b1ee33a` (debug attr drop).
+  Three commits: eye plumbing + centreU keying + debug attr drop.
   Catalog dots-mode 30/30 byte-identical; flat-mode 26/30 byte-
-  identical post-centreU (longCurtain parting gap restored).
-  Demographic-preset lidLine-on-default/ligneClaire side-effect
-  filed for Pascal/Holly to flag if anything reads off.
+  identical post-centreU. Demographic-preset lidLine-on-default/
+  ligneClaire side-effect filed for Pascal/Holly to flag if anything
+  reads off.
 
-## Blocked / pending
+## Blocked / pending (W2)
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Pascal | Quality + calibration audit on timmFlat 16-cell grid | timmFlat impl landing |
-| Holly  | Test strategy doc + first regression sweep | timmFlat landing (then W2 or W3 close depending on Pascal verdict) |
+| Pascal | Re-score the 13-cell revised grid | Nick PR #4 (cascade-leak fix) landing + re-render |
+| Holly  | Test strategy doc + first regression sweep | Slid to W3 close at earliest; W2 is now Nick-heavy |
 
-## Q1-W2 spawn order (for Bob)
+## Q1-W2 revised spawn order (for Bob)
 
-1. **Nick — eye plumbing + hullGroup centreU fix + debug attr drop.**
-   `tasks/nick-eye-plumbing-and-hull-cleanups.md`. Three small,
-   independent commits in one PR (~35 LOC total). Smallest, no
-   architectural surprises. Sequence first so the next two unblock.
-2. **Nick — `hullMode: 'convex' | 'alpha'` knob.**
-   `tasks/nick-alpha-shape-hullmode.md`. Lloyd reviews on completion.
-   Spawn after #1 lands (alpha-shape lives in the same `hull.ts`
-   file the centreU fix touches; serializing avoids merge churn).
-3. **Nick — `timmFlat` style pack implementation.**
-   `tasks/nick-timmflat-pack.md`. Parameter flips per the W1 spec
-   + the 16-cell grid render sheet. Spawn after #1 lands; can
-   start in parallel with #2 if Nick has bandwidth (file overlap
-   is zero — pack lives in `src/presets/styles.ts`, alpha-shape
-   lives in `src/render/hull.ts`). Default: serial after #2.
+**Wave 1 (parallel — both spawnable immediately):**
 
-Conditional spawns (after #3 lands):
-4. **Lloyd** — code review of #2 (alpha-shape). Bob-triggered; no
-   Claudia queue needed.
-5. **Pascal** — 16-cell timmFlat grid scoring + W1-deferred
-   calibration audit. Closes the sprint.
+1. **Nick — `tasks/nick-cascade-leak-fix.md`** (NEW, drafted by Claudia
+   this re-plan). Extend `TIMM_PEDAGOGY` overrides const in
+   `scripts/timmflat-grid.ts` to suppress the per-hairstyle + per-
+   demographic-presentation `leads` arrays that survive into the
+   bob / pomp renders. Pascal's smallest-fix path. **Fallback authority:**
+   if extending the override const doesn't catch the artifact cleanly
+   (e.g., the merge semantics deep-merge the arrays instead of
+   replacing), Nick is authorized to promote a `recipe.suppressLeads:
+   true` primitive knob (smallest possible primitive promotion — ~10
+   LOC type + ~5 LOC merge logic). Surface to Bob if reaching for
+   anything bigger. ~half-day to one day. Renders the revised 13-cell
+   grid on completion.
 
-Not queued this sprint:
-- Holly — sprint-close role; ride along with Pascal close if
-  timmFlat renders well, otherwise slip to W3 (her first spawn
-  should be a test-strategy doc per AGENTS.md, not test code).
-- Rollo — no catalog-level call this sprint; W2 is an
-  implementation sprint against the spec Rollo already signed.
-  Next Rollo touch is W3 spec or end-of-month directional review.
-- Leo — no audits queued; W3 may need Leo for orbital-socket /
-  socket-recess primitive if the next pack pick demands it.
-- David — monthly directional review naturally lands around W2
-  close or W3 open; Bob surfaces if anything shifts the Q1
-  trajectory.
+2. **Lloyd — `tasks/lloyd-cascade-architecture.md`** (NEW, drafted by
+   Claudia this re-plan). Architectural design pass — written design
+   ONLY, no implementation. Covers (a) the cascade-merge question
+   (where do pack-pedagogy knobs win — re-order? type-level pin?
+   new lock primitive?), and (b) the demographic-topology gap
+   (does the cells 9/12/14/15 + four-corner failure close at the
+   cascade-merge layer or at the demographic-preset-data layer —
+   pushing jaw topology proportions harder in `demographics.ts`?).
+   Output: a written design at `research/lloyd-cascade-architecture.md`
+   naming the layer-of-fix for each symptom and sizing W3 implementation
+   for Nick. ~half-day to one day. **Parallel-safe with Nick PR #4**
+   (different files; Lloyd writes prose, Nick writes code).
+
+**Wave 2 (sequential after Wave 1 lands):**
+
+3. **Pascal — `tasks/pascal-w2-revised-rescore.md`** (NEW, drafted by
+   Claudia this re-plan). Re-score the 13-cell revised grid post Nick
+   PR #4. **Acceptance: Pascal ≥ 5 on all 13 retained cells (1, 2, 3,
+   4, 5, 8, 9, 10, 12, 13, 14, 15, 16).** Cells 6, 7, 11 explicitly
+   not scored this round — they are W3 work. Brief is sharp: Pascal
+   should NOT re-litigate the calibration (Job 2 holds from
+   `research/pascal-w2-timmflat.md`); the audit is closed. Pascal
+   should ALSO NOT re-litigate the four-corner test pass/fail (the
+   demographic-topology gap is filed; Lloyd's design covers it).
+   Pascal's job: verify the cascade-leak fix landed cleanly on the
+   bob/pomp cells (4, 5, 8, 10, 13, 16) and re-affirm the calibration-
+   holds 3/16 → 5/13 register-correct cells continue to hold at ≥ 5
+   on re-render.
+
+**Conditional / not queued:**
+
+4. **Bob technical sign-off on Lloyd's design** — Bob reviews Lloyd's
+   written design and either accepts it or surfaces to Claudia for
+   re-scope if Lloyd's design implies a structural change Claudia
+   needs to triage against ROADMAP. No Pascal/Rollo on a design doc.
+5. **Holly — test strategy doc** — first Holly spawn (per AGENTS.md);
+   slips to W3 close at earliest. May further slip to W4 if W3 is
+   tight. Not queued this sprint.
+6. **Rollo — no catalog-level call this sprint.** Next Rollo touch
+   is W4 next-pack-spec (per the ROADMAP scope-cut declared above —
+   W3's next-pack-spec slot slides to W4).
+7. **Leo — no audits queued for W2.** W3 may need Leo for
+   orbital-socket / socket-recess primitive if the W4 pack pick
+   demands it.
+8. **David — monthly directional review** naturally lands around W2
+   close or W3 open. Bob surfaces if the timmFlat re-plan + W3 Nick-
+   heavy load + W4 pack-spec slip shifts the Q1 trajectory. Per the
+   re-plan: it doesn't (4 packs at floor still hit; depth on pack
+   #2 actually improves with the W3 closeout).
 
 ## History
 
@@ -264,35 +305,22 @@ needs primitive fixes before it can hit Pascal ≥ 5.
   dramatic than Lloyd §7 predicted; Lloyd review pulled alpha-shape
   into W2 instead of "deferred until adoption."
 - **Box 3 (Leo + Rollo joint timmFlat spec at
-  `research/stylepack-timmFlat-spec.md`).** Pedagogy half (5
-  pedagogy citations Timm + Dini, Sito, Caniff, Toth, Eisner;
-  3-5 defining decisions; construction-order note: jaw-first not
-  cranium-first per Sito p.41) + asset half (5 NPC slots from
-  superhero-NPC-portrait to pitch-deck character heads; 16-cell
-  must-ship demographic grid; 4 adjacent gaps named; mixture-rule
-  preservation check against forest registry confirmed zero
-  filed aesthetics at risk). Implementable in W2 without any
+  `research/stylepack-timmFlat-spec.md`).** Pedagogy half (Leo) +
+  asset half (Rollo) both signed. Implementable in W2 without any
   BACKLOG primitive promotion.
 - **Box 4 (Leo face-integration audit at
   `research/leo-face-integration-audit.md`).** Eyes = STOP, small
   (~25 LOC eye-primitive plumbing prereq before timmFlat impl).
   Brows / Mouth / Integration = GO-WITH-CAVEATS for W2.
-  Cross-cutting: Pascal's "features-as-decals" complaint is
-  structurally real (no orbital socket, no brow ridge plane, no
-  mouth-on-mandible attachment); timmFlat dodges it because Timm
-  canon literally IS decals — pack 3+ (Caniff/manga/realistic)
-  will hit it hard and need a socket-recess primitive pass. Six
-  BACKLOG candidates flagged.
-- **Lloyd pass 2 review (post-merge, code review of Nick's
-  implementation, appended to `research/lloyd-pass-1.md`).** Four
-  verdicts: (1) tangent-decay APPROVED-WITH-EDITS — expose as
-  param; next-PR. (2) `hullGroup` keying APPROVED-WITH-EDITS —
-  switch to `centreU` quadrant, one-line at `scaffold.ts:1414`,
-  required before shipped volume adoption. (3) `data-hull-group`
-  debug attr NEEDS-CHANGES — drop or gate behind debug flag.
-  (4) Alpha-shape deferral NEEDS-CHANGES — pull into Q1-W2 as
-  `hullMode: 'convex' | 'alpha'` parameter, convex stays as a
-  mode per mixture rule. Plus dead-code flag at `hull.ts:71-86`.
+  Cross-cutting: features-as-decals integration debt is real;
+  timmFlat dodges it because Timm canon literally IS decals; pack
+  3+ will hit it hard and need a socket-recess primitive pass.
+  Six BACKLOG candidates flagged.
+- **Lloyd pass 2 review.** Four verdicts: tangent-decay APPROVED-
+  WITH-EDITS (next-PR); `hullGroup` keying APPROVED-WITH-EDITS
+  (one-line at `scaffold.ts:1414`); `data-hull-group` debug attr
+  NEEDS-CHANGES (drop); alpha-shape deferral NEEDS-CHANGES (pull
+  into W2). Plus dead-code flag at `hull.ts:71-86`.
 
 **Carry-overs into W2:**
 - Eye primitive plumbing (Leo STOP).

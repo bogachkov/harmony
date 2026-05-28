@@ -166,4 +166,139 @@ the W3 picture:
 
 ## Handoff
 
-(Claudia fills in on completion.)
+W2 re-plan complete. Pascal's NO-SHIP verdict folded; the three
+failure clusters routed into a sharpened Option B (13-cell ship in
+W2, long-hair primitive + cascade-merge implementation + demographic-
+preset push slid to W3).
+
+### Decision
+
+**Option B sharpened.** Ship `timmFlat` in W2 across a revised
+13-cell grid (cells 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 15, 16).
+Drop cells 6, 7, 11 (long-hair primitive ceiling) to W3. Land Nick's
+cascade-leak fix (smallest of the three failure clusters, per
+Pascal's reco) and Lloyd's architectural design pass (covering both
+the cascade-merge question and the demographic-topology gap; design
+only, no implementation). The cascade-merge implementation,
+demographic-preset push, and long-hair primitive promotion all slide
+to W3.
+
+### Why not A / C / D
+
+- **A (all three in W2)** runs W2 long another 2-3 days on top of
+  the 1.5 already consumed. Q1 has 4 weeks; burning a full extra
+  week on one pack would slip pack count from 4 to 3.
+- **C (3-cell ship)** ROADMAP "demographic depth > pack count" reads
+  against. Hard to defend Gary-facing.
+- **D (defer pack entirely, architectural foundation in W2)** loses
+  W2 momentum. timmFlat IS landing where it gets the chance (Pascal:
+  cells 1/2/3 are register-correct). Burning W2 on architecture-
+  with-no-render-gate risks the architecture going unconstrained.
+  Cascade-leak fix in (B) is itself a small architectural foundation
+  step — Nick's fallback option (`recipe.suppressLeads`) IS the
+  cheapest possible primitive promotion and gives Lloyd's design
+  pass concrete data to opine on.
+
+### ROADMAP scope-cut declaration
+
+I am explicitly cutting **W3's next-pack-spec slot** (Leo + Rollo
+write the spec for pack #3) and sliding it to **W4**. Q1 pack count:
+default + tintin + ligneClaire + timmFlat = 4 packs at the ROADMAP
+N ≥ 4 floor. W3 close = 4 packs at full demographic depth (the
+original 16-cell timmFlat grid closes in W3 once long-hair primitive
++ cascade-merge + demographic-preset push land + Pascal re-scores
+cells 6/7/11/9/12/14/15). W4 = spec + implement pack #5 if there's
+budget, otherwise polish + first Holly sweep + Q1 closeout. The
+ROADMAP rule (demographic depth > pack count) is preserved: we are
+trading W3's pack-spec buffer for W3's depth-completion of pack #2,
+which is the right trade per the rule.
+
+### Spawn order for Bob
+
+**Wave 1 (parallel — both spawnable immediately):**
+
+1. **Nick** — `tasks/nick-cascade-leak-fix.md` (NEW, drafted). Extend
+   `TIMM_PEDAGOGY` const + diagnose merge semantics + fallback
+   authority to promote `recipe.suppressLeads: true` if needed.
+   Re-render the revised 13-cell grid. ~half-day to one day.
+2. **Lloyd** — `tasks/lloyd-cascade-architecture.md` (NEW, drafted).
+   Written architectural design pass — cascade-merge question +
+   demographic-topology gap. No implementation. Output:
+   `research/lloyd-cascade-architecture.md`. ~half-day to one day.
+   Parallel-safe with Nick (different files; Lloyd writes prose,
+   Nick writes code).
+
+**Wave 2 (sequential after Wave 1 lands):**
+
+3. **Pascal** — `tasks/pascal-w2-revised-rescore.md` (NEW, drafted).
+   Re-score 13 retained cells. Acceptance: Pascal ≥ 5 on all 13.
+   Brief is sharp: do NOT re-litigate calibration audit (closed) or
+   four-corner test (filed for Lloyd design + W3 implementation).
+
+**Conditional / not queued:**
+
+- **Bob technical sign-off on Lloyd's design** — Bob reviews, accepts
+  or surfaces to Claudia for re-scope.
+- **Holly** — first spawn (test strategy doc per AGENTS.md) slips
+  to W3 close at earliest; may further slip to W4.
+- **Rollo** — next touch is W4 next-pack-spec (per the ROADMAP
+  scope-cut).
+- **Leo** — no W2 audits queued; W3 may need Leo for orbital-socket
+  primitive depending on W4 pack pick.
+- **David** — monthly directional review naturally lands around W2
+  close or W3 open. Bob surfaces if the re-plan shifts the Q1
+  trajectory. Per my analysis: it doesn't.
+
+### Artifacts updated
+
+- **`face-lib/SPRINT.md`** — rewritten with revised goal + revised
+  ship gate (5 boxes now) + revised spawn order + W3 slip declaration
+  + ROADMAP scope-cut. Done section updated with Pascal close pass +
+  this re-plan as new rows.
+- **`face-lib/BACKLOG.md`** — Architectural-calls-open section
+  expanded: cascade-order row scoped tighter (now design-in-W2 with
+  the two sub-questions named); two new rows for long-hair primitive
+  promotion + demographic-topology silhouette divergence (both W3).
+  Deferred-features got two new rows: `recipe.strandMode: 'off'` knob
+  + timmFlat cells 6/7/11 re-render-and-score.
+- **`face-lib/tasks/nick-cascade-leak-fix.md`** — NEW. Nick's W2
+  re-spawn brief with diagnosis-first + three options + fallback
+  authority to promote `recipe.suppressLeads`.
+- **`face-lib/tasks/lloyd-cascade-architecture.md`** — NEW. Lloyd's
+  design-only architectural pass covering both architecture questions.
+- **`face-lib/tasks/pascal-w2-revised-rescore.md`** — NEW. Pascal's
+  re-score brief — sharp scope, do not re-litigate calibration or
+  four-corner test.
+
+### Escalations / what to surface to Gary
+
+**Nothing requires Gary input.** Pascal's escalation flag is awareness
+only ("pack as declarative truth vs pack as overrides asserted at
+render time" — Lloyd's W2 design pass IS the venue for that
+directional call). Per AGENTS.md: scope changes are within the Q1
+envelope (4 packs at floor still hit). Per ROADMAP: depth > count
+rule preserved. Bob should periodically update Gary on the W2 re-plan
+in-thread but no pause-for-input.
+
+### Risk callouts (non-blocking)
+
+- **Nick's PR #4 risk.** If extending `TIMM_PEDAGOGY` doesn't catch
+  the leak AND `recipe.suppressLeads` fallback doesn't catch it
+  either (e.g., the bang-strand artifact has a non-leads source —
+  hard-coded interior detail in the bang-mass primitive), Nick
+  surfaces and we promote a `pack.suppressInteriorHairDetail`
+  primitive flag. That's a Claudia re-scope call, not a Gary
+  escalation. Mitigation: Nick's brief gives him explicit fallback
+  authority + clear stop conditions.
+- **Lloyd's design risk.** If Lloyd's design lands with a much
+  bigger scope than expected (e.g., cascade re-order is structural
+  enough to constitute a major architecture decision per AGENTS.md
+  Bob+Gary lane), Bob surfaces to me for re-scope. Mitigation:
+  Lloyd's brief explicitly notes "push back on the brief if it's
+  wrong" — including the legitimate verdict "no architectural
+  change needed; the `recipe.suppressLeads` knob IS the answer."
+- **Pascal's revised gate.** If Nick's fix lands cells 4/5/8/10/13/16
+  at Pascal 3-4 instead of ≥ 5 (the cascade-leak fix doesn't fully
+  un-corrupt those silhouettes), W2 ships at < 13 cells. Mitigation:
+  Pascal's revised brief tells him to flag rather than collapse. We
+  re-plan from there.

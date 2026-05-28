@@ -26,6 +26,8 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 | Tangent-decay parameter exposure | `clumpStroke()`'s tangent-decay `1 - 0.8 * gravity * t` magic constant. Expose as `spec.tangentDecay?: number` (default 0.8) so a future curl-mechanics pass can tune per regime (straight / wave / curl have different decay rates per HT §5). Lloyd APPROVED-WITH-EDITS in pass 2. ~5 LOC. Defer until a caller wants it. | Lloyd pass-2 §1 |
 | Alpha-shape `ALPHA_FACTOR` parameter exposure | `hull.ts`'s alpha-shape merger uses `ALPHA_FACTOR = 1.5 × median NN-distance` (Lloyd §7 starting guess, held up first try across the three W1 fixtures + grid pre-dedup stabilises NN distribution). Expose as `recipe.hullAlpha?: number` (default 1.5) when a W3 volume pack wants tighter/looser tuning. Lloyd APPROVED-AS-IS in pass 3 for v1. ~5 LOC. Defer until a caller wants it. | Lloyd pass-3 §3 |
 | Swept-back-long hair × Timm gap | Rollo pass-1 top-3 missing axis — period-drama matriarch, severe antagonist (Batman Beyond Bruce-as-elder, Mrs. Crock, Maleficent register). Hair primitive not built. When it lands, pair through `timmFlat` first. | `stylepack-timmFlat-spec.md` adjacent-gap #4 |
+| `recipe.strandMode: 'off'` knob (long-hair primitive) | `style: 'long'` field-tracer's multi-strand layer cannot be reached by the override cascade — fires below it. Cells 6/7/11 of the timmFlat grid (longSleek + longTail at the Timm flat-shape register). Per mixture rule: add as a knob; default preserves current strand behavior; timmFlat sets it off. Pascal's reco at `research/pascal-w2-timmflat.md` §sprint-close. ~30-50 LOC field-tracer + Lloyd touch. **W3 first row.** | Pascal W2 timmFlat NO-SHIP verdict |
+| timmFlat cells 6/7/11 re-render + score | Three cells dropped from the W2 ship grid pending the long-hair primitive promotion above. Re-render + Pascal re-score after the strandMode knob lands. Closes the original 16-cell spec. **W3 closeout.** | Claudia W2 re-plan |
 
 ## Known regressions / bugs
 
@@ -64,27 +66,51 @@ chaos like exp-wavy-1, 1 = current locked clumps).
 
 ## Architectural calls (open)
 
-- **Cascade-order issue for pack-level pedagogy knobs.** Nick
-  discovered during timmFlat PR #3 that pack-level knobs outside
-  the `hair` block (`mouth.lipFullness`, `eyes.lashes`,
-  `eyes.lidLine`, and notably `recipe.leads = []` even inside the
-  hair block) get **clobbered by demographic layers downstream** in
-  the current cascade (presentation → age → hairstyle, with
-  hairstyle winning on hair conflicts per the `index.ts` header
-  rule HS-3). Style packs are the right place to declare pedagogy
-  (Timm wants `lidLine: 0.6` load-bearing, `recipe.leads = []` to
-  kill interior strand striping); they currently don't reach the
-  renderer through the cascade without re-asserting at the
-  `overrides` layer. Nick worked around in
-  `scripts/timmflat-grid.ts` via a `TIMM_PEDAGOGY` overrides const.
-  The architectural fix lives at the cascade layer — should style
-  packs sit AFTER demographic + hairstyle (with explicit knob
-  win)? Or should pedagogy knobs be marked load-bearing at the
-  type level so demographic can't clobber? Lloyd + Claudia to
-  scope. **Promote to W3 once Pascal scores timmFlat.** Per
-  AGENTS.md mixture rule — pack pedagogy is exactly the kind of
-  "declarative truth statement" that must reach the renderer to
-  honor the intent.
+- **Cascade-order architecture for pack-level pedagogy knobs (DESIGN
+  IN W2).** Lloyd architectural design pass scoped — pack-level knobs
+  (`mouth.lipFullness`, `eyes.lashes`, `eyes.lidLine`, and notably
+  `recipe.leads = []`) get clobbered by demographic layers downstream
+  in the current cascade. Pascal's W2 read confirmed: the cascade-
+  order surprise is now visible in shipping output (bob/pomp interior
+  strand striping). Lloyd writes design ONLY in W2; Nick implements
+  in W3. Filed task: `tasks/lloyd-cascade-architecture.md`.
+  Output: `research/lloyd-cascade-architecture.md`. The design must
+  cover both halves:
+  - **(a) cascade-merge architecture.** Pack-as-declarative-truth vs
+    pack-as-overrides-asserted-at-render-time (Pascal's framing).
+    Possible designs: re-order so STYLE wins on overlapping knobs;
+    type-level pin on load-bearing pedagogy knobs; new `recipe.lock`
+    or `recipe.suppressLeads` primitive; multiple of the above.
+  - **(b) demographic-topology gap.** Cells 9/12/14/15 + four-corner
+    test failure. Does this close at the cascade-merge layer (push
+    pack pedagogy harder onto demographic-topology proportions) or
+    at the demographic-preset-data layer (push jaw topology
+    proportions harder in `demographics.ts` — adult-square /
+    child-round / elder-jowled need to actually diverge at
+    silhouette level)?
+  Lloyd names the layer-of-fix for each symptom and sizes the W3
+  Nick implementation work.
+
+- **Long-hair primitive register conflict (PROMOTE TO W3).** The
+  `style: 'long'` field-tracer's multi-strand layer fights Timm
+  canon ("long hair = one flat shape"). Pascal scored cells 6/7/11
+  at 2/2/2 — dead-procedural-hair-test fires. Cannot be override-
+  worked-around (strand layer is below the override cascade).
+  ~30-50 LOC in `src/render/field-tracer.ts` + Lloyd touch. Pascal's
+  reco: `recipe.strandMode: 'off'` knob OR field-tracer no-ops when
+  `clumpMode: 'flat'` AND no leads configured. Per mixture rule:
+  add as a knob, default preserves current strand behavior, timmFlat
+  pack sets it off. W3 first Nick row.
+
+- **Demographic-topology silhouette divergence (PROMOTE TO W3, per
+  Lloyd design).** Cells 9/12/14/15 + four-corner failure. Adult-
+  square / child-round / elder-jowled produce similar broad-bottomed
+  silhouettes at 96px. Fix path depends on Lloyd's W2 design pass —
+  could be a demographic-preset-data push (Nick edits
+  `demographics.ts` `bigonialWidth` / `mentalWidth` / `gonialAngle`
+  spread for round vs jowled vs square) OR a cascade-merge fix
+  (pack pedagogy gets to push topology proportions harder). Sized
+  W3 after Lloyd's design.
 
 ## Tech-debt notes
 
