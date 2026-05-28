@@ -39,16 +39,14 @@ const shortPomp: DeepPartial<FaceParams> = {
     edgeKind: 'smooth',
     recipe: {
       parting: 'sweptBack',
-      verticalLift: 0.50,
+      verticalLift: 0.45,
       flowStrokes: [
-        // Primary sweep: rises from low front-centre upward and back through the
-        // lifted mass. The large ΔY (0.55 → 0.98) crosses the crown zone and
-        // reads as the leading edge of the sweep.
-        { startX:  0.05, startY: 0.55, endX: -0.10, endY: 0.98, size: 2.0, pressureMid: 0.90 },
-        // Secondary sweep: offset slightly right of centre, shorter arc that
-        // provides directional reinforcement without crowding. Stays within the
-        // lifted mass zone.
-        { startX:  0.18, startY: 0.60, endX:  0.05, endY: 0.90, size: 1.5, pressureMid: 0.80 },
+        // Primary sweep: rises from mid-front-hairline upward and back through the
+        // lifted mass. Large ΔY crosses the crown zone; endX slightly negative
+        // (nape side) carries the swept-back read.
+        { startX:  0.08, startY: 0.55, endX: -0.08, endY: 0.95, size: 1.8, pressureMid: 0.88 },
+        // Secondary sweep: offset right of centre, a little shorter.
+        { startX:  0.22, startY: 0.58, endX:  0.06, endY: 0.88, size: 1.4, pressureMid: 0.78 },
       ],
     },
   },

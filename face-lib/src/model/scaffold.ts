@@ -965,7 +965,11 @@ const buildHair = (
   // (spikes / coily bumps) with no fill. Strokes don't reach into those
   // extensions. Keep the fill for those cases so the silhouette is
   // visually filled. No shadow band, no highlight (those were brim hacks).
-  const drawCap = edgeKind === 'spiked' || edgeKind === 'edgeTextured';
+  // verticalLift: the lifted silhouette zone above the cranium must be filled.
+  // Without a fill polygon, the swept strokes can't cover the entire lifted bump
+  // because the cranial field doesn't extend above v=π/2. Add the cap fill for
+  // the lifted case so the zone reads as solid hair mass, not an empty arc.
+  const drawCap = edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0;
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
@@ -1411,7 +1415,7 @@ const buildHair = (
   if (verticalLift > 0 && fillColor) {
     const liftApexY = ry + liftMag;         // highest point of the lifted silhouette
     const liftHalfWidth = rx * 0.55;        // horizontal span of the lifted mass
-    const sweepStrokeCount = Math.round(28 + verticalLift * 20);  // 28-48 strokes
+    const sweepStrokeCount = Math.round(35 + verticalLift * 25);  // 35-60 strokes
     // Seeded RNG for deterministic lift strokes (separate state from clump rng).
     let liftRngState = 42 >>> 0;
     const liftRng = (): number => {
@@ -1422,37 +1426,49 @@ const buildHair = (
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
     for (let i = 0; i < sweepStrokeCount; i++) {
-      // Stroke start: scattered across the front hairline zone (near the forehead).
-      // Positive x = right side of the face as drawn.
-      const startX = (liftRng() * 2 - 1) * liftHalfWidth * 0.80;
-      const startY = hairlineY + headHeight * (0.02 + liftRng() * 0.06);
-      // Lift peak: slightly behind the start x (sweep direction) at the apex Y.
-      // The peak is biased toward x=0 (centreline) so the mass converges there.
-      const peakX = startX * (0.3 + liftRng() * 0.3);  // pull toward centreline
-      const peakY = liftApexY * (0.80 + liftRng() * 0.20);
-      // End: behind the crown (negative-ish x relative to start, or at nape).
-      // The backward sweep: end is further back than start, past the apex.
-      const endX = peakX - (liftRng() * liftHalfWidth * 0.40);
-      const endY = ry * (0.70 + liftRng() * 0.20);  // somewhere on the back of the dome
-      // Quadratic sweep through three points: start → peak → end.
+      // Each stroke sweeps from the FRONT of the hairline (near forehead), rises to the
+      // apex, and curves BACKWARD toward the nape. All strokes share this forward-to-back
+      // direction so the mass reads as a coherent swept-back volume.
+      //
+      // X convention: x > 0 = right side of face as drawn. For a front-view face the
+      // swept-back direction in X is toward 0 (centerline convergence) then slightly
+      // negative (back-of-head side).
+      //
+      // Stroke fan: spread across the forehead width. Use t in [0,1] for left-to-right
+      // ordering so strokes form a coherent fan from one temple to the other.
+      const fanT = (i + liftRng() * 0.5) / sweepStrokeCount;  // 0..1, with slight jitter
+      const startX = liftHalfWidth * (2 * fanT - 1) * 0.85;   // left-to-right fan
+      const startY = hairlineY + headHeight * (0.01 + liftRng() * 0.04);
+      // Peak: converges toward x=0 at the apex.
+      const peakOnX = startX * (0.15 + liftRng() * 0.20);     // strongly pulls toward centerline
+      const peakOnY = liftApexY * (0.82 + liftRng() * 0.16);  // 82-98% of apex height
+      // End: past the apex, toward the back of the dome, slightly past center.
+      const endX = -startX * (0.10 + liftRng() * 0.15);       // slight mirror of start (swept back)
+      const endY = ry * (0.60 + liftRng() * 0.25);            // back-of-dome level
+      // For a quadratic Bezier to PASS THROUGH (peakOnX, peakOnY) at t=0.5,
+      // the control point must be: P_ctrl = 2*peakOn - 0.5*(start + end)
+      const ctrlX = 2 * peakOnX - 0.5 * (startX + endX);
+      const ctrlY = 2 * peakOnY - 0.5 * (startY + endY);
       const sweepSamples = 16;
       const pts: Vec3[] = [];
       for (let s = 0; s <= sweepSamples; s++) {
         const t = s / sweepSamples;
         const mt = 1 - t;
-        // Quadratic Bezier: B(t) = mt²·start + 2·mt·t·peak + t²·end
-        const x = mt * mt * startX + 2 * mt * t * peakX + t * t * endX;
-        const y = mt * mt * startY + 2 * mt * t * peakY + t * t * endY;
-        pts.push([x, y, 0.015 + t * 0.005]);  // slight Z fade
+        // Quadratic Bezier: B(t) = mt²·start + 2·mt·t·ctrl + t²·end
+        const x = mt * mt * startX + 2 * mt * t * ctrlX + t * t * endX;
+        const y = mt * mt * startY + 2 * mt * t * ctrlY + t * t * endY;
+        pts.push([x, y, 0.25]);  // above skin fill (skin avgZ ~0.08); hair strokes render on top
       }
       if (pts.length < 4) continue;
-      const size = 0.8 + liftRng() * liftRng() * 3.0;
-      const pressureMid = 0.65 + liftRng() * 0.30;
+      // Thin strokes: pompadour reads as dense flow, not as fat clumps. A few
+      // dominant strokes (rng^3 long tail) give the lock rhythm.
+      const size = 0.5 + liftRng() * liftRng() * 2.5;
+      const pressureMid = 0.70 + liftRng() * 0.25;
       curves.push({
         kind: 'feature-ink', closed: false, points: pts,
         ink: {
           size, taperStart: 0.08 + liftRng() * 0.10, taperEnd: 0.25 + liftRng() * 0.35,
-          pressureMid, color: fillColor,
+          pressureMid, color: '#000000',  // black for contrast against the dark cap fill
         },
       });
     }
