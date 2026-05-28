@@ -80,17 +80,33 @@ not implementation):
   Job 1 verdict (NO-SHIP at original 16-cell gate) is what
   triggered this re-plan; the Job 2 verdict (calibration holds)
   is the W1-deferred outcome.
-- [ ] **Lloyd architectural design pass landed** — written design
-  covering (a) cascade-merge architecture: does pack-pedagogy fix
-  at the cascade-layer level (re-order so packs win on overlapping
-  pedagogy knobs) or at the type level (mark knobs load-bearing)
-  or via a new "lock" primitive; (b) demographic-topology gap:
-  does the cells-9/12/14/15 + four-corner failure close at the
-  cascade-merge layer or at the demographic-preset-data layer
-  (push jaw topology proportions harder in `demographics.ts`).
-  **Design ONLY. No Nick implementation in W2 per this gate —
-  Nick implements per Lloyd's design in W3.** Filed at
-  `research/lloyd-cascade-architecture.md`.
+- [x] **Lloyd architectural design pass landed** —
+  `research/lloyd-cascade-architecture.md` (178 lines, slight cap
+  overrun on two distinct architectural surfaces; defensible).
+  **Q1 cascade-merge — hybrid manifest design.** Re-order STYLE
+  from cascade slot 2 to a NEW slot 6 (post-hairstyle,
+  pre-expression) AND ship per-pack `declares: string[]` manifest
+  naming the contested knob paths. Pack applies TWICE — substrate
+  pass unchanged at slot 2, declarative pass at slot 6 writes ONLY
+  manifest paths. Default `[]` → no-op late pass →
+  `default`/`tintin`/`ligneClaire` stay byte-identical. Type-system
+  enforces manifest paths can't include demographic-only knobs
+  (engine-vs-style separation at compile time). ~65 LOC for Nick W3.
+  **Q2 demographic-topology — demographic-preset-data layer fix.**
+  Topology dispatcher is fine; leak is in `demographics.ts` data
+  spread. Push `bigonialWidth`/`mentalWidth`/`gonialAngle`/`jowl`
+  apart across child/masculine/elder. Fold Rollo BACKLOG
+  `pointed`/`pear` row in as private fixtures (`elderMascPear`,
+  `adultFemPointed`), NOT public enum additions. ~50 LOC. **Lloyd
+  recommends to Claudia: Q2 first (smaller, no architectural risk,
+  Pascal early signal), Q1 second; mechanically independent.**
+  Mixture-rule caveat: `tintin × demographic` WILL drift on Q2 —
+  not byte-identical; regression guard via Pascal re-score of
+  `tintin × 4` cells alongside the timmFlat re-score. Fallback:
+  `pack.proportionScale: number` if `tintin` slides. **Nick PR #4
+  interaction:** Lloyd observed Nick chose Option C primitive-flag
+  fallback (`recipe.suppressInteriorHairDetail`); manifest design
+  subsumes it; delete in same W3 commit that lands the manifest.
 
 What is explicitly NOT in W2's revised gate (slid to W3):
 
@@ -148,10 +164,19 @@ which is the right trade per the rule.
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Nick  | `tasks/nick-cascade-leak-fix.md` (PR #4) | running | Cascade-leak fix: extend `TIMM_PEDAGOGY` override OR promote `pack.suppressInteriorHairDetail` flag (Claudia gave inline authority). |
-| Lloyd | `tasks/lloyd-cascade-architecture.md` (design pass) | running | Written design only — covers cascade-merge + demographic-topology layer-of-fix questions. Nick implements in W3. |
+| Nick  | `tasks/nick-cascade-leak-fix.md` (PR #4) | running | Cascade-leak fix. Lloyd observed Nick chose the Option C primitive-flag path (`recipe.suppressInteriorHairDetail`) — uncommitted at last check. Lloyd's W3 manifest design subsumes the flag (delete in W3). |
 
 ## Done this sprint (W2)
+
+- **Lloyd cascade-architecture design pass** —
+  `research/lloyd-cascade-architecture.md` (commit `74792f5`).
+  Q1 (cascade-merge): hybrid manifest at NEW slot 6 + per-pack
+  `declares: string[]` (~65 LOC W3). Q2 (topology gap):
+  demographic-preset-data layer fix (~50 LOC W3). Recommended W3
+  order to Claudia: Q2 first, Q1 second; mechanically independent.
+  Mixture-rule caveat for Q2 on `tintin` (regression guard via
+  Pascal re-score of 4 tintin cells). Subsumes Nick PR #4's
+  primitive-flag fallback (delete in W3). **Box 5 closed.**
 
 - **Claudia W2 re-plan** — `tasks/claudia-q1w2-replan-pascal-no-ship.md`.
   Re-planned W2 post Pascal's NO-SHIP. Decision: ship 13-cell timmFlat
