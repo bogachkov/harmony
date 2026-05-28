@@ -71,10 +71,12 @@ What is explicitly NOT in W1's gate:
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | RUNNING | Longest pole. Spawned in parallel with Leo. |
-| Leo    | `leo-rollo-stylepack-w1-spec.md` — pedagogy half of joint spec | RUNNING | Parallel to Nick. Rollo follows when Leo's half lands. |
-| Rollo  | `leo-rollo-stylepack-w1-spec.md` — asset/demographics half | QUEUED (spawn 3) | Appends to Leo's half. Waits on Leo. |
-| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | QUEUED (spawn 4) | After Rollo. Same context warm if possible. |
+| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | RUNNING | ~40-50% through Lloyd's design per visible in-flight changes. |
+| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | RUNNING | Spawn 4. |
+
+**Done this sprint (W1):**
+- Leo W1 stylepack pedagogy half (timmFlat picked + spec'd) — closes half of box 3.
+- Rollo W1 stylepack asset half (NPC slots + demographic grid + mixture check) — closes box 3 fully.
 
 ## Blocked / pending
 
