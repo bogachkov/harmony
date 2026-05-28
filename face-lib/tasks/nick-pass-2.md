@@ -82,4 +82,19 @@ pixel-equivalence to pre-rename renders.
 
 ## Handoff
 
-(Nick fills in.)
+Both ships landed cleanly.
+
+**Ship 1 (bob regression):** Widened `drawCap` at `scaffold.ts:977` per brief.
+Condition now also fires for `style === 'short' || style === 'medium'` with
+`edgeKind` in `smooth | flicked | crowSnipped`. Verified bobChinLength,
+shortSwept, shortPompadour, shortReceding — all render with visible fill mass.
+No other code touched.
+
+**Ship 2 (lead/fill rename):** `FlowStroke` → `Lead` type (alias preserved for
+one pass), `flowStrokes` → `leads` on `HairstyleRecipe` (deprecated optional
+`flowStrokes` kept for backward compat — scaffold reads `recipe.leads ??
+recipe.flowStrokes ?? []`). `flowWeight?: number` added to `Lead`. `fillBias?:
+'follow-leads' | 'free'` plumbed to `HairstyleRecipe`; NOT wired in behaviour
+yet per brief. Updated 12 hairstyle files + demographics.ts (3 sites). Renders
+are byte-for-byte identical to Ship 1 renders. Bob regression row removed from
+BACKLOG.md; deferred-features row updated to "coupling pending Lloyd".
