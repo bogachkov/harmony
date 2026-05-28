@@ -1097,7 +1097,14 @@ const buildHair = (
   // the visible parting naturally (gap between two clump regions).
   if (partingX !== null && style !== 'long') {
     const partingTopY = ry * 0.92;
-    const partingBottomY = hairlineY + headHeight * 0.02;
+    // Bottom clipped well above the hairline so the parting stays inside the
+    // hair mass and does not trail into the forehead as a scar-like line.
+    // headHeight * 0.10 keeps the stroke tip ~10% of head height above the
+    // hairline; combined with taperEnd: 0.55 the bottom fades to nothing
+    // before it reaches the visible hairline boundary. (Bug: 0.02 let the
+    // full-weight tip of the 3px stroke hit the hairline edge, reading as
+    // a scar on the forehead.)
+    const partingBottomY = hairlineY + headHeight * 0.10;
     const partingPts: Vec3[] = [];
     const partSamples = 14;
     for (let i = 0; i <= partSamples; i++) {
@@ -1111,9 +1118,11 @@ const buildHair = (
     // hair mass. Pascal feedback (4/10 round): the parting line was there but dark-on-dark
     // and disappeared. Render it at 2× the normal line weight and very confident so it
     // reads as a structural break, not a stray scratch.
+    // taperEnd raised to 0.55 so the bottom half of the stroke fades cleanly —
+    // avoids the dark tip touching the hairline.
     curves.push({
       kind: 'feature-ink', closed: false, points: partingPts,
-      ink: { size: 3.0, taperStart: 0.20, taperEnd: 0.35, pressureMid: 1.0, color: '#000000' },
+      ink: { size: 3.0, taperStart: 0.20, taperEnd: 0.55, pressureMid: 1.0, color: '#000000' },
     });
   }
 
