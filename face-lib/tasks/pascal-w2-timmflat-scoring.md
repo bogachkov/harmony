@@ -141,4 +141,83 @@ architectural call, not your verdict to make).
 
 ## Handoff
 
-(Pascal fills in on completion.)
+**Job 1 verdict — NO-SHIP at the W2 ship-gate.** 3 of 16 cells land at
+Pascal ≥ 5 (cells 1, 2, 3 — adult-masc-square × short-hair). 13 cells
+land below 5. Failure modes cluster into three categories:
+
+1. **Cascade-order leak in 6 cells (4, 5, 8, 10, 13, 16):** Nick's
+   `TIMM_PEDAGOGY` override layer caught most of the pedagogy contract
+   but did NOT suppress per-hairstyle interior strand striping carried
+   by `bobChinLength` / `shortPomp` lead arrays. The renders show
+   interior strand striping at the bang line where `recipe.leads = []`
+   was supposed to mean none. This is the override layer not catching
+   everything Leo+Rollo specified — the cascade-order surprise Nick
+   flagged in the grid script is now visible in shipping output, not
+   just in the architecture diagrams.
+
+2. **Engine-ceiling on long-hair register in 3 cells (6, 7, 11):**
+   The `style: 'long'` field-tracer's multi-strand layer fights Timm
+   canon ("long hair = one flat shape"). Renders show dead-procedural-
+   hair: strand-radial-from-crown + vertical-strands-past-chin. Concur
+   with Nick that this is a primitive-level issue (the field-tracer
+   strand layer doesn't honor flat-clump mode). Anchor-table rule fires:
+   "if hair is dead, no score above 4" — these land at 2.
+
+3. **Demographic data not exercising topology in 4 cells (9, 12, 14,
+   15):** Adult-square / child-round / elder-jowled silhouettes don't
+   clearly distinguish at thumbnail. This is the failure mode Rollo's
+   spec predicted at lines 504-511.
+
+**Four-corner test verdict — PUSH BACK on Nick's PASSES.** Cells 1 vs
+4 do NOT read as clearly different characters at 96px (same silhouette
++ corrupted hair on cell 4). Cells 12 vs 14 do NOT read as clearly
+different ages at 96px (hair carries all the age signal; the
+underlying jaw/face barely diverges). This is the demographic-layer-
+not-exercising-topology gap Rollo's spec explicitly tested for.
+
+**Off-grid probes (soft) — both reach.** `pointed-jaw` produces a
+Joker-class chin cusp; `pear-jaw` produces a Penguin-class wide-
+bigonial silhouette. Confirms the topology dispatcher substrate works.
+Not part of the ship-gate verdict.
+
+**Job 2 verdict — calibration holds.** Cross-referenced all 16 cell
+scores against the AGENTS.md anchor table:
+- The 3 ≥ 5 cells pass the dead-hair / flat-line / integration sniffs
+  in the Timm register (flat fill is pedagogy not procedural-collapse;
+  zero-jitter is pedagogy not flat-line-collapse).
+- The 13 < 5 cells map cleanly to anchor bands by failure mode (broken
+  primitive → 2; clearly-procedural hair-leak → 3; structural intent
+  but topology not exercised → 4).
+- The W1-deferred audit's load-bearing test ("if Pascal scores above 5
+  on output that fails the sniff, the calibration is the bug") does
+  not fire. No cell scores ≥ 5 on output that fails the sniff.
+
+**Sprint-close recommendation — Q1-W2 does NOT close.** Smallest path
+to close requires three concurrent moves: (a) Nick re-spawn to extend
+`TIMM_PEDAGOGY` overrides for `bobChinLength` / `shortPomp`
+hairstyle-level leads (fixes cells 4/5/8/10/13/16); (b) Claudia
+sprint-re-plan promoting a primitive-level "flat-clump-mode disables
+strand layer" coupling, ~30-50 LOC in the field-tracer (unblocks cells
+6/7/11); (c) Lloyd architectural call on whether the demographic-data
+topology gap closes at the cascade-merge layer or at the demographic-
+preset-data layer (fixes cells 9/12/14/15 + four-corner test failure).
+All three are needed; none alone is sufficient.
+
+The honest framing for Gary if Claudia wants to ship-with-known-gaps:
+the pack ships in 3 working cells, NOT in a shallow 16-cell grid. The
+ROADMAP rule "demographic depth > pack count" reads against shallow-
+shipping; the pedagogy contract works where it lands (cells 1/2/3 are
+register-correct), the bugs are in plumbing + primitive + demographic-
+data, not in the pack file.
+
+**Escalation flag to Gary** (per AGENTS.md "if something genuinely
+needs Gary input"): the cascade-order surprise is now visible in
+shipping output. The directional call "pack as declarative truth" vs.
+"pack as overrides asserted at render time" is the surface area for
+Lloyd's W3 architectural pass. Flagged for awareness — not pausing
+work.
+
+Full per-cell scoring table + four-corner verdict + calibration audit
++ probe reads in `face-lib/research/pascal-w2-timmflat.md`.
+
+*— Pascal, Q1-W2 sprint-close.*
