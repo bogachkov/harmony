@@ -26,7 +26,7 @@ Anything in here can be promoted to the next sprint by the Tech Lead.
 | Tangent-decay parameter exposure | `clumpStroke()`'s tangent-decay `1 - 0.8 * gravity * t` magic constant. Expose as `spec.tangentDecay?: number` (default 0.8) so a future curl-mechanics pass can tune per regime (straight / wave / curl have different decay rates per HT §5). Lloyd APPROVED-WITH-EDITS in pass 2. ~5 LOC. Defer until a caller wants it. | Lloyd pass-2 §1 |
 | Alpha-shape `ALPHA_FACTOR` parameter exposure | `hull.ts`'s alpha-shape merger uses `ALPHA_FACTOR = 1.5 × median NN-distance` (Lloyd §7 starting guess, held up first try across the three W1 fixtures + grid pre-dedup stabilises NN distribution). Expose as `recipe.hullAlpha?: number` (default 1.5) when a W3 volume pack wants tighter/looser tuning. Lloyd APPROVED-AS-IS in pass 3 for v1. ~5 LOC. Defer until a caller wants it. | Lloyd pass-3 §3 |
 | Swept-back-long hair × Timm gap | Rollo pass-1 top-3 missing axis — period-drama matriarch, severe antagonist (Batman Beyond Bruce-as-elder, Mrs. Crock, Maleficent register). Hair primitive not built. When it lands, pair through `timmFlat` first. | `stylepack-timmFlat-spec.md` adjacent-gap #4 |
-| ~~`recipe.strandMode: 'off'` knob (long-hair primitive)~~ | **PROMOTED TO Q1-W3** (`tasks/longhair-primitive-rebuild.md`). Closes cells 6/7/11. Conditional owner per David's graphics-specialist hire decision. | Pascal W2 timmFlat NO-SHIP verdict |
+| ~~`recipe.strandMode: 'off'` knob (long-hair primitive)~~ | **PROMOTED TO Q1-W3** (`tasks/felix-longhair-primitive-rebuild.md`). Closes cells 6/7/11. Owner: Felix (David approved the graphics-domain hire in commit `9db6566`; this is Felix's first spawn). | Pascal W2 timmFlat NO-SHIP verdict |
 | ~~timmFlat cells 6/7/11 re-render + score~~ | **PROMOTED TO Q1-W3** as part of the full 16-cell re-render + Pascal re-score row (`tasks/pascal-w3-close-rescore.md`). Closes the original 16-cell spec. | Claudia W2 re-plan |
 | `pack.proportionScale` knob | Optional pack-level scalar over demographic jaw proportions. Lloyd Q2 §debt-left: land ONLY if W3 Q2 demographic-data push regresses `tintin` × demographic renders. Default 1.0 (no-op). Pascal's `tintin × 4` regression re-score is the trigger. Defer unless trigger fires. | Lloyd Q2 design |
 | Late-pass for expression / character presets | Lloyd Q1 §debt-left: the same `pack.declares` manifest mechanism extends naturally to other preset layers (expression, character-archetype). Flag for W4 pack-spec when Rollo + Leo consider expression / archetype packs. | Lloyd Q1 design |
@@ -85,9 +85,10 @@ chaos like exp-wavy-1, 1 = current locked clumps).
   features section.
 
 - ~~**Long-hair primitive register conflict.**~~ **MOVED TO W3
-  (`tasks/longhair-primitive-rebuild.md`).** Field-tracer rebuild
-  closes cells 6/7/11. Owner conditional on David's graphics-
-  specialist hire decision. Row will close on W3 ship.
+  (`tasks/felix-longhair-primitive-rebuild.md`).** Field-tracer
+  rebuild closes cells 6/7/11. Owner: Felix (David approved the
+  graphics-domain hire; this is Felix's first spawn). Row will
+  close on W3 land.
 
 - ~~**Demographic-topology silhouette divergence.**~~ **MOVED TO
   W3 (`tasks/nick-q2-demographic-topology.md`)** per Lloyd Q2
@@ -96,7 +97,7 @@ chaos like exp-wavy-1, 1 = current locked clumps).
   spread across child/masculine/elder. Two private fixtures
   (`elderMascPear`, `adultFemPointed`) fold in the Rollo BACKLOG
   `pointed`/`pear` row. Mixture-rule guard via Pascal `tintin × 4`
-  regression re-score. Row will close on W3 ship.
+  regression re-score. Row will close on W3 land.
 
 ## Tech-debt notes
 

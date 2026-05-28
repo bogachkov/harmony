@@ -50,12 +50,11 @@ Five boxes:
 - [ ] **Long-hair primitive rebuild lands.** Closes cells 6/7/11
   (longSleek/longTail at Timm flat-shape register). Field-tracer
   no-ops when `clumpMode: 'flat'` AND no leads configured — or a
-  `recipe.strandMode: 'off'` knob, whichever the implementer's
-  design picks. Per mixture rule: default preserves current strand
-  behavior. ~30-50 LOC in `src/render/field-tracer.ts`.
-  **Owner conditional on David's call** — see §Spawn order. If
-  David lands the new graphics-domain role, this row goes to the
-  new role; otherwise Nick.
+  `recipe.strandMode: 'off'` knob, whichever Felix's design picks.
+  Per mixture rule: default preserves current strand behavior.
+  ~30-50 LOC in `src/render/field-tracer.ts`. **Owner: Felix**
+  (David approved the graphics-domain hire in commit `9db6566`;
+  this is Felix's first spawn per AGENTS.md §Onboarding-note).
 
 - [ ] **Full 16-cell re-render + Pascal re-score.** All 16 cells
   scored absolute against the AGENTS.md anchor. **Acceptance:
@@ -103,7 +102,7 @@ Five boxes:
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Engineer (Nick or new role) | Long-hair primitive rebuild | David's graphics-specialist hire decision (`tasks/david-team-rescope-graphics-specialist.md`) — non-blocking, can start after Q2 + Q1 land regardless |
+| Felix  | Long-hair primitive rebuild (first spawn) | Can run parallel to Nick Q2 + Q1 (file overlap zero — field-tracer vs demographics/api). Bob spawns when queue clears |
 | Holly  | Test-strategy doc + first regression sweep | Slid to W4 unless W3 finishes tight |
 | Pascal | W3 close re-score (16-cell timmFlat + 4-cell tintin) | All three engine rows landing + re-render |
 
@@ -111,48 +110,44 @@ Five boxes:
 
 Per Lloyd's W2 design-pass recommendation: **Q2 first** (smaller, no
 architectural risk, Pascal gets early signal), **Q1 second**
-(architecture lands after the topology data is good), **long-hair
-primitive third** (engine-primitive depth work, conditional owner per
-David's hire call).
+(architecture lands after the topology data is good). The long-hair
+primitive rebuild runs **in parallel** with Wave 1 because David's
+hire decision landed before sprint open and Felix's lane has zero
+file overlap with Nick's Q1/Q2 work.
 
-**Wave 1 (sequential — same engineer, same file region):**
+**Wave 1 (parallel — Felix runs alongside Nick because zero file overlap):**
 
-1. **Engineer — `tasks/nick-q2-demographic-topology.md`** (NEW,
-   drafted by Claudia). Implement Lloyd's Q2 design: jaw proportion
-   spread in `demographics.ts` + two private fixtures
-   (`elderMascPear`, `adultFemPointed`). Mixture-rule regression
-   guard: tintin × 4 cells. ~50 LOC, half-day plus tuning.
-   **Owner: Nick** unless David's hire decision lands first AND David
-   assigns Q2 to the new role (unlikely — Lloyd's design called Q2
-   data-layer work, not graphics-math; Nick remains the natural fit).
+1. **Nick — `tasks/nick-q2-demographic-topology.md`** (NEW, drafted
+   by Claudia). Implement Lloyd's Q2 design: jaw proportion spread
+   in `demographics.ts` + two private fixtures (`elderMascPear`,
+   `adultFemPointed`). Mixture-rule regression guard: `tintin × 4`
+   cells. ~50 LOC, half-day plus tuning. **Lloyd reviews on
+   completion.**
 
-2. **Engineer — `tasks/nick-q1-cascade-merge-manifest.md`** (NEW,
-   drafted by Claudia). Implement Lloyd's Q1 design: `pack.declares`
-   field + allowed-path type union + second pack pass in
-   `mergeParams` + `timmFlat.declares` + delete Nick PR #4's
+2. **Felix — `tasks/felix-longhair-primitive-rebuild.md`** (NEW,
+   drafted by Claudia). Felix's **first spawn** per AGENTS.md
+   §Onboarding-note. Field-tracer rebuild: no-op multi-strand layer
+   when `clumpMode: 'flat'` AND no leads configured, OR add
+   `recipe.strandMode: 'off'` knob — Felix calls per smallest-fix
+   discipline + graphics-math judgment on the field-tracer integration
+   path. Closes cells 6/7/11. ~30-50 LOC in `src/render/field-
+   tracer.ts`. **Felix reviews own graphics-math; Lloyd reviews
+   architectural surface if any is touched.**
+
+**Wave 2 (sequential after Q2 lands; ~zero serialization risk against
+Felix's row since different files):**
+
+3. **Nick — `tasks/nick-q1-cascade-merge-manifest.md`** (NEW, drafted
+   by Claudia). Implement Lloyd's Q1 design: `pack.declares` field +
+   allowed-path type union + second pack pass in `mergeParams` +
+   `timmFlat.declares` + delete Nick PR #4's
    `suppressInteriorHairDetail` flag. ~65 LOC, half to one day.
    **Owner: Nick.** Architecture-shaped work but Lloyd's design is
-   the architecture; Nick implements straight per the design. Lloyd
-   reviews on completion.
+   the architecture; Nick implements straight per the design.
+   **Lloyd reviews on completion** (architectural surface change —
+   Lloyd's lane per PROCESS.md decision-rights).
 
-**Wave 2 (parallelizable with Wave 1's tail — same engineer can carry,
-or a different one can pick up if David's hire lands):**
-
-3. **Engineer — `tasks/longhair-primitive-rebuild.md`** (NEW,
-   drafted by Claudia). Field-tracer rebuild: no-op multi-strand
-   layer when `clumpMode: 'flat'` AND no leads configured, OR add
-   `recipe.strandMode: 'off'` knob (engineer's call per smallest-fix
-   discipline). Closes cells 6/7/11. ~30-50 LOC in
-   `src/render/field-tracer.ts`. **Owner: conditional on David.**
-   - **If David approves the graphics-domain hire:** this row goes
-     to the new role (the acute W3 trigger Bob cited in
-     `tasks/david-team-rescope-graphics-specialist.md`). The task
-     file is written role-agnostic; Bob hands the brief to whoever
-     David scopes.
-   - **If David declines or counter-proposes:** this row stays
-     Nick's. Lloyd reviews on completion (primitive-surface change).
-
-**Wave 3 (sequential after Wave 2 lands):**
+**Wave 3 (sequential after Wave 1 + Wave 2 land):**
 
 4. **Pascal — `tasks/pascal-w3-close-rescore.md`** (NEW, drafted by
    Claudia). Re-score the full 16-cell timmFlat grid (all 16, not
@@ -169,7 +164,9 @@ or a different one can pick up if David's hire lands):**
 5. **Lloyd code review** on Nick's Q1 + Q2 PRs. Bob-triggered post-
    merge, not Claudia-queued. Lloyd's design pass already named the
    exact regression checks each PR should pass; review is
-   confirmatory.
+   confirmatory. Felix reviews Nick's PRs only if they touch
+   graphics-math interior (neither Q1 nor Q2 do — Q1 is cascade
+   architecture, Q2 is data tuning).
 6. **Holly** — test-strategy doc first spawn. Slips to W4 unless
    W3 finishes tight.
 7. **Rollo** — next touch is W4 pack #5 spec (per ROADMAP scope-cut).
