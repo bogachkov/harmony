@@ -140,21 +140,29 @@ per piece"):
 6. `hairstyles: add 3 Lloyd pass 1 §6 test fixtures` —
    `shortBob` / `longCurtain` / `coilyHalo`.
 
-**Net LOC.** +307 added, −47 removed → net **+260**. Above Lloyd's
-projected +150 (§4). Differences:
+**Net LOC.** Engine code (`src/model/` + `src/render/`): +476 added,
+−32 removed → net **+444 in engine code**. Test fixtures + index: +148.
+Above Lloyd's projected +150 (§4). Differences:
+
 - `src/render/hull.ts` came in at ~160 LOC, in line with Lloyd's "~150."
-- The `clumpStroke` 3D integrator is ~70 LOC because the tangent-blend +
-  jitter + flat-fast-path each need a few lines; Lloyd's estimate didn't
-  count flat-fast-path comments + the radius/jitter logic.
+- The `clumpStroke` 3D integrator + types is ~140 LOC because the
+  tangent-blend + jitter + flat-fast-path each need a few lines plus
+  inline comment explanation of WHY each branch exists; Lloyd's
+  estimate didn't count flat-fast-path documentation.
 - Cap/shadow/highlight deletion is **gated** (`if (!isVolume && drawCap)`)
   rather than physically removed — the flat path keeps the code path
   alive. This is the mixture-rule cost Lloyd flagged in §4. ~90 LOC of
   cap/shadow/highlight stays alive for `flat` mode.
+- Comment density is higher than Lloyd's estimate (every new branch +
+  every new field type has a paragraph). I think that's right for a
+  longest-pole piece of work the rest of the team will read; if Lloyd
+  prefers fewer comments I'll cut on review.
 
-Per the "+250 → flag for re-spawn" soft ask: at +260 I am within sight
-but Lloyd should look at the diff before merge. The drift is mostly
-honest mixture-cost (keeping flat alive) and the `expandCapsule` body
-being a hair longer than estimated.
+Per the "+250 → flag for re-spawn" soft ask: I am clearly past +250
+(at +444 engine) and want to flag this for Bob. The drift is mostly
+honest mixture-cost (keeping flat alive) and comment volume; if Lloyd
+agrees the structure is sound, the line-count itself is not a red flag
+for me, but it's exactly the kind of thing the brief asked I surface.
 
 **Regression test.** All 13 hairstyles (× 2 presentations = 26 renders)
 were captured pre-refactor at `/tmp/baseline` and re-rendered after every
