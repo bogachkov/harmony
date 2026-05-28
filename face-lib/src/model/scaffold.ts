@@ -21,13 +21,29 @@ export type InkProfile = {
 };
 
 export type Curve = {
-  kind: 'construction' | 'feature' | 'feature-ink';
+  // kind: 'clump-volume' — a 3D clump centreline with per-point world-space
+  // radius. The renderer expands it into a 2D capsule chain in project.ts,
+  // then groups capsules by `hullGroup` (same id = same merged silhouette)
+  // and fills the convex hull of the union. Centreline strokes still render
+  // through the perfect-freehand path. Per Lloyd pass 1 §2 stages C–E.
+  kind: 'construction' | 'feature' | 'feature-ink' | 'clump-volume';
   closed: boolean;
   points: Vec3[];
   role?: 'silhouette' | 'hair-top';
   fill?: string | null;
   noStroke?: boolean;   // skip stroke pass — fill-only render (used for hidden hairlines)
   ink?: InkProfile;     // required when kind === 'feature-ink'
+  // Per-point world-space radius. Same length as `points`. Required when
+  // kind === 'clump-volume'; optional/ignored on other kinds. Per Lloyd
+  // pass 1 §1: this is how volume rides on Curve without inverting the
+  // projection boundary.
+  radiusProfile?: number[];
+  // Hull-merge group key. All clump-volume curves with the same hullGroup
+  // contribute their projected capsules to one shared 2D convex hull. The
+  // hull is filled (with `fill`) and the centrelines still render as inked
+  // strokes on top. Convention: 'front' | 'left' | 'right' | 'nape'. Per
+  // Lloyd pass 1 §2 stage E.
+  hullGroup?: string;
 };
 
 export type Scaffold = {

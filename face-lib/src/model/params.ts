@@ -94,6 +94,20 @@ export type HairstyleRecipe = {
   // Default 'follow-leads'. Per mixture-not-survival rule: 'free' preserves
   // all existing aesthetics as reachable parameter points.
   fillBias?: 'follow-leads' | 'free';
+  // clumpMode — 'flat' (default) preserves the 2D-surface-bound clump
+  // rendering used by all 13 existing hairstyles; 'volume' switches the
+  // clump loop to the 3D integrator + convex-hull silhouette pipeline (Lloyd
+  // pass 1). Per the mixture-not-survival rule: this is a NEW MODE, not a
+  // replacement. Existing styles must render visually equivalent in 'flat'.
+  // Tintin / ligne-claire stays flat.
+  clumpMode?: 'flat' | 'volume';
+  // clumpVolume — knobs for the 3D integrator. Only consulted when clumpMode
+  // === 'volume'. gravity ∈ [0,1]: vertical fall past the cranium silhouette
+  // (1 = full curtain). radial ∈ [-1,+1]: outward push from cranium normal
+  // (+ = coily halo, − = inward fall, 0 = field-only). radius: world-space
+  // clump radius at the root (also tip; the integrator tapers linearly to 0
+  // unless overridden by the caller). Per Lloyd pass 1 §1.
+  clumpVolume?: { gravity: number; radial: number; radius: number };
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
