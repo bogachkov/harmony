@@ -77,19 +77,29 @@ All four must be true:
   flagged in handoff. Bundled items (centreU key + debug attr)
   landed earlier in PR #1. **Landed PR #2 — two commits on
   vector-draw; awaiting Lloyd review.**
-- [ ] **`timmFlat` pack lands in `src/presets/styles.ts`** per the
-  W1 spec. All 16 Rollo grid cells render at Pascal ≥ 5 + Rollo
-  "would ship." The four-corner thumbnail test (cells 1, 4, 12,
-  14) passes: clearly different characters, clearly different
-  ages at 96×96. Bob captures the 16-cell sheet and shares.
-- [ ] **Pascal calibration audit** lands — deferred from W1 since
-  no substantive new output existed to score. Pascal scores the
-  16-cell timmFlat grid against the AGENTS.md anchor table
-  (absolute, not delta-from-previous). If Pascal scores above 5
-  on output that fails the dead-procedural-hair / flat-line /
-  features-don't-integrate sniff, the calibration itself is the
-  bug (per AGENTS.md). Pascal lands AFTER timmFlat renders;
-  closes the sprint.
+- [~] **`timmFlat` pack lands in `src/presets/styles.ts`** per the
+  W1 spec. **Pack DATA landed (PR #3); RENDER QUALITY did not
+  close the gate** — Pascal scored 3/16 cells at ≥ 5 (cells 1, 2,
+  3 — adult-masc-square × short hair). Four-corner test FAILED on
+  Pascal's read (cells 1/4 not clearly different characters at
+  96px; cells 12/14 not clearly different ages — the
+  demographic-not-exercising-topology failure mode Rollo spec
+  lines 506-511 explicitly tested for). Three failure clusters:
+  cascade-leak (6 cells, override layer didn't suppress
+  hairstyle-level `leads`), engine-ceiling long-hair primitive
+  (3 cells, multi-strand field-tracer fights flat canon),
+  demographic-topology gap (4 cells + four-corner failure).
+  **Claudia owns the W2 re-plan call.**
+- [x] **Pascal calibration audit** — **calibration holds.** Pascal
+  walked all ≥ 5 cells against the dead-procedural-hair /
+  flat-line / features-don't-integrate sniff-tests; none fires.
+  Anchor table maps cleanly onto all 16 scores. One forward note:
+  "Timm pedagogy register is the first time the engine has tested
+  a tradition where zero jitter is the right answer — sniff-tests
+  are register-sensitive, not absolute." Operating-manual
+  clarification for future flat-fill packs, not a recalibration.
+  **W1-deferred outcome filed at
+  `research/pascal-w2-timmflat.md` §Calibration.**
 
 What is explicitly NOT in W2's gate:
 
@@ -116,9 +126,25 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Pascal | `tasks/pascal-w2-timmflat-scoring.md` | spawning | Two jobs: 16-cell grid score + W1-deferred calibration audit. Closes the sprint. |
+| Claudia | W2 re-plan triggered by Pascal NO-SHIP | spawning | Pascal scored 3/16 ≥ 5; sprint does not close. Three concurrent moves needed per Pascal's reco — Claudia owns the call. |
 
 ## Done this sprint (W2)
+
+- **Pascal W2 close pass** — `research/pascal-w2-timmflat.md`.
+  Two jobs in one file. Job 1: 3/16 cells at Pascal ≥ 5 — **NO-SHIP
+  at the W2 gate.** Job 2: calibration holds. Four-corner test
+  FAILED on Pascal's read; pushes back on Nick's PASSES with named
+  diagnosis (cells 1/4 not distinct chars at 96px; cells 12/14
+  not distinct ages; the demographic-not-exercising-topology
+  failure mode the spec explicitly tested for). Sprint-close
+  recommendation: three concurrent moves — (a) Nick re-spawn to
+  extend `TIMM_PEDAGOGY` for `bobChinLength`/`shortPomp`
+  hairstyle-level leads (smallest-fix on 6 cells); (b) Claudia
+  promote a primitive-level flat-clump-disables-strand-layer
+  toggle (cells 6/7/11, ~30-50 LOC in field-tracer); (c) Lloyd
+  architectural call on cascade-merge-vs-demographic-data fix
+  path (cells 9/12/14/15 + four-corner). All three needed; none
+  sufficient alone. **Claudia owns the W2 re-plan call.**
 
 - **Nick PR #3** — `tasks/nick-timmflat-pack.md`. `timmFlat` pack
   lands in `src/presets/styles.ts` (+62 LOC); grid script at
