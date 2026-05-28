@@ -68,22 +68,11 @@ export const expandCapsule = (cap: Capsule2D, segs = 12): Vec2[] => {
   // Endpoint A: half-circle on the "back" side (opposite of b), swept from
   // perpendicular (+n) around the back to perpendicular (-n).
   for (let i = 0; i <= halfSegs; i++) {
-    const theta = Math.PI / 2 + (i / halfSegs) * Math.PI;
-    const cx = Math.cos(theta);
-    const cy = Math.sin(theta);
-    // Local frame: x = tangent (toward b), y = +n. Half-circle on back side:
-    // arc goes (n) → (-t) → (-n). Coordinates in world: tx*cx*(-?)...
-    // Simpler: parameterise angle relative to tangent.
-    // arc starts at +n (theta=0), goes through -t (theta=PI/2), ends at -n (theta=PI).
-    // Map: outward direction d = cos(theta)*(-tangent) + sin(theta)*n_or_minusn.
-    // We'll sweep cleanly using a direct angle from +n through -t back to -n:
+    // arc starts at +n (phi=0), goes through -t (phi=PI/2), ends at -n (phi=PI).
     const phi = (i / halfSegs) * Math.PI;
     const ox = nx * Math.cos(phi) + (-tx) * Math.sin(phi);
     const oy = ny * Math.cos(phi) + (-ty) * Math.sin(phi);
     out.push([ax + ox * cap.ra, ay + oy * cap.ra]);
-    // Note: we computed both via theta and phi just for clarity above; phi is
-    // the one we actually use.
-    void cx; void cy;
   }
   // Endpoint B: half-circle on the "front" side (opposite of a). Sweep from
   // (-n) through (+t) back to (+n).
