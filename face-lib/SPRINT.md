@@ -71,9 +71,10 @@ What is explicitly NOT in W1's gate:
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | QUEUED (spawn 1) | Longest pole. Spawn first so the loop is running. |
-| Leo+Rollo | `leo-rollo-stylepack-w1-spec.md` — pick + spec one new style pack | QUEUED (spawn 2) | Single joint pass; Leo writes pedagogy half, Rollo writes asset/demographics half. Parallel to Nick. |
-| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration audit | QUEUED (spawn 3) | Same Leo, sequential to the style-pack pass. Done before W1 close so W2 brief can react. |
+| Nick   | `nick-3d-clump-volume.md` — implement Lloyd pass 1 | RUNNING | Longest pole. Spawned in parallel with Leo. |
+| Leo    | `leo-rollo-stylepack-w1-spec.md` — pedagogy half of joint spec | RUNNING | Parallel to Nick. Rollo follows when Leo's half lands. |
+| Rollo  | `leo-rollo-stylepack-w1-spec.md` — asset/demographics half | QUEUED (spawn 3) | Appends to Leo's half. Waits on Leo. |
+| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | QUEUED (spawn 4) | After Rollo. Same context warm if possible. |
 
 ## Blocked / pending
 
