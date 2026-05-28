@@ -94,4 +94,36 @@ Update `## Handoff` here on completion.
 
 ## Handoff
 
-(David fills in.)
+David pass 1 complete. Deliverable: `face-lib/research/david-pass-1.md`
+(199 lines, under cap). Bob's ROADMAP is structurally sound — not
+rubber-stamped, but no pivots recommended.
+
+**Six ROADMAP edits recommended (all within David authority, Bob can
+land without re-spawning David):**
+
+1. Q1 success metric: "Q1 ships iff N style packs land at quality bar,
+   N ≥ 4. The 3D hair refactor is necessary-not-sufficient."
+2. Time-mapping honesty: human-time mappings are calibration metaphors,
+   not contracts; expect ±50%; metric is goal-met, not calendar-met.
+3. Q1 scope-out additions: eye/mouth primitive rework (deferred unless
+   a style pack requires it); API hardening (Q4 lane).
+4. Q1→Q2 transition prep: last sprint of Q1 includes Lloyd body-
+   architecture design pass.
+5. Quality bar restated in ROADMAP itself — currently only in
+   AGENTS.md; a fresh spawn reading only ROADMAP wouldn't know what
+   "quality bar" means.
+6. Pascal calibration audit at first sprint close.
+
+**Four items flagged for Gary (David did NOT decide these):**
+
+- Style-pack-per-category for animals + monsters in Q3/Q4 — confirm
+  or scope down.
+- Props/objects + multi-character compositions — implicitly out;
+  confirm.
+- Is 3D hair refactor IN-Q1 vs. parallel-infra given Gary's "not just
+  engine refinements" line.
+- Count (4-10 packs) vs. depth (demographic coverage per pack) when
+  there's a tradeoff.
+
+Next: Bob to share pass 1 with Gary, land the six edits Gary signs
+off on, then Claudia can plan Q1-W1 against the revised ROADMAP.

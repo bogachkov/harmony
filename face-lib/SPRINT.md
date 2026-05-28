@@ -30,19 +30,19 @@ Two parallel tracks:
 
 ## In flight
 
-| Agent  | Task | Status | Notes |
-| ------ | ---- | ------ | ----- |
-| David  | First spawn — ROADMAP validation against Gary's stated goals | RUNNING | `tasks/david-roadmap-review-1.md`. Gates Claudia's first sprint plan. |
+(nothing — David's review complete, waiting on Gary's call on the four escalated questions)
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Nick   | Implement 3D clump-volume primitive per Lloyd pass 1 | Awaiting spawn (Claudia first on the queue this sprint) |
-| Leo + Rollo | Style-pack candidate selection + spec | Awaiting spawn (Claudia second on the queue) |
+| Bob    | Land David's 6 ROADMAP edits | Gary's answers on the 4 escalated questions (some edits depend on #1) |
+| Claudia | First sprint plan against revised ROADMAP | Gary's answers + Bob's edits |
+| Nick   | Implement 3D clump-volume primitive | Claudia (will it be IN-Q1 or parallel-infra? Gary's call) |
+| Leo + Rollo | Style-pack candidate selection + spec | Claudia |
 | Lloyd  | Code review of Nick's 3D implementation | Nick's PR |
-| Holly  | First-ever Holly spawn — test strategy doc + regression sweep | After Nick's 3D refactor lands |
-| Pascal | Quality score on post-3D-refactor render set | After Nick + Holly |
+| Holly  | Test strategy doc + regression sweep | Sprint close |
+| Pascal | Quality score on post-3D-refactor renders | After Nick + Holly |
 
 ## Done previous sprints
 
