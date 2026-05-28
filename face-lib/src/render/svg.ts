@@ -2,6 +2,7 @@ import type { FaceParams } from '../model/params.ts';
 import type { Projected } from './project.ts';
 import { bounds } from './project.ts';
 import { inkStrokePath } from './strokes.ts';
+import { mergeCapsulesToHull, type Capsule2D } from './hull.ts';
 
 // Deterministic seeded RNG so identical params produce identical SVG.
 const mulberry32 = (seed: number): (() => number) => {
@@ -136,7 +137,41 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
 
   // Pass 1: fills only (no stroke). Painted in painter's order so later layers cover earlier ones.
   const paths: string[] = [];
+
+  // HULL-MERGE PASS — group clump-volume curves by hullGroup and emit ONE
+  // filled hull polygon per group. Drawn FIRST (before other fills) so the
+  // centreline strokes paint on top of the silhouette mass. Per Lloyd pass 1
+  // §2 stage E.
+  const hullGroups = new Map<string, { caps: Capsule2D[]; fill: string; avgZ: number }>();
   for (const item of prepped) {
+    const c = item.c;
+    if (c.kind !== 'clump-volume' || !c.capsules || c.capsules.length === 0) continue;
+    const groupKey = c.hullGroup ?? '__default';
+    const fill = item.fill ?? p.style.hairFill ?? p.style.color;
+    const entry = hullGroups.get(groupKey);
+    if (entry) {
+      for (const cap of c.capsules) entry.caps.push(cap);
+      // Use the back-most member's avgZ so the merged silhouette sits behind
+      // its own strokes in painter order.
+      if (c.avgZ < entry.avgZ) entry.avgZ = c.avgZ;
+    } else {
+      hullGroups.set(groupKey, { caps: [...c.capsules], fill, avgZ: c.avgZ });
+    }
+  }
+  for (const { caps, fill, avgZ } of hullGroups.values()) {
+    const hull = mergeCapsulesToHull(caps);
+    if (hull.length < 3) continue;
+    const pxHull: Array<readonly [number, number]> = hull.map(([x, y]) => [tx(x), ty(y)] as const);
+    paths.push(
+      `<path d="${pointsToPath(pxHull, true)}" fill="${xmlEscape(fill)}" stroke="none" data-hull-group="${xmlEscape(String(avgZ.toFixed(3)))}"/>`,
+    );
+  }
+
+  for (const item of prepped) {
+    // clump-volume curves contribute to the hull-merge pass above; their
+    // centrelines do not render directly (the scaffold also pushes a
+    // companion feature-ink curve for the inked centreline).
+    if (item.c.kind === 'clump-volume') continue;
     if (item.isInk) {
       // Inked stroke — render the perfect-freehand outline polygon as a fill. No separate
       // stroke pass for inked strokes (they're already the right shape).
@@ -156,6 +191,9 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   // (which are already rendered as a fill outline polygon in pass 1).
   for (const item of prepped) {
     if (item.c.noStroke || item.isInk) continue;
+    // Clump-volume centrelines render via the companion feature-ink curve
+    // pushed by scaffold; skip them here.
+    if (item.c.kind === 'clump-volume') continue;
     const stroke = item.isConstruction ? p.style.constructionColor : p.style.color;
     const dash = item.isConstruction ? ' stroke-dasharray="4 3"' : '';
     paths.push(
