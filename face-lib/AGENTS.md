@@ -230,3 +230,51 @@ Use the anchor table. If hair is dead, no score above 4.
   (wrong cranial field direction, parting too thin, etc.) are precisely
   the in-stream context that helps the user reason about where Fred is.
   Reading a render and silently re-iterating is breaking the commit.
+
+- **Mixture, not survival-of-fittest. The core engine-design rule.**
+  Liftoff is NOT "one render hits 8/10" — it is "the engine can produce
+  6/10 across a random set of user instructions WITHOUT further code
+  changes." That means working aesthetics get PRESERVED as reachable
+  points in the parameter surface, not optimized away by the next round.
+
+  The day-long blocker that this rule prevents: each "fix" replaces the
+  prior approach instead of expanding the parameter space. Round N
+  produces chaotic-energetic hair; Fred decides clumping is "better,"
+  ships clumping, the chaotic look becomes unreachable. Pascal scores
+  same because a different artifact now exists in place of the old. Net:
+  same score, fewer aesthetics reachable.
+
+  Concrete rules for Fred:
+  - When tuning a parameter, the OLD value's behaviour should become a
+    selectable point (a new recipe knob OR a new preset file), not a
+    deleted memory.
+  - "We're going to drop X for Y" is almost always wrong. The right move
+    is "we're going to make X-vs-Y a knob, default to Y."
+  - When a render looks good in any way (the user calls it "a gem,"
+    Pascal says "yes," or you yourself feel "that one's working"), FILE
+    IT — save the exact parameter combo as a new hairstyle / preset /
+    test fixture. Never leave a working configuration in mid-air git
+    history with no parameter path back to it.
+
+  Rules for LEO when running audits:
+  - Distinguish "this primitive is genuinely broken" from "this is one
+    valid point in a wider parameter space we should preserve." The
+    second case calls for a NEW KNOB, not a rewrite.
+  - Default audit recommendation: "expose the difference between the
+    current behaviour and the proposed alternative as a parameter."
+    Replacement is the special case, not the default.
+
+  Rules for PASCAL when scoring:
+  - When a round is "4/10 lateral with different artifacts," that may
+    actually be a REGRESSION on the prior round's working axis. Explicitly
+    note: "this lost the chaos that round N had" or "this gained X but
+    deleted the option to render Y." Per-axis movement matters, not just
+    the average.
+  - Do NOT ask Fred to "fix" something working in a way you don't
+    prefer — that's preference enforcement, not bug-finding. Score it
+    honestly and note "this is a valid aesthetic Fred should preserve
+    as a reachable point, even if not my preference."
+
+  The mental shift: this is not iterative refinement of a single model.
+  It is the gradual expansion of a parameter space such that more user
+  requests are answerable from existing knobs.
