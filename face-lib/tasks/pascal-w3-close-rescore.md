@@ -200,4 +200,38 @@ them.
 
 ## Handoff
 
-(Pascal fills in on completion.)
+**Pascal Pass 3 — W3 sprint-close — CLEAN-CLOSE.**
+
+- **16-cell timmFlat tally: 16 / 16 at Pascal ≥ 5.** Strict close
+  threshold met.
+  - Cells 1-5, 8-10 held at 5 through Q1 manifest rewrite (no
+    cascade-leak regression from `suppressInteriorHairDetail` →
+    declarative `fillStyle: 'flat'` migration).
+  - Cells 6, 7, 11 first-time ≥ 5 via Felix's flat-curtain primitive
+    rebuild. Single closed silhouette, no strand field, Timm-register.
+  - Cells 12, 13, 14, 15, 16 promoted 4 → 5 via Q2 jaw-proportion
+    spread in `demographics.ts`. Round-cranium / jowl-bulge topology
+    now visible at silhouette.
+- **Four-corner test: PASSES.** Cells 1/4/12/14 at 96px read as four
+  distinguishable topologies (cusped-square / soft-oval / round
+  soft-U / jowled). W2 push-back resolved.
+- **Tintin × 4 regression: HOLDS.** All four cells at-or-above prior
+  register. Three drift in Lloyd's designed direction (sharper cusp,
+  jowl visible, rounder child); one byte-identical. `pack.
+  proportionScale` fallback NOT triggered — stays on BACKLOG.
+- **Calibration: holds.** No ≥ 5 cell fires a sniff-test. No
+  recalibration needed.
+- **Sprint-close call: CLEAN-CLOSE** (16/16, not "ship-with-named-gap").
+
+Full scoring + tintin reads + four-corner re-verdict appended as
+`## Pass 3 — W3 close (full 16-cell + tintin × 4)` in
+`face-lib/research/pascal-w2-timmflat.md`. ~125 lines.
+
+Nothing escalated to Gary. One minor BACKLOG candidate for W4+
+(Pascal-5 → Pascal-6 quality ceiling — see return note); filed to
+Claudia, not gating.
+
+Renders Bob shares with Gary: `/tmp/nick-q1-shipped/grid/sheet-full.png`,
+`/tmp/nick-q1-shipped/grid-96/sheet-thumb.png`,
+`/tmp/nick-q1-shipped/grid-96/four-corners.png`,
+`/tmp/nick-q1-shipped/tintin-regression/sheet-tintin4.png`.

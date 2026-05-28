@@ -495,3 +495,128 @@ renders; trusting Nick's 50/50 byte-identical regression sweep.
    Verdict: 8 / 13 cells at Pascal ≥ 5; box 3 strict-13/13 does NOT
    close; recommend ship-with-known-gaps + W3 Q2 row owns the
    demographic-topology gap (per Lloyd's landed design).*
+
+---
+
+## Pass 3 — W3 close (full 16-cell + tintin × 4)
+
+*W3 sprint-close pass. All three W3 engine rows landed: Nick Q2
+demographic-topology push (`9e03a7f`), Felix long-hair primitive
+rebuild (`835148f`), Nick Q1 cascade-merge manifest (`a884a54`).
+Renders: `/tmp/nick-q1-shipped/grid/`, `/grid-96/`, `/tintin-regression/`.
+Scoring absolute per AGENTS.md anchor table, not delta. Calibration
+audit closed in Pass 1 — not re-litigated.*
+
+### Per-cell scoring table — full 16
+
+| # | Cell                                       | Pascal | One-line read                                                                                                                                       |
+| - | ------------------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | adult-masc-square shortSwept               | 5      | Holds; cusped-square jaw clean, flat hair cap reads as one closed mass with subtle hairline notch. Register-correct masc-protagonist.               |
+| 2 | adult-masc-square shortSwept dark          | 5      | Holds; dark-skin swap clean, cap silhouette unchanged. Integration via shared contour weight intact.                                                |
+| 3 | adult-masc-square spikyShort               | 5      | Holds; 5-spike envelope reads as deliberate Toth-direction terminations atop closed cap, no interior leak. Confident.                               |
+| 4 | adult-fem-oval bobChinLength               | 5      | Q1 parting→none at slot 6 drops the prior parting tick; bob now reads as a clean uniform flat helmet. Cleaner Timm read (concur with Nick). Holds.  |
+| 5 | adult-fem-oval bobChinLength dark          | 5      | Holds; equivalent to cell 4 with dark-skin swap. Clean.                                                                                              |
+| 6 | adult-fem-oval longSleek                   | 5      | **FIRST-TIME ≥ 5.** Felix's flat-curtain primitive lands — single closed silhouette, flat fill, no strand field, even contour. Timm-register.       |
+| 7 | adult-fem-oval longTail                    | 5      | **FIRST-TIME ≥ 5.** Same primitive; curtain + tail mass below chin reads as one shape. Integration via shared contour holds.                        |
+| 8 | teen-masc-ovalsoft shortPomp               | 5      | Holds; pomp lift as one closed mass, no sweep texture. Teen frame slightly slimmer than adult-square — modest demographic differentiation now.      |
+| 9 | teen-masc-ovalsoft spikyShort dark         | 5      | Holds; spike cluster confident, side-fringe tidy, face integrates.                                                                                  |
+|10 | teen-fem-ovalsoft bobChinLength            | 5      | Holds; clean teen bob; teen-vs-adult differentiation now via softer chin not just hair-shape. Modest improvement, score band same.                  |
+|11 | teen-fem-ovalsoft longSleek dark           | 5      | **FIRST-TIME ≥ 5.** Felix's primitive on dark-skin teen-fem; curtain clean, single silhouette, features integrate.                                  |
+|12 | child-masc-round shortSwept                | 5      | **PROMOTED 4 → 5.** Q2 jaw-proportion spread lands: cranium visibly wider, ears more protruding, shorter face. Child topology now distinct.         |
+|13 | child-fem-round bobChinLength dark         | 5      | **PROMOTED 4 → 5.** Round cranium reads, child face proportions distinct from cell 10 (teen-fem). Bob clean.                                        |
+|14 | elder-masc-jowled shortReceding            | 5      | **PROMOTED 4 → 5.** Real jowl bulge now visible outside the cheek line, tapering to chin. Forward-protruding jowl mass — topology read lands.      |
+|15 | elder-masc-jowled shortReceding dark       | 5      | **PROMOTED 4 → 5.** Equivalent to cell 14 with dark-skin swap; same jowl topology landing.                                                          |
+|16 | elder-fem-jowled bobChinLength             | 5      | **PROMOTED 4 → 5.** Jowl spread now does the demographic work even with the bob — silhouette reads elder-fem distinct from cell 4 (adult-fem-oval). |
+
+**Tally: 16 / 16 cells at Pascal ≥ 5. Strict close threshold met.**
+
+### Four-corner re-verdict — PASSES
+
+`/tmp/nick-q1-shipped/grid-96/four-corners.png` + individual 96px
+cells. At thumbnail: cell 1 reads cusped-square, cell 4 soft-oval
+with flat helmet cap, cell 12 round soft-U (visibly wider lower
+cranium than cell 4), cell 14 jowled with clear gonial swell + receded
+hairline. **Four distinguishable topologies at 96px.** The W2-diagnosed
+demographic-topology gap mechanically closed via Q2; my Pass 2
+push-back is resolved. Diagnostic closing — note positively.
+
+### Tintin × 4 regression read
+
+`/tmp/nick-q1-shipped/tintin-regression/sheet-tintin4.png` + individual
+PNGs vs `/tmp/tintin-baseline/`. Per-cell read:
+
+| # | Cell                                       | Read                                                                                                                       |
+| - | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 1 | tintin × adult-masc-square shortSwept      | Holds. Cusp slightly sharper (designed direction); tintin vocab — heavy brows, dot eyes, low ink density — preserved.      |
+| 2 | tintin × child-fem-round bobChinLength     | Holds. Child rounder than baseline (designed direction); bob + lash + lip register intact.                                 |
+| 3 | tintin × elder-masc-jowled shortReceding   | Holds. Jowl now visible (was oddly youthful pre-Q2); tintin line-density, dot eyes, hairline preserved.                    |
+| 4 | tintin × adult-fem-oval bobChinLength      | Byte-identical to baseline (untouched demographic). Holds.                                                                  |
+
+**Tintin regression verdict: HOLDS** on all 4 cells. Three cells drift
+in Lloyd's designed direction (sharper / clearer demographic read);
+one is byte-identical. No cell reads worse than its prior register.
+**`pack.proportionScale` fallback NOT triggered** — Lloyd Q2 §debt-left
+stays in BACKLOG.
+
+### Sniff-test sweep
+
+Walked the three sniff-tests against every ≥ 5 cell. Dead-hair test:
+flat black masses are pedagogy not procedural-collapse on every cell
+(including the new Felix long-hair primitive — single closed shape,
+no strand field). Flat-line test: contour jitter is uniformly zero,
+which IS the Timm register per Leo decision §2. Integration test:
+every cell reads as one drawing via shared contour weight. **No
+≥ 5 cell fires a sniff-test. Calibration holds; no recalibration.**
+
+### Off-grid probe one-liners
+
+- `adultFemPointed.png` — wedge-cusp chin lands cleanly on the adult-fem
+  base; visibly distinct from the must-ship grid. Joker-direction
+  topology reachable.
+- `elderMascPear.png` — pear silhouette visible; wide bigonial + low
+  ramus + bald crown reads as Penguin-class. Reachable.
+
+Both new fixtures (per Nick Q2 design) are reachable adjacent points,
+not gate-cells. Noting for record.
+
+### Movement signal vs Pass 2 (NOT folded into score)
+
+- **Demographic-topology axis: strict progress.** Cells 12, 13, 14, 15,
+  16 moved 4 → 5 via Q2's jaw-proportion spread in `demographics.ts`.
+  Five-cell category closed.
+- **Long-hair primitive axis: strict progress.** Cells 6, 7, 11 moved
+  2 (Pass 1) → first-time ≥ 5 via Felix's flat-curtain primitive
+  rebuild. Three-cell category closed.
+- **Cascade-leak axis: held.** Cells 1-5, 8-10 hold at 5 through Q1
+  manifest rewrite. No regression from the `suppressInteriorHairDetail`
+  → declarative `fillStyle: 'flat'` migration. Q1 architectural
+  refactor preserved register.
+- **Cell 4 parting axis: lateral / improvement.** Q1 cascade now
+  rolls hairstyle `parting` to `'none'` at slot 6 on 8 timmFlat
+  cells. Concur with Nick — cleaner Timm read; the prior structural
+  parting tick was reading as a thin pedagogy hint, not a load-bearing
+  cue. Bob cells (4, 5, 10, 13, 16) all read cleaner.
+
+### Pack-level verdict — CLEAN-CLOSE (16/16)
+
+- **16/16 cells at Pascal ≥ 5.**
+- **Four-corner test PASSES.**
+- **Tintin × 4 regression HOLDS.**
+- **No sniff-test fires; no calibration drift.**
+
+**W3 close verdict: CLEAN-CLOSE.** The full 16-cell timmFlat grid
+closes at register, the mixture-rule tintin guard holds, and the
+demographic-topology + long-hair gaps from W2 mechanically closed
+via the three landed engine rows. Sprint-close gate satisfied at the
+strict threshold (not "ship-with-named-gap").
+
+**Honest framing for Gary:** the timmFlat pack now ships at Pascal-5
+across full demographic depth (16 / 16). Pascal-5 is "a real pro
+could plausibly have drawn this on an off day" — pro daily output,
+not master register. The pack ships its scope; the next quality
+ceiling (Pascal 6→7, pro-daily → confident-pro) is a separate axis
+that wasn't W3's job.
+
+*— Pascal, Q1-W3 sprint-close pass, Pass 3.
+   Verdict: 16 / 16 cells at Pascal ≥ 5 + tintin × 4 holds + four-corner
+   passes = CLEAN-CLOSE. W3 sprint-close gate satisfied.*
