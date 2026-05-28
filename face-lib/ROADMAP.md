@@ -40,6 +40,9 @@ storyboards) that Gary names as his personal "why."
 - Props / objects (held items, furniture, etc.)
 - Scenes / backgrounds
 - Multi-character compositions (group shots, interactions)
+- **Monsters / creatures.** Gary's "I can sacrifice monsters" + David's
+  push to drop fully rather than carry as Q4-stretch (stretch invites
+  Q4 creep that under-delivers animals). Revisit at next annual.
 
 These are real future scope, but not in this year's program.
 
@@ -109,9 +112,10 @@ has been substantially exercised.
 **Scope OUT of Q1 (explicitly deferred):**
 
 - Bodies, clothes, poses → Q2.
-- Animals → Q3.
-- Monsters → Q4.
-- API hardening → Q4 lane.
+- Q3 integration / polish / LLM-tool-call session → Q3.
+- Animals → Q4.
+- (Monsters → dropped for this AI year; see annual scope-out.)
+- API hardening → folded into Q3 (b) gate.
 - Hat / accessory / glasses primitives → deferred unless a style pack
   REQUIRES one to render its aesthetic at all.
 
@@ -123,26 +127,49 @@ last-round delta.
 ### Q2 — Bodies, clothes, poses
 
 The "clothed person." Takes the face engine as a head and gives it a
-torso, limbs, a clothing layer, and parametric pose. Style packs from
-Q1 must extend to the body (a Tintin-style body, a Disney-style body, etc.).
+torso, limbs, a clothing layer, and parametric pose.
 
-### Q3 — Animals
+**Q2 is now Q3 substrate, not unchanged-from-original** (David pass 2).
+Explicit handoff requirement: each Q1 style pack must extend across Q2
+body/clothes/pose at Pascal ≥5 / Rollo-would-ship. No generic body
+grafted onto faces; each pack carries its own body conventions.
+
+### Q3 — People done well
+
+Gary's call: "people must be really well done by Q3." This is the
+integration / polish / consolidation quarter, not the "ship a new
+primitive type" quarter.
+
+**Ship gate** (David pass 2 — concrete gate, not category list):
+
+- (a) **All Q1 style packs extend across Q2 body/clothes/pose at the
+  quality bar** — Pascal ≥5 + Rollo-would-ship — across the full
+  demographic axis we shipped in Q1.
+- (b) **A real LLM-tool-call session produces N coherent end-to-end
+  character requests** — `composeCharacter({demographic, style, pose,
+  clothes})` works without manual surgery. N to be set by Claudia at
+  Q3 sprint planning; suggested floor: 5 distinct requests producing
+  qualifying renders end-to-end.
+
+API hardening was originally Q4-lane in pass 1; it now naturally lives
+inside the Q3 (b) gate above — the LLM-tool-call surface getting
+exercised against real demand IS the API getting hardened. No separate
+Q4 line.
+
+### Q4 — Animals
 
 Distinguishable mammal / bird / fish / etc. archetypes. New cranium
-topology dispatcher (the face engine's jaw dispatcher work generalizes).
+topology dispatcher (the face engine's jaw dispatcher work generalizes
+— animals are the architectural-generalization test for the engine,
+which is the reason monsters cut first when scope pressure hits).
 
-**Open question (Gary deferred):** style-pack-per-category for animals
-— i.e., do we ship 4-10 styles × animals, or do animals render in the
-existing human style packs? Gary: "I am open on that. Engine vs style
-separation is important though." Decided at Q3 quarterly checkpoint.
-
-### Q4 — Monsters / creatures + API hardening
-
-Asymmetry, multiple appendages, non-human proportions. Plus the API
-surface gets hardened for use as a character generator in real apps.
-
-**Open question (Gary deferred):** same as Q3 — style-pack-per-monster
-or rendered in human packs. Same Q4 checkpoint decision.
+**Open question (escalated to Gary, non-blocking — Claudia plans Q4
+with both branches considered until Gary calls it):** style-pack-per-
+animal? — i.e., do we ship 4-10 styles × animals, or do animals render
+in the existing human-style packs (with engine-vs-style separation
+enforced)? Default assumption pending Gary's call: animals render in
+the existing style packs (lower scope, exercises engine-vs-style
+separation principle).
 
 ## Cross-quarter principles
 
