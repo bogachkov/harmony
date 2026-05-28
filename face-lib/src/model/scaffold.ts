@@ -418,7 +418,16 @@ const buildEyeDots = (
   return curves;
 };
 
-const buildEye = (anchor: Vec3, halfWidth: number, openness: number, tilt: number, surfaceZ: number): Curve[] => {
+const buildEye = (
+  anchor: Vec3, halfWidth: number, openness: number, tilt: number, surfaceZ: number,
+  lidLine: number = 0, lashes: number = 0, underlineHint: number = 0, isLeft: boolean = true,
+): Curve[] => {
+  // Almond eye + three independent within-style modifiers (lidLine, lashes,
+  // underlineHint) plumbed through from p.eyes — mirrors buildEyeDots so the
+  // same recipe knobs work on both eye styles. Defaults of 0 preserve all
+  // existing renders byte-identical (Leo audit: every shipped preset is 0 on
+  // the almond branch today). Sito 2004 p.40: "the eye is the lid more than
+  // the pupil" — lidLine carries the Timm/Caniff/manga upper-lid weight.
   const samples = 18;
   const upper: Vec3[] = [];
   const lower: Vec3[] = [];
@@ -451,6 +460,67 @@ const buildEye = (anchor: Vec3, halfWidth: number, openness: number, tilt: numbe
     }
     curves.push({ kind: 'feature', closed: true, points: pupil, fill: '#1a1a1a' });
   }
+
+  // Upper-lid weight. >0.05 emits a parallel stroke above the lid (visual
+  // thickening); >0.4 closes the gap into a filled "brick" — the Timm slab.
+  if (lidLine > 0.05) {
+    const offset = halfWidth * (0.06 + 0.14 * lidLine);   // how far above the upper curve
+    const lidTop: Vec3[] = upper.map(([px, py, pz]) => [
+      px - offset * sin,
+      py + offset * cos,
+      pz,
+    ]);
+    if (lidLine > 0.4) {
+      // Filled brick: closed poly from upper curve up to the offset curve.
+      const brick: Vec3[] = [...upper, ...lidTop.slice().reverse()];
+      curves.push({ kind: 'feature', closed: true, points: brick, fill: '#1a1410' });
+    } else {
+      // Thicken-via-parallel: just the companion stroke.
+      curves.push({ kind: 'feature', closed: false, points: lidTop });
+    }
+  }
+
+  // Eyelash ticks at the outer corner — mirrored from buildEyeDots:379.
+  if (lashes > 0.1) {
+    const outerSign = isLeft ? -1 : 1;
+    const r = halfWidth * 0.25;                            // scale lashes to almond half-width
+    const lashStartX = anchor[0] + outerSign * halfWidth * 0.95;
+    const lashStartY = anchor[1] + r * 0.9;
+    const lashLen = r * (0.9 + 0.6 * lashes);
+    const lashCount = 2 + Math.round(lashes * 1.5);        // 2-3 lashes
+    for (let i = 0; i < lashCount; i++) {
+      const t = i / Math.max(1, lashCount - 1);
+      const startX = lashStartX - outerSign * r * 0.5 * t;
+      const startY = lashStartY - r * 0.1 * t;
+      const tipX = startX + outerSign * lashLen * 0.6;
+      const tipY = startY + lashLen * 0.7;
+      curves.push({
+        kind: 'feature', closed: false,
+        points: [
+          [startX, startY, surfaceZ + 0.011],
+          [tipX, tipY, surfaceZ + 0.011],
+        ],
+      });
+    }
+  }
+
+  // Under-eye tick — mirrored from buildEyeDots:404. Narrower than the eye
+  // so it reads as an under-eye bag, not a separate object.
+  if (underlineHint > 0.1) {
+    const r = halfWidth * 0.5;
+    const ulHalfW = r * (0.6 + 0.3 * underlineHint);       // STAYS NARROWER than the eye
+    const ulY = anchor[1] - halfWidth * (0.6 + 0.15 * underlineHint);
+    const ulSamples = 6;
+    const ul: Vec3[] = [];
+    for (let i = 0; i <= ulSamples; i++) {
+      const t = i / ulSamples;
+      const x = anchor[0] - ulHalfW + 2 * ulHalfW * t;
+      const y = ulY + r * 0.08 * Math.sin(Math.PI * t);
+      ul.push([x, y, surfaceZ + 0.010]);
+    }
+    curves.push({ kind: 'feature', closed: false, points: ul });
+  }
+
   return curves;
 };
 
@@ -2293,8 +2363,14 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
       p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false,
     ));
   } else {
-    features.push(...buildEye([-eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, p.eyes.tilt, eyeSurfaceZ));
-    features.push(...buildEye([eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, -p.eyes.tilt, eyeSurfaceZ));
+    features.push(...buildEye(
+      [-eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, p.eyes.tilt, eyeSurfaceZ,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true,
+    ));
+    features.push(...buildEye(
+      [eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, -p.eyes.tilt, eyeSurfaceZ,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false,
+    ));
   }
 
   // Brows
