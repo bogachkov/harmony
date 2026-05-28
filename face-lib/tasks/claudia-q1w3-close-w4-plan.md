@@ -107,4 +107,45 @@ makes off-day-pro packs.
 
 ## Handoff
 
-(Claudia fills in on completion.)
+**W3 closed CLEAN, W4 opened against Gary's "prove master-tier."**
+
+### Done
+- **SPRINT.md:** W3 → History (all 5 boxes `[x]`, honest notes: 16/16
+  strict, four-corner PASSES, tintin × 4 HOLDS, three engine rows +
+  Lloyd-approved, Felix's first delivery + day-one calibration, Pascal's
+  off-day-pro-not-master-tier framing carried forward). W4 active: goal
+  reframed around Gary's "prove master-tier" — the deliverable is
+  EVIDENCE (does the engine reach confident-pro, yes/no/why), a negative
+  result explicitly legitimate.
+- **BACKLOG.md:** promoted both ceiling-raisers to W4 (`highlightCutout`,
+  per-feature line-weight multiplier); filed pack #5 as "spec at Q2-open,
+  FULL-STACK with body conventions" (deferred, NOT cut); filed the
+  features-as-decals architectural-ceiling row as the candidate root
+  cause if W4 proves the cap is architectural.
+- **Four W4 task files drafted:**
+  - `leo-rollo-timmflat-ceiling-audit.md` (Box 1 — names the lever list,
+    GATES the build)
+  - `felix-nick-timmflat-ceiling-raisers.md` (Box 2 — Felix graphics-math
+    interior, Nick pack-data wiring, Leo pedagogy, Lloyd reviews if a seam)
+  - `pascal-w4-master-tier-rescore.md` (Box 3 — the EVIDENCE: yes/no/why
+    on Pascal-6+)
+  - `holly-test-strategy-doc.md` (Box 4 — Holly's first spawn, runs parallel)
+
+### W4 acceptance (the four boxes)
+B-lane (must-have, Gary): (1) ceiling audit → (2) ceiling-raisers land
+→ (3) Pascal scores the lift = the yes/no/why evidence. C-lane (minimum
+= the doc): (4) Holly test-strategy doc. Pack #5 deferred Q2-open;
+Lloyd body-architecture pass → Q2-open (my call, David's lean).
+
+### What slips if (B)+(C) overrun
+Holly's thin regression-coverage CODE and BACKLOG-triage → Q2-open.
+The two hard W4 commitments: (B) one honest Pascal-6-7 attempt +
+Holly's DOC. Everything else is fill.
+
+### Spawn order for Bob
+- **Wave 1 (parallel):** Leo+Rollo ceiling audit (B-lane head) ‖ Holly
+  test-strategy doc (C-lane, zero code overlap, runs to completion).
+- **Wave 2 (after audit):** Felix+Nick ceiling-raisers (scoped against
+  the audit's lever list).
+- **Wave 3 (after raisers + re-render):** Pascal master-tier re-score.
+- Conditional: Lloyd review on the raiser PR if a seam is touched.

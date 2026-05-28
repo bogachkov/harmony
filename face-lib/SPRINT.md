@@ -8,267 +8,329 @@ sections reset.
 
 ---
 
-## Active sprint — Q1-W3 (open)
+## Active sprint — Q1-W4 (open) — LAST week of Q1
 
-**Goal: close the full 16-cell `timmFlat` grid at quality bar by
-landing Lloyd's Q2 (demographic-topology) + Q1 (cascade-merge
-manifest) designs + the long-hair primitive rebuild that owns cells
-6/7/11. End of W3 = pack #2 at full demographic depth, ROADMAP
-"depth > count" satisfied.**
+**Goal: PROVE master-tier. Push `timmFlat` from Pascal-5 (off-day-pro)
+toward Pascal 6-7 (confident-pro) and answer the one question that
+governs all of Q2-Q3: can the engine reach confident-pro on a face at
+all — yes or no, and why? The deliverable is EVIDENCE, not a guaranteed
+Pascal-7. In parallel, land Holly's first spawn (test-strategy doc,
+deferred since W1) so Q2 doesn't open the bodies/clothes/poses surface
+with no regression convention.**
 
-W2 closed at 8/13 cells ≥ Pascal 5 (the cascade-leak fix landed
-clean on all 6 primary fix targets; 5 cells held at 4 are exactly
-the demographic-topology gap Lloyd's Q2 design already owns). W3
-closes the remaining work via three engine touches + a re-render +
-Pascal re-score across the full 16-cell grid.
+W3 closed CLEAN: Pascal Pass 3 scored the full 16-cell `timmFlat` grid
+at **16/16 ≥ Pascal-5** (strict close, not ship-with-gap), four-corner
+test PASSES, `tintin × 4` regression HOLDS. The three engine rows (Q2
+demographic-topology, Q1 cascade-merge manifest, Felix long-hair
+primitive) all landed + Lloyd-approved. timmFlat now ships at off-day-pro
+across full demographic depth. The next quality ceiling (Pascal 6-7) is
+a *separate axis* that wasn't W3's job — it is W4's.
 
-### Acceptance (what closes Q1-W3)
+**The decision chain behind this goal (do not re-litigate):**
+- David's W4 directional review (`tasks/david-q1-w3close-directional-
+  review.md`, commit `634af04`): trajectory ON TRACK, met at the floor
+  (Pascal-5, not the Pascal-7 aspiration). W4 direction **(B) polish
+  timmFlat toward master-tier primary + (C) Holly hardening; (A) pack
+  #5 deferred to Q2-open, NOT cut.** He escalated the quality-bar
+  judgment to Gary.
+- **Gary's answer: "Prove master-tier."** Gary confirmed master-tier
+  IS the Q1 bar. This flips (B) from David's 60/40 lean to a
+  **must-have**. W4's primary job is to prove the engine CAN reach
+  Pascal 6-7 on timmFlat — not just that it makes off-day-pro packs.
 
-Five boxes:
+**A NEGATIVE RESULT IS A LEGITIMATE, VALUABLE W4 OUTCOME.** If the
+engine can't get past ~6 without an architectural change, that finding
+de-risks Q2/Q3 (the clothed-character ceiling will be no higher than
+the face ceiling — better to learn it now, on the one pack we've fully
+exercised, than in Q3 when it's expensive). W4 acceptance is framed as
+"we know whether the engine reaches confident-pro and why," NOT
+"timmFlat is Pascal-7 or W4 failed."
 
-- [x] **Q2 — demographic-topology push lands.** Lloyd's design at
-  `research/lloyd-cascade-architecture.md` §Q2. Edit `demographics.ts`
-  jaw proportion spread (`bigonialWidth`/`mentalWidth`/`gonialAngle`/
-  `jowl` across child/masculine/elder) + add two private fixtures
-  (`elderMascPear`, `adultFemPointed`) folding Rollo's BACKLOG
-  `pointed`/`pear` row in as private demographic-data only. ~50 LOC.
-  **Mixture-rule guard:** `tintin × demographic` will drift (not
-  byte-identical); Pascal re-scores 4 representative `tintin` cells
-  alongside the timmFlat re-score. Fallback `pack.proportionScale`
-  knob only if `tintin` slides. **LANDED — Nick handoff in
-  `tasks/nick-q2-demographic-topology.md`. Open for Lloyd review.**
+### Acceptance (what closes Q1-W4)
 
-- [x] **Q1 — cascade-merge hybrid manifest lands.** Lloyd's design
-  §Q1. Re-ordered STYLE to a NEW slot 6 (post-hairstyle, pre-expression)
-  AND shipped per-pack `declares: readonly AllowedDeclarePath[]`
-  manifest. `AllowedDeclarePath` string-literal-union (in
-  `model/params.ts`) excludes `head.*` / `eyes.spacing` / `eyes.size`
-  / `nose.length`/`width` / `brows.fullness`/`length` /
-  `mouth.width` / `ears.*` / `neck.*` AT COMPILE TIME — verified
-  with a `declares-disallowed-path` fixture (11/11 forbidden paths
-  produce TypeScript errors). `timmFlat.declares` covers 14 paths
-  (leads / parting / fillStyle / lipFullness / labiomentalShow /
-  cornerMarks / upperCurve / lashes / lidLine / underlineHint /
-  brows.style / nose.style / bridgeVisible / showNostrils).
-  Default `[]` shipped on `default`/`tintin`/`ligneClaire` → 816-
-  cell broad regression sweep (`scripts/felix-broad-regression.ts`)
-  byte-identical pre vs post; tintin × 4 demographic regression
-  sheet byte-identical. Nick PR #4's
-  `recipe.suppressInteriorHairDetail` flag DELETED in same commit,
-  replaced by declarative `recipe.fillStyle: 'standard' | 'flat'`
-  knob declared via the manifest. TIMM_PEDAGOGY override workaround
-  in `scripts/timmflat-grid.ts` collapsed to empty object (~30 LOC
-  removed). **LANDED — Nick handoff in `tasks/nick-q1-cascade-
-  merge-manifest.md`. Open for Lloyd review.**
+Four boxes. Box 1 + Box 4 are the two HARD commitments (must-have);
+Box 2 is the secondary (must land at minimum the DOC); Box 3 is fill.
 
-- [ ] **Long-hair primitive rebuild lands.** Closes cells 6/7/11
-  (longSleek/longTail at Timm flat-shape register). Field-tracer
-  no-ops when `clumpMode: 'flat'` AND no leads configured — or a
-  `recipe.strandMode: 'off'` knob, whichever Felix's design picks.
-  Per mixture rule: default preserves current strand behavior.
-  ~30-50 LOC in `src/render/field-tracer.ts`. **Owner: Felix**
-  (David approved the graphics-domain hire in commit `9db6566`;
-  this is Felix's first spawn per AGENTS.md §Onboarding-note).
+- [ ] **(B) Master-tier audit + spec lands.** Leo + Rollo name what
+  "confident-pro timmFlat" actually needs to clear Pascal-5 → 6-7,
+  grounded in the BACKLOG ceiling-raisers
+  (`research/stylepack-timmFlat-spec.md` §3 + `pascal-w2-timmflat.md`
+  §Pass 3 ceiling note). Output: a short audit/spec in `research/`
+  naming the levers in priority order + their expected Pascal lift,
+  and an explicit honest read on whether the named levers can plausibly
+  reach 6-7 OR whether the ceiling is architectural (decals-on-sphere
+  integration debt — `BACKLOG.md` features-as-decals row). **Task:
+  `tasks/leo-rollo-timmflat-ceiling-audit.md`.**
 
-- [ ] **Full 16-cell re-render + Pascal re-score.** All 16 cells
-  scored absolute against the AGENTS.md anchor. **Acceptance:
-  Pascal ≥ 5 on 16/16 (strict)** OR Pascal ≥ 5 on 13/16 with the
-  remaining gap traced to a single named root cause that's filed
-  to BACKLOG for W4+. timmFlat at full demographic depth closes
-  the original 16-cell spec.
+- [ ] **(B) Ceiling-raiser primitives land.** Implement the levers the
+  audit (Box 1) prioritizes — expected: `highlightCutout` primitive
+  (new, ~20 LOC, BACKLOG est. Pascal ~7→8) + per-feature line-weight
+  multiplier (touches the render/line-weight path, ~30 LOC, BACKLOG
+  est. villain register ~7→8). Felix owns the graphics-math interior
+  (highlightCutout is a new primitive; line-weight multiplier touches
+  the render path); Nick wires the pack-data (`timmFlat.declares` +
+  the new knob defaults); Leo confirms pedagogy. **Mixture rule:
+  additive only — `default`/`tintin`/`ligneClaire` stay byte-identical;
+  ONLY timmFlat opts in.** **Task:
+  `tasks/felix-nick-timmflat-ceiling-raisers.md`.** Final lever list
+  is set by Box 1; this task is scoped on completion of the audit (the
+  two named above are the strong candidates — confirm against the
+  audit before implementing).
 
-- [ ] **`tintin × 4` regression re-score.** Lloyd's mixture-rule
-  caveat: the Q2 demographic-data push WILL drift `tintin` (not
-  byte-identical). Pascal re-scores 4 representative `tintin × demographic`
-  cells alongside the timmFlat re-score. If `tintin` slides below
-  its prior register, fall back to `pack.proportionScale` per Lloyd's
-  Q2 §debt-left. Same Pascal spawn closes both this and box 4.
+- [ ] **(B) Pascal re-scores the lift — the EVIDENCE.** Re-score the
+  16-cell timmFlat grid (+ the off-grid villain-register probes:
+  `adultFemPointed` / `elderMascPear` / a Joker-direction lid-weight
+  probe) against the AGENTS.md anchor table, absolute. **Acceptance:
+  a CLEAR yes/no on "did the engine reach Pascal-6+ on any cell, and
+  how many," with the why.** Both outcomes close the box: ≥6 on a
+  meaningful share = "ceiling reached, master-tier is on the engine's
+  surface"; capped at 5 = "current ceiling is 5, here is the named
+  root cause (likely the features-as-decals integration debt), filed
+  for Q2." Mixture-rule guard: re-confirm `tintin × 4` holds (the
+  line-weight multiplier touches a shared render path — verify it
+  doesn't drift non-opted packs). **Task:
+  `tasks/pascal-w4-master-tier-rescore.md`.**
 
-### What is explicitly NOT in W3 (deferred to W4 or later)
+- [ ] **(C) Holly's first spawn — test-strategy doc lands.** Deferred
+  since W1; MUST land before Q2 triples the primitive surface (torso /
+  limbs / clothing layer / pose). A DESIGN artifact, not test code:
+  "what does 'tests passed' mean for a parametric art engine" —
+  regression convention (byte-identical sweeps vs. visual-diff
+  thresholds), what the gallery must cover honestly, how the
+  forest-registry mixture rule gets a regression guard, and what
+  minimal test scaffolding Q2 should open against. Runs **parallel**
+  to the (B) lane (zero code overlap). **Task:
+  `tasks/holly-test-strategy-doc.md`.**
 
-- **Next-pack-spec (pack #5 by Leo + Rollo)** — slid from W3 to W4
-  per the ROADMAP scope-cut Claudia declared in W2. Q1 pack count:
-  default + tintin + ligneClaire + timmFlat = 4 packs at ROADMAP
-  N ≥ 4 floor. W4 = spec + implement pack #5 if budget allows,
-  otherwise polish + first Holly sweep + Q1 closeout.
-- **Holly test-strategy doc** — first Holly spawn (per AGENTS.md);
-  slips to W4 if W3 stays tight. Not queued this sprint.
-- **`pack.proportionScale` knob** — only lands if W3 Q2 regresses
-  `tintin` (per Lloyd's design §debt-left). Mechanism deferred until
-  the regression fires.
-- **Late-pass for expression/character presets** — same manifest
-  mechanism extends naturally; flag to Claudia for W4 pack-spec.
-- **Per-feature line-weight multiplier**, **categorical `brows.shape`
-  enum**, **orbital socket recess primitive**, **`mouth.philtralBow`
-  knob**, **`expressions.ts` resuscitation** — all stay on BACKLOG.
+### Fill (only if W4 has room after the four boxes; first to slip)
+
+- **Thin regression-coverage pass** (Holly, after her doc) — a minimal
+  regression scaffold so Q2 opens against a clean board. **Slips to
+  Q2-open if (B) overruns** (David's call, Gary-confirmed: the (C)
+  minimum is the DOC; regression coverage can slip).
+- **BACKLOG triage pass** — clear W1-W3 deferral sediment so Q2 opens
+  clean. Slips to Q2-open if no room.
+
+### What is explicitly NOT in W4
+
+- **(A) Pack #5 — DEFERRED to Q2-open, NOT cut.** Per David
+  (Gary-confirmed): spec it **full-stack with body conventions** at
+  Q2-open rather than re-opening a face-only pack in Q2 (the ROADMAP
+  handoff rule: each pack carries its own body/clothes/pose
+  conventions). Filed in BACKLOG as "pack #5: spec at Q2-open,
+  full-stack." This is a mixture deferral, not a deletion.
+- **Lloyd's Q1-closeout body-architecture design pass** — ROADMAP
+  names it for the last Q1 sprint. Claudia's call per David's lean:
+  **rides Q2-open, not W4**, so W4 stays focused on proving the
+  ceiling. If Box 1 surfaces that the ceiling IS architectural (the
+  decals-on-sphere debt), that finding feeds directly into Lloyd's
+  Q2-open body-architecture pass — the right sequence.
+- **Orbital-socket recess primitive / brow-shape enum / philtralBow /
+  expressions resuscitation** — stay on BACKLOG unless Box 1's audit
+  names one as the load-bearing ceiling-raiser (in which case Claudia
+  re-scopes Box 2). Default expectation: highlightCutout + line-weight
+  multiplier are the two W4 promotions.
 
 ## In flight
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| Felix | Long-hair primitive rebuild | in flight (parallel) | Working tree shows scaffold.ts edits + scripts/felix-longhair-probe.ts present pre-Nick-Q2; Nick did NOT touch the file. Felix to commit separately. |
+| — | — | — | W4 not yet spawned; Bob spawns per the Q1-W4 spawn order below. |
 
-## Done this sprint (W3)
+## Done this sprint (W4)
 
-- **Nick — Q1 cascade-merge hybrid manifest** (`tasks/nick-q1-cascade-
-  merge-manifest.md`). Lloyd Q1 §Pick landed verbatim. Three engine
-  files + one script: `model/params.ts` adds `AllowedDeclarePath`
-  string-literal-union (14 admissible paths; demographic paths
-  inadmissible at compile time) + `applyDeclares` filter helper +
-  swaps `recipe.suppressInteriorHairDetail?: boolean` for
-  declarative `recipe.fillStyle?: 'standard' | 'flat'`.
-  `presets/styles.ts` adds `Pack` type (`DeepPartial<FaceParams> &
-  { declares?: readonly AllowedDeclarePath[] }`); `timmFlat.declares`
-  populated with 14 paths Lloyd named in §Q1 §Pick; `default`,
-  `tintin`, `ligneClaire` ship `declares: []` (mixture-rule guard).
-  `api.ts:composeFace` adds slot 6 late pass (post-hairstyle,
-  pre-expression) via `applyDeclares(substrate, declares)`.
-  `model/scaffold.ts` swaps 4 gate sites
-  `recipe.suppressInteriorHairDetail === true` →
-  `recipe.fillStyle === 'flat'`; Felix's long-hair flat-curtain
-  primitive (cells 6/7/11) verified byte-identical post-swap.
-  `scripts/timmflat-grid.ts` collapses TIMM_PEDAGOGY override block
-  (~30 LOC removed) — `TIMM_NO_LEADS` now empty `{}` because the
-  manifest carries the pedagogy through the cascade.
-  **Regression guards (all passing):**
-    - 816-cell broad regression (`scripts/felix-broad-regression.ts`):
-      `default` × all hairstyles × all demographics IDENTICAL pre vs
-      post; same for `tintin`, `ligneClaire`. Only `timmFlat` cells
-      drift — by design (manifest re-asserts contested pedagogy past
-      hairstyle clobber, e.g. shortSwept's parting='sideL' now
-      correctly rolls back to 'none' at slot 6).
-    - tintin × 4 demographic regression sheet: 4/4 byte-identical.
-    - timmFlat 16-cell grid vs Felix-shipped (`/tmp/felix-shipped/grid/`):
-      8/16 byte-identical (cells 3, 6, 7, 8, 9, 11, 14, 15); 8/16
-      differ on the parting-curve interior-leak fix (cells 1, 2, 4,
-      5, 10, 12, 13, 16) — visual inspection confirms the diff is
-      removal of a tiny dark parting-tick at the hair-top that
-      pre-Q1 leaked through from hairstyle's parting='sideL' /
-      'centre'. Comparable or improved silhouette read across the
-      board; Pascal Wave 3 calls the absolute score.
-  **Test fixtures from Lloyd §Sizing post-impl review:**
-  `declares-empty` (no-op patch — returns undefined; verified);
-  `declares-narrow` (one-path manifest writes only that path;
-  verified); `declares-disallowed-path` (11/11 demographic paths
-  produce TypeScript errors; verified); 12-hairstyle × 3-pack
-  regression diff = 0 (verified across 17 hairstyles × 3 packs ×
-  4 ages × 4 presentations = 816 cells, zero drift on non-timmFlat).
-  Render paths: `/tmp/nick-q1-shipped/grid/` (16 full PNGs +
-  sheet-full.png), `/tmp/nick-q1-shipped/grid-96/four-corners.png`
-  (Pascal four-corner test), `/tmp/nick-q1-shipped/tintin-regression/`
-  (4 cells + sheet), `/tmp/post-q1-manifest/manifest.txt` (816-cell
-  hashes). LOC: +284 / -111 = +173 net diff stat; code-only
-  +94 / -25 = +69 net (within shouting distance of Lloyd's ~+50
-  estimate; +~104 of the diff is inline pedagogy comment on the
-  `AllowedDeclarePath` union, `applyDeclares` helper, the new
-  `recipe.fillStyle` knob, and the `Pack` type — honest comment-
-  heaviness, not algorithm bloat). Flagged in handoff for Lloyd
-  to thin if desired. **Open for Lloyd review** (architectural
-  surface = cascade order + type system change).
+(none yet)
 
-- **Nick — Q2 demographic-topology push** (`tasks/nick-q2-demographic-
-  topology.md`). Lloyd Q2 §Pick landed verbatim in `demographics.ts`:
-  `child.jaw` bigonial 0.55→0.62 + mental 0.55→0.60; `masculine.jaw`
-  bigonial 0.82→0.86 + mental 0.46→0.42 + gonialAngle 0.25→0.18;
-  `elder.jaw` bigonial 0.70→0.74 + jowl 0.38→0.48. Two private
-  off-grid fixtures (`elderMascPear`, `adultFemPointed`) exported as
-  named partials — NOT new public ages/presentations. Grid script
-  restored cells 6/7/11, opts in for the two private fixtures, and
-  renders the `tintin × 4` regression sheet alongside the 16-cell
-  timmFlat grid. Four-corner test (cells 1/4/12/14) at 96px now reads
-  as four distinguishable topologies — what Pascal Pass 2 failed.
-  Nick's honest pre-Pascal read: all 5 short cells (12-16) should
-  land at ≥ 5; Pascal calls the absolute score in Wave 3. No `tintin`
-  regression visible; `default`/`ligneClaire` × untouched-demographic
-  byte-identical. **Open for Lloyd review** (type / data layer).
-
-## Blocked / pending (W3)
+## Blocked / pending (W4)
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Felix  | Long-hair primitive rebuild (first spawn) | Can run parallel to Nick Q2 + Q1 (file overlap zero — field-tracer vs demographics/api). Bob spawns when queue clears |
-| Holly  | Test-strategy doc + first regression sweep | Slid to W4 unless W3 finishes tight |
-| Pascal | W3 close re-score (16-cell timmFlat + 4-cell tintin) | All three engine rows landing + re-render |
+| Felix + Nick | Ceiling-raiser primitives (Box 2) | Box 1 audit naming the lever list + priority |
+| Pascal | Master-tier re-score (Box 3) | Box 2 ceiling-raisers landing + re-render |
+| Holly  | Test-strategy doc (Box 4) | Nothing — runs parallel from W4-open (zero code overlap) |
 
-## Q1-W3 spawn order (for Bob)
+## Q1-W4 spawn order (for Bob)
 
-Per Lloyd's W2 design-pass recommendation: **Q2 first** (smaller, no
-architectural risk, Pascal gets early signal), **Q1 second**
-(architecture lands after the topology data is good). The long-hair
-primitive rebuild runs **in parallel** with Wave 1 because David's
-hire decision landed before sprint open and Felix's lane has zero
-file overlap with Nick's Q1/Q2 work.
+Two lanes run in parallel from W4-open; the (B) lane is serial within
+itself (audit → implement → score).
 
-**Wave 1 (parallel — Felix runs alongside Nick because zero file overlap):**
+**Wave 1 (parallel — two independent lanes, zero file overlap):**
 
-1. **Nick — `tasks/nick-q2-demographic-topology.md`** (NEW, drafted
-   by Claudia). Implement Lloyd's Q2 design: jaw proportion spread
-   in `demographics.ts` + two private fixtures (`elderMascPear`,
-   `adultFemPointed`). Mixture-rule regression guard: `tintin × 4`
-   cells. ~50 LOC, half-day plus tuning. **Lloyd reviews on
-   completion.**
+1. **(B-lane head) Leo + Rollo — `tasks/leo-rollo-timmflat-ceiling-
+   audit.md`.** Name what confident-pro timmFlat needs: the
+   ceiling-raisers in priority order, expected Pascal lift each, and
+   the honest call on whether the named levers reach 6-7 OR the ceiling
+   is architectural. This gates Box 2's lever list. Leo leads
+   (pedagogy of the Timm villain/hero register split + the lid-weight
+   canon); Rollo confirms the asset-side lift. **Short — an audit, not
+   a build.**
 
-2. **Felix — `tasks/felix-longhair-primitive-rebuild.md`** (NEW,
-   drafted by Claudia). Felix's **first spawn** per AGENTS.md
-   §Onboarding-note. Field-tracer rebuild: no-op multi-strand layer
-   when `clumpMode: 'flat'` AND no leads configured, OR add
-   `recipe.strandMode: 'off'` knob — Felix calls per smallest-fix
-   discipline + graphics-math judgment on the field-tracer integration
-   path. Closes cells 6/7/11. ~30-50 LOC in `src/render/field-
-   tracer.ts`. **Felix reviews own graphics-math; Lloyd reviews
-   architectural surface if any is touched.**
+2. **(C-lane, fully parallel) Holly — `tasks/holly-test-strategy-
+   doc.md`.** Holly's first spawn. Design artifact. Zero code overlap
+   with the (B) lane — can run start-to-finish alongside Wave 1+2+3.
+   Bob spawns at W4-open and lets it run.
 
-**Wave 2 (sequential after Q2 lands; ~zero serialization risk against
-Felix's row since different files):**
+**Wave 2 (serial after Wave 1 audit lands):**
 
-3. **Nick — `tasks/nick-q1-cascade-merge-manifest.md`** (NEW, drafted
-   by Claudia). Implement Lloyd's Q1 design: `pack.declares` field +
-   allowed-path type union + second pack pass in `mergeParams` +
-   `timmFlat.declares` + delete Nick PR #4's
-   `suppressInteriorHairDetail` flag. ~65 LOC, half to one day.
-   **Owner: Nick.** Architecture-shaped work but Lloyd's design is
-   the architecture; Nick implements straight per the design.
-   **Lloyd reviews on completion** (architectural surface change —
-   Lloyd's lane per PROCESS.md decision-rights).
+3. **(B-lane) Felix + Nick — `tasks/felix-nick-timmflat-ceiling-
+   raisers.md`.** Implement the levers Box 1 prioritized. Felix owns
+   the graphics-math interior (new `highlightCutout` primitive; the
+   line-weight-multiplier render-path touch) + reviews Nick's
+   graphics-math; Nick wires the pack-data + knob defaults + the
+   `timmFlat.declares` additions; Leo confirms pedagogy on the
+   rendered probe. Lloyd reviews if the line-weight multiplier touches
+   an architectural seam (likely a small render-path knob, not a
+   cascade change — Lloyd confirms scope on review). **Mixture-rule
+   regression guard built in: non-timmFlat packs byte-identical.**
 
-**Wave 3 (sequential after Wave 1 + Wave 2 land):**
+**Wave 3 (serial after Wave 2 lands + re-render):**
 
-4. **Pascal — `tasks/pascal-w3-close-rescore.md`** (NEW, drafted by
-   Claudia). Re-score the full 16-cell timmFlat grid (all 16, not
-   just the previously-deferred 6/7/11) against the AGENTS.md anchor
-   table. Plus the 4-cell `tintin × demographic` regression check
-   per Lloyd's mixture-rule caveat. Acceptance: Pascal ≥ 5 on 16/16
-   (strict) OR 13/16 with a named single-root-cause filed for W4+.
-   No re-litigation of calibration (audit closed Pass 1) or
-   four-corner test (the demographic-topology gap is now the engine
-   work being scored, not a separate gate).
+4. **(B-lane) Pascal — `tasks/pascal-w4-master-tier-rescore.md`.**
+   Re-score the 16-cell grid + villain-register probes, absolute. The
+   yes/no/why evidence is the W4 headline deliverable. Re-confirm
+   `tintin × 4` holds (shared render-path guard). Calibration audit
+   NOT re-litigated (closed Pass 1).
 
 **Conditional / not queued:**
 
-5. **Lloyd code review** on Nick's Q1 + Q2 PRs. Bob-triggered post-
-   merge, not Claudia-queued. Lloyd's design pass already named the
-   exact regression checks each PR should pass; review is
-   confirmatory. Felix reviews Nick's PRs only if they touch
-   graphics-math interior (neither Q1 nor Q2 do — Q1 is cascade
-   architecture, Q2 is data tuning).
-6. **Holly** — test-strategy doc first spawn. Slips to W4 unless
-   W3 finishes tight.
-7. **Rollo** — next touch is W4 pack #5 spec (per ROADMAP scope-cut).
-   No W3 queue.
-8. **Leo** — no audits queued for W3. W4 pack #5 pick may demand
-   an orbital-socket primitive Leo brief; deferred until pack pick.
-9. **David** — monthly directional review naturally lands around
-   W3 close or W4 open. Bob surfaces if the W3 trajectory shifts.
+5. **Lloyd review** on the ceiling-raiser PR — Bob-triggered if Wave 2
+   touches an architectural seam (the line-weight multiplier render
+   path). Felix reviews the graphics-math interior in-lane.
+6. **Holly thin-regression pass** — only if W4 has room after the four
+   boxes; else slips to Q2-open (Gary-confirmed: the (C) minimum is
+   the doc).
+7. **Leo / Rollo pack #5 full-stack spec** — Q2-open, NOT W4.
+8. **Lloyd body-architecture design pass** — Q2-open per Claudia's
+   call (David's lean), unless Box 1 surfaces the ceiling is
+   architectural, in which case Box 1's finding is the input to it.
 
 ## History
 
-### Q1-W2 (closed — accept-with-known-gaps per Pascal Pass 2; W3 closes the gap)
+### Q1-W3 (closed — CLEAN-CLOSE, 16/16 strict per Pascal Pass 3)
+
+**Closure summary:** Pascal Pass 3 (`research/pascal-w2-timmflat.md`
+§Pass 3) scored the full 16-cell `timmFlat` grid at **16 / 16 cells at
+Pascal ≥ 5 — strict close threshold met** (NOT ship-with-named-gap).
+Four-corner test **PASSES** (cells 1/4/12/14 read as four
+distinguishable topologies at 96px — the W2-diagnosed
+demographic-topology gap mechanically closed). `tintin × 4` regression
+**HOLDS** (3 cells drift in Lloyd's designed direction — sharper /
+clearer demographic read; 1 byte-identical; no cell worse than its
+prior register; `pack.proportionScale` fallback NOT triggered). No
+sniff-test fires on any ≥ 5 cell; calibration holds, no recalibration.
+
+**Honest note for the record (Pascal's framing, carried forward to
+W4):** timmFlat ships at **Pascal-5 across full demographic depth** —
+"a real pro could plausibly have drawn this on an off day," pro daily
+output, NOT master register. The next ceiling (Pascal 6→7,
+pro-daily → confident-pro) is a separate axis that was not W3's job.
+This is the exact ceiling note David escalated and Gary answered with
+"prove master-tier" — W4's primary job.
+
+**Goal (met):** close the full 16-cell `timmFlat` grid at quality bar
+by landing Lloyd's Q2 (demographic-topology) + Q1 (cascade-merge
+manifest) designs + the long-hair primitive rebuild owning cells
+6/7/11. End of W3 = pack #2 at full demographic depth, ROADMAP
+"depth > count" satisfied. **All five acceptance boxes closed `[x]`.**
+
+**Acceptance (all met):**
+
+- [x] **Q2 — demographic-topology push landed.** Nick implemented
+  Lloyd Q2 §Pick verbatim in `demographics.ts` (jaw proportion spread
+  across child/masculine/elder: `bigonialWidth` / `mentalWidth` /
+  `gonialAngle` / `jowl`) + two private off-grid fixtures
+  (`elderMascPear`, `adultFemPointed`) folding Rollo's BACKLOG
+  `pointed`/`pear` row in as private demographic-data (NOT public
+  axis additions). Four-corner test at 96px now reads four
+  distinguishable topologies. Commit `9e03a7f`. Handoff in
+  `tasks/nick-q2-demographic-topology.md`. Lloyd-reviewed.
+
+- [x] **Q1 — cascade-merge hybrid manifest landed.** Nick implemented
+  Lloyd Q1 §Pick: STYLE re-ordered to NEW slot 6 (post-hairstyle,
+  pre-expression) + per-pack `declares: readonly AllowedDeclarePath[]`
+  manifest. `AllowedDeclarePath` string-literal-union in
+  `model/params.ts` excludes demographic paths AT COMPILE TIME
+  (verified: 11/11 forbidden paths produce TS errors). `timmFlat.
+  declares` covers 14 paths. Default `[]` on `default`/`tintin`/
+  `ligneClaire` → 816-cell broad regression byte-identical. Nick PR
+  #4's `recipe.suppressInteriorHairDetail` flag DELETED, replaced by
+  declarative `recipe.fillStyle: 'standard' | 'flat'`. Commit
+  `a884a54`. Handoff in `tasks/nick-q1-cascade-merge-manifest.md`.
+  Lloyd-reviewed.
+
+- [x] **Long-hair primitive rebuild landed.** Felix's first spawn
+  (per AGENTS.md §Onboarding-note). Flat-curtain primitive closes
+  cells 6/7/11 (longSleek/longTail at Timm flat-shape register) —
+  single closed silhouette, flat fill, no strand field. Default
+  preserves current strand behavior (mixture rule). Commit `835148f`.
+  Handoff in `tasks/felix-longhair-primitive-rebuild.md`. Honest
+  day-one calibration surface noted — Felix's first owned piece of
+  work, landed at quality. Lloyd reviewed architectural surface;
+  Felix self-reviewed graphics-math.
+
+- [x] **Full 16-cell re-render + Pascal re-score.** Pascal Pass 3:
+  **16/16 cells at Pascal ≥ 5 (strict).** Cells 6/7/11 first-time ≥ 5
+  (Felix's primitive); cells 12-16 promoted 4 → 5 (Q2's jaw-proportion
+  spread); cells 1-5, 8-10 held at 5 through the Q1 manifest rewrite
+  (no regression from the `suppressInteriorHairDetail` →
+  `fillStyle: 'flat'` migration). Four-corner test PASSES.
+
+- [x] **`tintin × 4` regression re-score.** HOLDS on all 4 cells.
+  Mixture-rule guard satisfied; `pack.proportionScale` fallback NOT
+  triggered (stays in BACKLOG).
+
+**Done this sprint (W3):**
+
+- **Pascal — W3 close re-score, Pass 3** (`research/pascal-w2-timmflat.md`
+  §Pass 3 + `tasks/pascal-w3-close-rescore.md`). 16/16 ≥ 5 strict;
+  four-corner PASSES; tintin × 4 HOLDS; no sniff-test fires;
+  calibration holds. Movement signal: demographic-topology axis
+  (cells 12-16, 4→5) + long-hair primitive axis (cells 6/7/11,
+  2→≥5) both strict progress; cascade-leak axis held through the Q1
+  refactor. Honest Gary-framing recorded: 16/16 at Pascal-5 is honest
+  off-day-pro shipping, not master-tier — the ceiling note that
+  became W4's primary job.
+
+- **Nick — Q1 cascade-merge hybrid manifest** (`tasks/nick-q1-cascade-
+  merge-manifest.md`, commit `a884a54`). `AllowedDeclarePath` union +
+  `applyDeclares` helper + slot-6 late pass + `Pack` type + 14-path
+  `timmFlat.declares` + `suppressInteriorHairDetail` → `fillStyle`
+  migration. 816-cell broad regression byte-identical on non-timmFlat;
+  declares-disallowed-path fixture confirms compile-time engine/style
+  separation. Lloyd-reviewed (architectural surface).
+
+- **Nick — Q2 demographic-topology push** (`tasks/nick-q2-demographic-
+  topology.md`, commit `9e03a7f`). Jaw spread in `demographics.ts` +
+  two private fixtures. Four-corner test fixed. No tintin regression
+  visible; default/ligneClaire × untouched-demographic byte-identical.
+  Lloyd-reviewed (data layer).
+
+- **Felix — long-hair primitive rebuild** (`tasks/felix-longhair-
+  primitive-rebuild.md`, commit `835148f`). Flat-curtain primitive,
+  cells 6/7/11. First Felix spawn; calibrated the new graphics-domain
+  lane into the team. Mixture-rule default preserves strand behavior.
+
+- **Claudia — W3 close + W4 plan** (this artifact +
+  `tasks/claudia-q1w3-close-w4-plan.md`). Closed W3 to History;
+  opened W4 against David's direction + Gary's "prove master-tier"
+  confirmation.
+
+**W3 → W4 carry-overs:**
+- Master-tier push on timmFlat (Pascal-5 → 6-7). **W4 primary (B),
+  must-have per Gary.**
+- Holly test-strategy doc (deferred since W1). **W4 secondary (C),
+  minimum-must-land.**
+- Pack #5 spec. **DEFERRED to Q2-open, full-stack with body
+  conventions (NOT cut).**
+- Lloyd body-architecture design pass. **Q2-open (Claudia's call).**
+
+### Q1-W2 (closed — accept-with-known-gaps per Pascal Pass 2; W3 closed the gap)
 
 **Closure summary:** Pascal Pass 2 landed 8/13 retained cells at
 ≥ 5 (cells 1, 2, 3, 4, 5, 8, 9, 10), with 5 cells held at 4
-(cells 12, 13, 14, 15, 16). All 5 short cells trace to a single
+(cells 12, 13, 14, 15, 16). All 5 short cells traced to a single
 root cause: the demographic-topology gap (child-round / elder-
-jowled / adult-square don't diverge at silhouette). That gap is
+jowled / adult-square don't diverge at silhouette). That gap was
 already owned by Lloyd's W3 Q2 design (~50 LOC in
 `demographics.ts`). Gary's call after the close report: accept
 Pascal's ship-with-known-gaps recommendation, close W2, open W3.
@@ -295,8 +357,8 @@ long-hair primitive and the cascade-merge implementation to W3.
 
 Pascal scored these 2/2/2 — primitive-level long-hair field-tracer
 fights Timm canon ("long hair = one flat shape") at the engine-
-primitive level. W3 closes them via the long-hair primitive rebuild
-row.
+primitive level. W3 closed them via the long-hair primitive rebuild
+row (Felix).
 
 **Revised acceptance (what closed Q1-W2):**
 
@@ -308,13 +370,11 @@ row.
   held at Pascal 4 — all 5 trace to the demographic-topology gap,
   owned by W3 Q2 design row. Cells 6, 7, 11 deferred to W3 long-hair
   primitive row. Pack DATA landed (PR #3). Cascade-leak fix (PR #4)
-  landed clean on all 6 primary fix targets. **Box closes partial
+  landed clean on all 6 primary fix targets. **Box closed partial
   on the explicit understanding that W3 finishes the full 16-cell
-  grid.**
+  grid — W3 delivered 16/16.**
 - [x] **Pascal calibration audit — calibration holds.** Filed at
-  `research/pascal-w2-timmflat.md` §Calibration. The Job 1 verdict
-  (NO-SHIP at original 16-cell gate) triggered the re-plan; the
-  Job 2 verdict (calibration holds) is the W1-deferred outcome.
+  `research/pascal-w2-timmflat.md` §Calibration.
 - [x] **Lloyd architectural design pass landed** —
   `research/lloyd-cascade-architecture.md`. Q1 cascade-merge hybrid
   manifest at slot 6 + per-pack `declares` (~65 LOC W3). Q2
@@ -327,94 +387,23 @@ row.
 - **Pascal W2 Pass 2 re-score** — `research/pascal-w2-timmflat.md`
   §Pass 2 + `tasks/pascal-w2-revised-rescore.md`. 8/13 cells ≥ 5;
   all 6 primary cascade-leak fix targets confirmed clean; 5 short
-  cells all the demographic-topology gap (Lloyd Q2 owns). No
-  calibration drift, no mixture-rule alarm. Recommendation:
-  accept-with-known-gaps; W3 Q2 closes the full grid. Pascal's
-  diagnosis confirmation: Pass 1 cascade-leak symptom framing was
-  correct; mechanism guess (recipe.leads survival) was upstream of
-  the true root cause (unconditional clump-stroke + sweep-stroke +
-  cap-tone blocks in `scaffold.ts`).
-
+  cells all the demographic-topology gap (Lloyd Q2 owns).
 - **Nick PR #4 — cascade-leak fix** — `tasks/nick-cascade-leak-fix.md`.
-  Two commits on vector-draw: `8a9b5f0` WIP checkpoint, `f0c1a5e`
-  final handoff + 13-cell grid re-render. Nick chose **Option C
-  primitive-flag promotion**: `recipe.suppressInteriorHairDetail`
-  (params.ts type field + scaffold.ts 4 gates + styles.ts pack-
-  level setting). Lloyd's W3 manifest design subsumes the flag
-  (two-line delete in W3 commit that lands the manifest). Nick's
-  honest pre-Pascal read: six primary fix targets (4, 5, 8, 10,
-  13, 16) all read clean at the bang line. 50/50 byte-identical
-  regression on existing packs.
-
+  `recipe.suppressInteriorHairDetail` (subsumed by W3 manifest).
 - **Lloyd cascade-architecture design pass** —
   `research/lloyd-cascade-architecture.md` (commit `74792f5`).
-  Q1 (cascade-merge): hybrid manifest at NEW slot 6 + per-pack
-  `declares: string[]` (~65 LOC W3). Q2 (topology gap):
-  demographic-preset-data layer fix (~50 LOC W3). Recommended W3
-  order to Claudia: Q2 first, Q1 second; mechanically independent.
-  Mixture-rule caveat for Q2 on `tintin` (regression guard via
-  Pascal re-score of 4 tintin cells). Subsumes Nick PR #4's
-  primitive-flag fallback (delete in W3).
-
 - **Claudia W2 re-plan** — `tasks/claudia-q1w2-replan-pascal-no-ship.md`.
-  Re-planned W2 post Pascal's NO-SHIP. Decision: land 13-cell
-  timmFlat in W2 (drop 6/7/11), land cascade-leak fix + Lloyd
-  architectural design pass; slide long-hair primitive + cascade-
-  merge implementation + demographic-preset topology push to W3;
-  explicit ROADMAP scope-cut on W3's next-pack-spec slot (slides
-  to W4).
-
-- **Pascal W2 close pass** — `research/pascal-w2-timmflat.md`. Two
-  jobs in one file. Job 1: **3/16 cells at Pascal ≥ 5 — NO-SHIP at
-  the original 16-cell W2 gate.** Job 2: **calibration holds.**
-  Four-corner test FAILED on Pascal's read. Three failure clusters:
-  cascade-leak (6), long-hair primitive ceiling (3), demographic-
-  topology gap (4 + four-corner). Calibration audit: sniff-tests
-  are register-sensitive, not absolute. Escalation flag filed for
-  Gary's awareness (no pause): pack-as-declarative-truth vs pack-as-
-  overrides at render time. Lloyd's W3 manifest design landed that
-  call.
-
-- **Nick PR #3** — `tasks/nick-timmflat-pack.md`. `timmFlat` pack
-  lands in `src/presets/styles.ts` (+62 LOC); grid script at
-  `scripts/timmflat-grid.ts`; full 16-cell sheet rendered at
-  `/tmp/timmflat-out/`. Cascade-order spec-drift surprise filed
-  for architectural fix (now Lloyd W2 design pass). PR #3 committed
-  across `4c1caee` (pack data, parallel-edit collision into Lloyd-
-  Pass-3 commit) + `236fd8a` (grid script + handoff).
-
-- **Lloyd Pass 3** — code review of Nick PR #2. Verdicts:
-  LOC overrun APPROVED-AS-IS, decision-1 default split APPROVED-
-  AS-IS, ALPHA_FACTOR=1.5 APPROVED-AS-IS for v1, dead-code at
-  `hull.ts:71-86` NEEDS-CHANGES → surgical 11-line drop landed
-  inline by Bob as `dda5d0b`.
-
-- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Alpha-shape
-  + `hullMode` knob landed. 30/30 byte-identical; longCurtain
-  wimple + coilyHalo hexagon eliminated.
-
+- **Pascal W2 close pass** — `research/pascal-w2-timmflat.md`. Job 1:
+  3/16 ≥ 5, NO-SHIP at original 16-cell gate. Job 2: calibration holds.
+- **Nick PR #3** — `tasks/nick-timmflat-pack.md`. `timmFlat` pack data.
+- **Lloyd Pass 3** — code review of Nick PR #2.
+- **Nick PR #2** — `tasks/nick-alpha-shape-hullmode.md`. Alpha-shape +
+  `hullMode` knob.
 - **Nick PR #1** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
-  Three commits: eye plumbing + centreU keying + debug attr drop.
-  Catalog dots-mode 30/30 byte-identical; flat-mode 26/30 byte-
-  identical post-centreU. Demographic-preset lidLine-on-default/
-  ligneClaire side-effect filed for Pascal/Holly to flag if anything
-  reads off.
 
-**ROADMAP scope-cut declaration (held):** The W3 next-pack-spec
-slot stays slid to W4. Q1 pack count: default + tintin + ligneClaire
-+ timmFlat = 4 packs at the ROADMAP N ≥ 4 floor. W3 close = pack #2
-at full demographic depth. W4 = spec + implement pack #5 if budget
-allows, otherwise polish + first Holly sweep + Q1 closeout. The
-ROADMAP rule (demographic depth > pack count) is preserved.
-
-**W2 → W3 carry-overs:**
-
-- Long-hair primitive rebuild (cells 6/7/11). **W3 row.**
-- Cascade-merge hybrid manifest implementation per Lloyd Q1 design.
-  **W3 row.**
-- Demographic-preset topology push per Lloyd Q2 design. **W3 row.**
-- Re-render of full 16-cell grid + Pascal re-score. **W3 closeout.**
-- Tintin × 4-cell regression re-score (mixture-rule guard). **W3 closeout.**
+**ROADMAP scope-cut declaration (held through W3):** The next-pack-spec
+slot stayed slid; W3 closed pack #2 at full demographic depth. W4 spends
+on master-tier proof + Holly doc; pack #5 deferred to Q2-open full-stack.
 
 ### Q1-W1 (closed — all four ship-gate boxes met)
 
@@ -428,67 +417,44 @@ ROADMAP rule (demographic depth > pack count) is preserved.
    (not implemented). The spec is what Nick consumes in Q1-W2.
 
 **Side rail:** Leo audit on eye/mouth/brow integration under the
-current `tintin` pack — to know whether W2 pack #2 implementation
-needs primitive fixes before it can hit Pascal ≥ 5.
+current `tintin` pack.
 
 **Closed:**
 
 - **Box 1 + Box 2 (Nick 3D clump-volume refactor, 7 commits ending
   `909244c`).** All 13 existing hairstyles bit-for-bit identical in
-  flat mode (stricter than Lloyd's visually-equivalent §5 promise).
-  Volume mode renders cleanly for the three fixtures (`shortBob`
-  byte-identical, `longCurtain` gravity, `coilyHalo` radial). Net
-  +444 LOC engine + 148 fixtures. Convex-hull artefact more
-  dramatic than Lloyd §7 predicted; Lloyd review pulled alpha-shape
-  into W2 instead of "deferred until adoption."
+  flat mode. Volume mode renders cleanly for the three fixtures. Net
+  +444 LOC engine + 148 fixtures. Lloyd review pulled alpha-shape
+  into W2.
 - **Box 3 (Leo + Rollo joint timmFlat spec at
-  `research/stylepack-timmFlat-spec.md`).** Pedagogy half (Leo) +
-  asset half (Rollo) both signed. Implementable in W2 without any
-  BACKLOG primitive promotion.
+  `research/stylepack-timmFlat-spec.md`).** Both halves signed.
 - **Box 4 (Leo face-integration audit at
-  `research/leo-face-integration-audit.md`).** Eyes = STOP, small
-  (~25 LOC eye-primitive plumbing prereq before timmFlat impl).
-  Brows / Mouth / Integration = GO-WITH-CAVEATS for W2.
-  Cross-cutting: features-as-decals integration debt is real;
-  timmFlat dodges it because Timm canon literally IS decals; pack
-  3+ will hit it hard and need a socket-recess primitive pass.
-  Six BACKLOG candidates flagged.
-- **Lloyd pass 2 review.** Four verdicts: tangent-decay APPROVED-
-  WITH-EDITS (next-PR); `hullGroup` keying APPROVED-WITH-EDITS
-  (one-line at `scaffold.ts:1414`); `data-hull-group` debug attr
-  NEEDS-CHANGES (drop); alpha-shape deferral NEEDS-CHANGES (pull
-  into W2). Plus dead-code flag at `hull.ts:71-86`.
+  `research/leo-face-integration-audit.md`).** Eyes = STOP (eye-
+  primitive plumbing prereq). Cross-cutting: features-as-decals
+  integration debt is real; timmFlat dodges it; pack 3+ will hit it
+  hard and need a socket-recess primitive pass. Six BACKLOG
+  candidates flagged.
+- **Lloyd pass 2 review.** Four verdicts.
 
-**Carry-overs into W2:**
-- Eye primitive plumbing (Leo STOP).
-- `hullMode` alpha-shape + Lloyd items 2 & 3 bundle.
-- timmFlat implementation against the W1 spec.
-- Pascal calibration audit (deferred from W1, no output to score).
+**Carry-overs into W2:** eye plumbing; `hullMode` alpha-shape bundle;
+timmFlat implementation; Pascal calibration audit.
 
-**Deferred / filed to BACKLOG (W1 close):**
-- Tangent-decay parameter exposure (Lloyd item 1 next-PR).
-- Six Leo BACKLOG candidates triaged (eye plumbing PROMOTED to W2;
-  the other five DEFERRED to W3+ or later — see BACKLOG.md).
-- `hull.ts:71-86` dead-code cleanup (low priority refactor row).
-- `pointed` / `pear` jaw topology dispatch through demographic
-  presets (Rollo adjacent-gap #1 — filed as backlog row).
-- Per-feature line-weight multiplier (filed as backlog row).
-- Categorical `brows.shape` enum (filed as backlog row).
+**Deferred / filed to BACKLOG (W1 close):** tangent-decay exposure;
+six Leo candidates triaged; `hull.ts:71-86` dead-code; `pointed`/`pear`
+jaw dispatch; per-feature line-weight multiplier; categorical
+`brows.shape` enum.
 
 ### Sprint pre-Q1 (the long session that built the foundation)
 
-- Leo passes 3, 4, 5, 6, 7, 8 — pedagogy + audits.
+- Leo passes 3-8 — pedagogy + audits.
 - Lloyd pass 1 — 3D clump-volume architecture (TL approved).
 - Rollo pass 1 — catalog review.
 - Hair-theorist pass — physics doc.
-- Nick tuning pass 1 — three bug fixes (shortPomp topknot, bob scar,
-  longTail merge).
-- Nick pass 2 — bob HIGH regression fixed; lead/fill rename with
-  deprecation alias.
+- Nick tuning passes 1 + 2.
 - Recipe primitive (`HairstyleRecipe` + 11 hairstyle files).
 - Collab artifacts created: SPRINT / BACKLOG / tasks/.
 - ROADMAP + PROCESS docs created.
-- Nine-role crew formalized (added David CEO, Claudia PM, Holly QA).
+- Nine-role crew formalized (David CEO, Claudia PM, Holly QA).
 - David pass 1 + pass 2 (roadmap audit + scope revision).
 - Mixture-not-survival rule encoded.
 - Forest registry initialized.
