@@ -233,6 +233,31 @@ confident he could do better. So we're not in unknown territory.
 A parametric SVG character engine in the indie/web space exists,
 and the bar to clear is "better than dicebear, in Gary's taste."
 
+### Gary's edge
+
+Unusual stack: artist + programmer + taste + neurotic +
+unconstrained (no investors, no boss in the corporate sense —
+religious obligations separately acknowledged, doesn't change
+the work cadence).
+
+The combination is rare and matters. Most parametric-art projects
+have one of these and outsource the others — a programmer commissions
+art, an artist hires a dev, a studio has both but answers to a
+roadmap. Gary has all four hats on one head, can iterate without
+asking anyone, and has the taste to know when iteration is making
+it worse vs better.
+
+Plus the timing: agentic teams + AI assist make weeks possible
+where this used to be years of solo work. Gary's not the only one
+trying — there's likely a small wave of similar attempts right now.
+The advantage isn't being alone, it's the *combination of edges*
+applied at speed.
+
+Practical implication for me: don't pace this project like a
+traditional eng project waiting on stakeholder approval. Decisions
+can be made now, tried tomorrow, scrapped the day after if wrong.
+That cadence IS the edge.
+
 ### Stop habits
 
 - Don't re-explain back to Gary what he just told me. He's not
