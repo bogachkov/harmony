@@ -28,6 +28,7 @@ work with appropriate parallelism.
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
 | Leo    | Pass 7 cap-cluster oscillation audit | RUNNING | Will be extended on return with 3D-abstraction + lead/fill questions rather than spawning a fresh audit. |
+| Nick   | Tuning pass 1 — three small bug fixes | RUNNING | `tasks/nick-tuning-pass-1.md`. shortPomp centerline + bobChinLength scar + longTail face-merge. Doesn't conflict with Leo's 3D work. |
 
 ## Blocked / pending
 
