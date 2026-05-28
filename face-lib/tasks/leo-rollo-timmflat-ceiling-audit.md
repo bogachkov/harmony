@@ -109,5 +109,50 @@ A short audit in `face-lib/research/leo-rollo-timmflat-ceiling.md`:
 
 ## Handoff
 
-(Leo + Rollo fill in on completion. Name the final lever list — Felix
-+ Nick scope `tasks/felix-nick-timmflat-ceiling-raisers.md` against it.)
+**Status:** DONE. Audit: `face-lib/research/timmflat-ceiling-audit.md`
+(studied the actual 16-cell PNG grid + four-corners thumbs).
+
+### Gating decision: BUILD PROCEEDS on L1 + L2 (L3 if room).
+
+Both flagged levers confirmed REAL and ABSENT in the shipped renders (hair is
+single flat tone everywhere — no shadow cutout; line is one uniform weight
+everywhere — lid == contour == brow == mouth). Build them. They bank a real,
+gradeable lift. They do **not** reach dependable-7 — that is architectural
+(A-1), a Q2 finding, not a W4 task.
+
+### Lever list Felix + Nick scope `felix-nick-timmflat-ceiling-raisers.md` against
+
+| # | Lever | Who | Expected lift | Build? |
+|---|-------|-----|---------------|--------|
+| L1 | `highlightCutout` primitive, used INVERTED as a hair shadow-cutout (one dark cel-shadow over ~30-50% of the hair mass, light side 3/4-front-left); also eye / lower-lip specular knockout | Felix (primitive) + Nick (pack-data wire) | 5 → 6 broad; strong cells brush 7 | **YES — first** |
+| L2 | Per-feature line-weight multiplier — upper-lid 2-3x face contour (Timm canon table); secondary edges lighter | Felix (graphics-math interior) + Nick (table) | +0.5-1 on top of L1 | **YES — second** |
+| L3 | Mouth-corner darkening accent | Nick (pack param) | small (+0.25) | **only if L1+L2 land with room** |
+| L4 | Brow-as-plane / value step | — | — | **NO — fake without a brow-ridge normal; folds into A-1** |
+| A-1 | Feature-attachment model (orbital socket / brow ridge / mouth-on-mandible normals) | Lloyd | structural; the 6→7-dependable unlock | **NO — Q2 finding** |
+
+**Mixture-rule (Rollo):** both L1 + L2 are additive opt-ins on the `timmFlat`
+pack only. L2 touches the shared render line-weight path — it MUST land as a
+per-feature *multiplier over* the existing `style.lineWeight` scalar, default
+1.0 everywhere, so `default` / `tintin` / `ligneClaire` stay byte-identical.
+Pascal/Holly: guard with a tintin × demographic regression re-score (the same
+guard used at W3 close). L1 is a new primitive keyed off pack data — no shared
+path touched.
+
+### Architectural verdict
+
+**Decals cap timmFlat at a strong 6.** L1+L2 move *confidence* (most of the
+5→6 gap; best cells touch 7); they cannot move *integration* — a two-tone,
+heavier-lined feature is still painted on a flat skin plane with no socket /
+ridge / jaw turn. Dependable-7 across the 16-cell grid needs A-1. Third
+independent confirmation of the decal ceiling (Leo W1 integration audit,
+Pascal Pass-3 note, this render-level read).
+
+### Acceptance for the build
+
+L1+L2 should move the grid from 16/16 ≥ 5 to **16/16 ≥ 6**, with the
+strongest cells (clean adult 1/4) at 7. If that lands, the W4 thesis holds:
+levers buy 6, A-1 buys dependable-7. **Do not build L4 as a fake** — a brow
+plane-step without a brow-ridge normal introduces a form-turn the model can't
+honor and would *lower* scores.
+
+— Leo + Rollo, Q1-W4 joint ceiling audit. Co-signed.

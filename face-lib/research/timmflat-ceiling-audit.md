@@ -27,45 +27,49 @@ they are prerequisites the integration model will sit on top of anyway), and
 
 ## What the actual W3 renders show
 
-The shipped grid (`/tmp/nick-q1-shipped/grid/`) is the post-W3 state. The
-render source is self-incriminating in the best possible way — the cells label
-their own construction model. From `cell-00-young-f-african.svg`:
+Studied the shipped 16-cell grid (`/tmp/nick-q1-shipped/grid/` full +
+`/grid-96/` thumbs + `four-corners.png`). These are the post-all-W3 PNGs.
+The faces are genuinely clean: symmetric, confident closed contour, zero
+jitter, flat fills, demographically distinguishable jaw silhouettes
+(four-corner now passes — cell 1 square, 4 oval, 12 round, 14 jowled all
+read distinct at 96px). That is an honest Pascal-5. What's *missing* — and
+it's missing identically on all 16 cells — is what would push it to 6-7:
 
-- `<desc>… features-as-decals projection</desc>` — the renderer names the model.
-- Face base is a **single flat `ellipse`** with the comment
-  `skin plane: single flat tone, no form turn`. There is **no value step
-  anywhere on the skin** — no socket shadow, no brow-ridge plane, no jaw turn.
-- `.contour` and `.lid` are both `stroke-width: 2`. **Every line is one
-  weight.** The upper lid carries no more authority than the chin contour.
-- `.feature-fill { stroke: none }` — flat fills, **no specular knockout** on
-  eye, lip, or hair.
+- **Hair is a single flat tone — no shadow cutout, anywhere.** Look at cell
+  6 (long sleek), cell 1 (short swept cap), cell 4 (bob): each is one
+  uniform black mass. The Timm signature two-tone (base + one dark cel-shadow
+  over ~30-50% of the mass) is simply absent. This is the single most visible
+  "TV-flat vs published-flat" gap. **`highlightCutout` (used inverted, as a
+  shadow cutout) is the lever** — confirmed by eye, exactly as W1 spec §3 and
+  Pascal Pass-3 anticipated.
+- **The line is one weight everywhere.** The upper-lid stroke, the face
+  contour, the brow bar, and the mouth dash are all the same thickness. The
+  eye therefore has no hierarchy — in Timm canon the upper lid is 2-3x the
+  contour and the eye reads as "the lid more than the pupil." Here the lid is
+  a thin almond outline with a dot pupil and a small under-tick; it reads
+  *drawn-by-a-tool*, not *inked-with-intent*. **Per-feature line-weight is
+  the lever.** Most visible on the clean adult cells (1, 4) where everything
+  else is right and the flat eye is the only thing holding it at 5.
+- **The eye sits ON the skin, not IN a socket (all 16).** Flat skin plane
+  behind a flat almond, no shadow, no lid-crease depth. It is the textbook
+  features-as-decal. A heavier lid line (L2) makes it read *more deliberate*
+  but it still sits on the surface — L2 cannot put it in a socket.
+- **The mouth is a single flat dash, flat-on.** It doesn't wrap the jaw; the
+  corners don't turn back. On the broad-jaw cells (1, 14) the dash floats in
+  the lower third. A corner-darkening accent helps a little; it does not
+  wrap the form.
+- **The brow is a flat floating bar, no ridge.** Same-weight, no plane change
+  above the eye, nothing for the socket to hang off.
+- **Elder cells (14-16) read only ~15 years old-er than adult.** The jowl
+  silhouette (Q2 work) now lands, but with a flat skin plane there is nowhere
+  to put a crease, a fold, or an orbital hollow — age beyond silhouette has no
+  surface to live on. This is the *same decal cap* showing up as an age-read
+  ceiling.
 
-So all three of our W1 ceiling-raisers are confirmed *absent in the shipped
-build*, and Pascal's §Pass 3 "features applied-to, not emerging-from" reading
-is confirmed *at the source level*, not just by eye.
-
-**Where the off-day-pro read breaks down vs confident-pro — by cell:**
-
-- **Eye sits on skin, not in a socket (all 16 cells).** The almond + iris is a
-  clean shape, but with a flat skin plane behind it and a same-weight lid line,
-  it reads as a sticker on a balloon. This is the single most visible cap.
-  Worst on the high-contrast cells where the shape confidence makes the flat
-  placement *more* obvious (Leo's W1 prediction: the more graphically confident
-  the shape, the more its flatness shows) — e.g. `cell-05-adult-m-european`,
-  `cell-13-senior-m-african`.
-- **Mouth floats, doesn't wrap (all cells).** Lip shapes are value-separated
-  but flat-on; corners don't turn back onto the jaw cylinder. Reads pasted-on
-  most on the broad-jaw male cells (`cell-06`, `cell-09`, `cell-11`).
-- **Senior cells read too young (`cell-12`–`cell-15`).** Pascal flagged this in
-  Pass 2 and it persists: with no crease/fold and no plane change, age lives
-  only in hair value and silhouette. A flat skin plane has nowhere to put age.
-  This is a *symptom of the same decal cap* — age is a form-and-fold story.
-- **Brow is a flat shape, no ridge (all cells).** No plane change at the brow,
-  so the upper face has no structure above the eye to anchor the socket.
-
-None of these are "the shape is wrong." Every shape is a competent off-day-pro
-shape. They are all *placement / form-turn* failures. That is the decal ceiling
-expressing itself feature by feature.
+None of this is "the shape is wrong." Every shape is a competent off-day-pro
+shape. The misses are (a) two absent flat-graphic tells — hair-shadow and
+lid-weight — and (b) form-turn / attachment, which is the decal ceiling.
+(a) is buildable this week; (b) is architectural.
 
 ---
 
@@ -73,7 +77,7 @@ expressing itself feature by feature.
 
 | # | Lever | Owner | Expected lift | W4-fit | Verdict |
 |---|-------|-------|---------------|--------|---------|
-| L1 | **`highlightCutout`** — negative-space specular knockout on eye, lower lip, hair mass | Felix (primitive) + Nick (wire) | **5 → 6** (broad), strong cells brush 7 | **YES** | BUILD |
+| L1 | **`highlightCutout`** — used INVERTED as a hair shadow-cutout (one dark cel-shadow over ~30-50% of the mass, light side 3/4-front-left); plus specular knockout on eye + lower lip | Felix (primitive) + Nick (wire) | **5 → 6** (broad), strong cells brush 7 | **YES** | BUILD |
 | L2 | **Per-feature line-weight multiplier** — upper-lid 2-3x face contour; secondary edges lighter | Felix (primitive) + Nick (canon table) | **+0.5-1** on top of L1 | **YES** | BUILD |
 | L3 | **Mouth-corner darkening accent** | Nick (pack param) | small (+0.25), cheap | maybe, if time | NICE-TO-HAVE |
 | L4 | **Brow-as-plane / value step** | — | would help, **but** needs a normal at the brow to be honest | **NO** | borderline-architectural → folds into A-1 |
@@ -85,12 +89,14 @@ The BACKLOG estimated L1 and L2 at "~7→8." **We are downgrading the framing,
 not the levers.** Those estimates assumed a base already at 7; the shipped pack
 is a solid 5. From a 5 base:
 
-- **L1 `highlightCutout` is the bigger mover** and stays #1. It is *the*
-  flat-graphic "pro illustrator" tell — a knocked-out specular implies a light
-  source and a glossy plane with zero gradient, which is exactly the timmFlat
-  register (flat fills + decisive shape). It earns the most Pascal per byte and
-  it reads at thumbnail (confirmed against grid-96 use-case). Eye + lower lip
-  are the highest-value placements; hair mass third.
+- **L1 `highlightCutout` is the bigger mover** and stays #1. In the renders the
+  hair is a single flat tone on all 16 cells — the missing two-tone (base + one
+  dark cel-shadow) is *the* most visible "TV-flat vs published-flat" gap, so the
+  **inverted hair shadow-cutout is the highest-value placement**, not the
+  specular. A knocked-out specular on eye + lower lip is the secondary use — it
+  implies a light source and a glossy plane with zero gradient, exactly the
+  timmFlat register (flat fills + decisive shape). It earns the most Pascal per
+  byte and it reads at thumbnail (confirmed against the grid-96 use-case).
 - **L2 line-weight is the construction-confidence tell** and stays #2, but it
   is a *multiplier on L1's gains*, not an independent +1. A heavy upper-lid line
   makes the eye read deliberate — but on a flat skin plane it still sits on, not
