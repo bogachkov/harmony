@@ -1020,12 +1020,16 @@ const buildHair = (
 
   // Mass silhouette OUTLINE as inked stroke (perfect-freehand): confident, slightly
   // tapered at the temples. This replaces the uniform thin polyline that previously
-  // outlined the cap.
-  curves.push({
-    kind: 'feature-ink', closed: false, points: topSil,
-    role: 'hair-top',
-    ink: { size: 1.5, taperStart: 0.10, taperEnd: 0.10, pressureMid: 0.95 },
-  });
+  // outlined the cap. Per Leo SM-2 (pass 6): SUPPRESS for style='long' — the
+  // outline is what makes long-hair renders read as "cap with wisps." The fill
+  // stays; the strokes bridge into the fill (no boundary line).
+  if (style !== 'long') {
+    curves.push({
+      kind: 'feature-ink', closed: false, points: topSil,
+      role: 'hair-top',
+      ink: { size: 1.5, taperStart: 0.10, taperEnd: 0.10, pressureMid: 0.95 },
+    });
+  }
 
   // Hairline as a discrete inked stroke (skipped on receding so there's no scar across
   // the bald forehead; skipped on long because the forelock strokes cover the forehead
@@ -1176,55 +1180,67 @@ const buildHair = (
       }
       return out;
     };
-    const totalStrokes = 480;
-    for (let i = 0; i < totalStrokes; i++) {
-      // Seed distribution — split across the visible scalp so strokes
-      // originate from front AND sides, not just front-top. Real long hair
-      // covers the sides of the head; strokes seeded at u≈±PI/2 fall straight
-      // down along the side silhouette (per the field, gravity dominates at
-      // the equator). 50/50 split between front-biased and side-biased seeds.
-      let u: number;
-      let v: number;
-      const seedRoll = rng();
-      if (seedRoll < 0.50) {
-        // Front-biased (the falls-from-scalp portion).
-        u = (rng() + rng() - 1) * Math.PI * 0.6;
-        v = 0.55 * Math.PI / 2 + (rng() - 0.5) * 0.50 * Math.PI / 2;
-      } else if (seedRoll < 0.78) {
-        // Right-side seeds (u close to +PI/2). Spread over a v range so
-        // strokes start at multiple latitudes on the side, fall down together.
-        u = (0.55 + rng() * 0.35) * Math.PI / 2;
-        v = (0.05 + rng() * 0.70) * Math.PI / 2;
+    // CLUMPING TOPOLOGY (Leo pass 6 §9.5): instead of independent stroke seeds,
+    // generate ~28 clump centres on the scalp; each centre spawns 6-20 strokes
+    // drawn from a tight gaussian around it, with CORRELATED properties
+    // (length, phase, base thickness) so the clump reads as one ringlet/lock
+    // rather than as many independent strands. This simultaneously addresses
+    // the longCurly chaos (each clump = coherent curl group), edge-of-mass
+    // darkening (clumps stack ink at their boundaries), and the missing
+    // dominant-lock signal (long-tail clump-size distribution).
+    //
+    // Per Leo SM-1: total stroke ceiling ~450. Per SM-4: phase is DISCRETE per
+    // clump (each stroke belongs to exactly one clump), not derived from
+    // continuous position math.
+    const clumpCount = 28;
+    for (let c = 0; c < clumpCount; c++) {
+      // ---- Per-clump correlated properties (rolled ONCE per clump).
+      let centreU: number;
+      let centreV: number;
+      const sideRoll = rng();
+      if (sideRoll < 0.50) {
+        centreU = (rng() + rng() - 1) * Math.PI * 0.55;
+        centreV = 0.55 * Math.PI / 2 + (rng() - 0.5) * 0.45 * Math.PI / 2;
+      } else if (sideRoll < 0.75) {
+        centreU = (0.55 + rng() * 0.35) * Math.PI / 2;
+        centreV = (0.10 + rng() * 0.65) * Math.PI / 2;
       } else {
-        // Left-side seeds.
-        u = -(0.55 + rng() * 0.35) * Math.PI / 2;
-        v = (0.05 + rng() * 0.70) * Math.PI / 2;
+        centreU = -(0.55 + rng() * 0.35) * Math.PI / 2;
+        centreV = (0.10 + rng() * 0.65) * Math.PI / 2;
       }
-      // Continuous length distribution (no discrete buckets — those produced
-      // visible horizontal lines where many strokes ended at the same y).
-      // Two-pull bias toward shorter strokes with a long tail.
-      const length = 0.40 + rng() * rng() * 1.80;
-      // Continuous thickness too — most strokes around 1.5, with thin wisps
-      // and bold anchors at the extremes.
-      const size = 0.5 + rng() * rng() * 3.0;
-      const pressureMid = 0.65 + rng() * 0.35;
-      const surfaceOffset = 0.018 + rng() * 0.014;
-      const rawStroke = clumpStroke(field, { u, v }, length, 30, surfaceOffset);
-      if (rawStroke.length < 4) continue;
-      // Per-stroke wave amplitude varies (some strokes wavier than others) so
-      // waviness doesn't look synchronized. Phase also random so adjacent
-      // strokes don't peak together.
-      const ampJitter = waviness * (0.6 + rng() * 0.8);
-      const freqJitter = waveFrequency * (0.8 + rng() * 0.4);
-      const phase = rng() * Math.PI * 2;
-      const stroke = addWaviness(rawStroke, ampJitter, freqJitter, phase);
-      curves.push({
-        kind: 'feature-ink', closed: false, points: stroke,
-        ink: {
-          size, taperStart: 0.02 + rng() * 0.06, taperEnd: 0.25 + rng() * 0.40,
-          pressureMid, color: fillColor,
-        },
-      });
+      const lengthBase = 0.45 + rng() * rng() * 1.80;
+      // Per-clump thickness — triple-pull rng^3 distribution gives a long tail
+      // so ~10% of clumps are visibly heavier "dominant locks."
+      const sizeBase = 0.6 + rng() * rng() * rng() * 4.5;
+      // Clump phase — SHARED across all strokes in the clump so the clump
+      // waves as a unit.
+      const clumpPhase = rng() * Math.PI * 2;
+      const strokesPerClump = 6 + Math.floor(rng() * 14);
+      const clumpSpreadU = 0.06 + rng() * 0.10;
+      const clumpSpreadV = 0.05 + rng() * 0.08;
+
+      for (let s = 0; s < strokesPerClump; s++) {
+        const offU = (rng() + rng() - 1) * clumpSpreadU * Math.PI;
+        const offV = (rng() + rng() - 1) * clumpSpreadV * Math.PI;
+        const u = centreU + offU;
+        const v = centreV + offV;
+        const length = lengthBase * (0.78 + rng() * 0.44);     // ±22% intra-clump
+        const size = sizeBase * (0.60 + rng() * rng() * 1.00); // intra-clump variance
+        const pressureMid = 0.65 + rng() * 0.30;
+        const surfaceOffset = 0.018 + rng() * 0.012;
+        const rawStroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset);
+        if (rawStroke.length < 4) continue;
+        const ampJitter = waviness * (0.75 + rng() * 0.50);
+        const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
+        const stroke = addWaviness(rawStroke, ampJitter, freqJitter, clumpPhase);
+        curves.push({
+          kind: 'feature-ink', closed: false, points: stroke,
+          ink: {
+            size, taperStart: 0.02 + rng() * 0.06, taperEnd: 0.25 + rng() * 0.40,
+            pressureMid, color: fillColor,
+          },
+        });
+      }
     }
   }
 

@@ -708,3 +708,159 @@ Drawing the Head*, Watson-Guptill 2012, ch. 9 "Hair"; Bridgman
 *Constructive Anatomy: Heads*, 1924, figs. 38–43; Sterckx 1988 p.92
 (Hergé hair geometry); Hayashi 2000 §2; Crilley 2012 vol.1; Loomis
 1956 plates 30, 38; Nelson, Harrison canon as cited pass-2 §1.
+
+---
+
+## 9. Pass 6 — stroke-as-mass audit
+
+*Fred pivoted long-hair rendering after the user caught us bucket-filling
+the silhouette polygons of passes 3-5 ("Microsoft-Paint fill"). New
+approach: `style: 'long'` renders ~480 perfect-freehand strokes traced
+through the cranial field, seeded 50/50 across front-of-scalp + sides,
+with per-stroke RNG'd length/thickness/pressure/taper, and a per-recipe
+`waviness` + `waveFrequency` for perpendicular sinusoidal modulation.
+Four variants in `src/hairstyles/`: longSleek, longFlowing, longWavy,
+longCurly. Images: `/tmp/longhair/{fem,masc}-long{Sleek,Flowing,Wavy,Curly}.png`.
+This pass judges the APPROACH, not the output (Pascal's lane).*
+
+### 9.1 Field-trace + perfect-freehand + per-stroke RNG — right primitive?
+
+**Yes for strands; no as the whole long-hair primitive.** Loomis 1956
+pl.38, Faigin 2012 ch.9, Hayashi 2000 §2, hair-theory §2: long hair =
+**(a) mass envelope as fill** + **(b) clump-strokes on top**. Fred wired
+(b) competently. But (a) is bugged: the silhouette polygon is still
+bucket-filled WITH a visible outline. fem-longSleek = flat brown dome
+with strokes hanging off as wisps — *strokes-as-texture-on-cap*, not
+*strokes-as-mass*. The user's "strokes ARE the mass" meant kill the
+outline and let strokes bleed into the fill (Toth bridging, *Genius,
+Isolated* IDW 2011 ch.4), NOT delete the fill. Fill must EXIST but show
+no polygon edge.
+
+### 9.2 What's missing from the symbolic tree
+
+Three absences, ranked by visible-range delivered:
+
+1. **No clumping topology.** Real hair forms bundles of 5-50 strands
+   (sebum/capillary bridges; Robbins 2012 ch.9; Choe & Ko 2005 "wisp").
+   480 independent seeds = uniform distribution; `phase=u*3.5+v*2.1` is
+   a Fourier alias. Real clumps = ~10-40 *discrete units* with
+   correlated direction/length/phase/root.
+2. **No edge-of-mass darkening.** Stack zones (parting, curtain edge,
+   nape) should accumulate ink. Falls out of #1 automatically.
+3. **No anchor clumps.** Real long hair has 2-5 dominant locks (Hayashi
+   2000 §2 "curtain that occludes"). Variance present, spatial coherence
+   absent. Special case of #1 with long-tail clump sizes.
+
+Add #1 NOW. #2 and #3 are free if #1 lands.
+
+### 9.3 longCurly — parameter or approach?
+
+**Approach.** Perpendicular sine on a field-trace is wrong for curl:
+
+- Real curls are **3D helices** (oval cross-section → helical bending;
+  hair-theory §1.2, De La Mettrie 2007, Bertrand 2007). 2D perpendicular
+  sine is a side-projection of a helix, only correct edge-on; off-axis
+  it's an envelope tube with intermittent dots, not a wave line.
+- Curls **interlock** because spring radius < strand spacing — ringlets
+  (Hayashi 2000 "small Cs"; Crilley 2012 draws overlapping C-arcs).
+- Curls **shorten** the strand 30-60% (Robbins 2012 ch.3 "elastic
+  recoil"); ringlets hang CLOSER to scalp. Fred's curl strokes extend
+  as far as sleek strokes — gravity should look MORE visible on curls,
+  engine does the opposite.
+
+Honest primitive: **overlapping arc segments along the field trace** —
+Crilley's stack-of-Cs, ~5-15° arc, 0.5-1.5cm radius, alternating. Pascal
+will keep scoring longCurly ≤4 until this lands.
+
+### 9.4 Is perpendicular sine honest for waves?
+
+**Defensible at v1; ceiling ~5/10.** A 2C wave is close to a damped
+sinusoid in side-projection. Failure modes:
+
+- **Constant frequency along stroke** — real waves DAMP toward the tip
+  (Robbins 2012 fig 9.4). `exp(-0.4*t)` decay would push longWavy from
+  patterned to natural.
+- **Perpendicular in 2D image space**, not 3D-tangent space — visible
+  in fem-longWavy: side-curtain strokes wave INWARD toward the face
+  instead of along their drop axis.
+- **Phase from UV, not clump membership.** Real adjacent waves are
+  phase-locked because they share a CLUMP (§9.2 #1).
+
+Better future primitive: **per-clump shared phase + amplitude decay**
+(Bertails et al. 2006, "Super-Helices for Natural Hair", SIGGRAPH —
+clump-coordinated curl). Out of scope until §9.5 lands.
+
+### 9.5 The next biggest piece — opinionated pick
+
+**Clumping topology.** Concretely: replace 480 independent seeds with
+~25 **clump centres** on the scalp, each spawning 8-20 stroke seeds
+drawn from a tight gaussian, with **correlated** length/direction/phase/
+intensity per clump. Render back-clumps first (darker/thicker), then
+front-clumps (varied direction breaks the curtain).
+
+Why this beats tuning anything else:
+
+- Fixes longCurly chaos (clump = coherent ringlet group).
+- Provides edge-of-mass darkening for free (clump edges stack ink).
+- Produces the anchor-lock effect (long-tail clump-size distribution).
+- Removes the cap-fill illusion — with 25 dense clumps the silhouette
+  fill becomes redundant and the strokes legitimately ARE the mass.
+- It is what Loomis, Faigin, Hayashi, Choe & Ko, AND Robbins all
+  converge on independently: **clump is the unit, strand isn't.**
+
+Cost: ~80 LOC. Two recipe fields (`clumpCount`, `clumpSpread`). Per-
+clump RNG sub-seed preserves determinism. **Pascal's score will not
+move >1 point until clumping lands**; continuing to tune wave parameters
+or stroke counts is lateral motion.
+
+### 9.6 STOP-the-line flags — stroke-as-mass approach
+
+Additive to §6 and §8.5.
+
+- **SM-1. Do NOT render >500 strokes per head.** Cost is linear in
+  render, quadratic in SVG size (overlap painting). 480 = ceiling. If
+  density looks wrong, fix is clumping, not more strokes.
+- **SM-2. Do NOT delete the silhouette fill — DO suppress its outline
+  stroke for `style: 'long'`.** Fill stops strokes anchoring against
+  skin; outline is what reads as cap. One-line conditional.
+- **SM-3. Do NOT add a sixth recipe knob before clumping lands.** Order
+  is: clumping → curl-as-arc-stack (§9.3) → per-clump phase (§9.4) →
+  knobs.
+- **SM-4. Do NOT use seed-derived phase to fake clumping.**
+  `phase=u*3.5+v*2.1` is a Fourier artefact. Real clumping = DISCRETE
+  membership. More clever phase-from-position math = the bug.
+- **SM-5. Do NOT extend perpendicular-sine to handle curls.**
+  `waveFrequency > 3.5` produces longCurly chaos. Curl needs arc-stack.
+  Stop the line at `waveFrequency > 3.5`.
+- **SM-6. Do NOT seed strokes uniformly from the hemisphere.** 50/50
+  front-vs-sides is fine; next step is clump-centre seeding
+  (intrinsically non-uniform). Uniform sampling is the procedural tell
+  hair-theory §6 flags.
+
+### 9.7 Executive summary — for Fred
+
+1. **Field-trace + perfect-freehand + per-stroke RNG is the right strand
+   primitive — keep it.** The bug is the silhouette fill: still a bucket-
+   filled polygon with a visible outline, so every variant reads as
+   wisps-on-a-cap. Kill the outline; keep the fill; let strokes bleed
+   into the fill (Toth bridging).
+2. **Next biggest win is CLUMPING TOPOLOGY** — ~25 clump centres, 8-20
+   correlated strokes each. ~80 LOC. Simultaneously fixes longCurly
+   chaos, edge-of-mass darkening, and anchor-lock. Pedagogy AND physics
+   converge on it. Anything else right now is lateral motion.
+3. **longCurly is broken at the approach level, not the parameter
+   level.** Perpendicular sine is a 2D projection of a 3D helix. Real
+   curl needs Crilley's stack-of-Cs primitive. Cap `waveFrequency ≤ 3.5`
+   until that lands.
+4. **Perpendicular sine on waves is v1-defensible; ceiling ~5/10
+   without clumping.** Don't tune the sine further — the ceiling is set
+   by missing clumping, not by wave parameters.
+
+*Sources added pass 6:* Robbins, *Chemical and Physical Behavior of
+Human Hair*, 5th ed., Springer 2012 chs. 3+9 (curl recoil, wave decay,
+sebum bridges). Bertails et al., "Super-Helices for Predicting the
+Dynamics of Natural Hair," SIGGRAPH 2006 (per-clump phase). Crilley,
+*Mastering Manga* vol.1, IMPACT 2012 (curl as stack of Cs). Toth,
+*Genius, Isolated*, IDW 2011 ch.4 (silhouette bridging). Choe & Ko 2005;
+Hayashi 2000 §2; De La Mettrie 2007; Bertrand 2007 — as previously
+cited.
