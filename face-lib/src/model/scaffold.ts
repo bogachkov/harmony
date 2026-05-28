@@ -943,12 +943,13 @@ const buildHair = (
   // Mass cap as a filled closed polygon. noStroke = true; the visible top edge is
   // rendered as a SEPARATE inked stroke (next), so the cap reads as drawn rather
   // than as a flat fill region.
-  // Per Leo pass 7 §10: drop the cap polygon for short and medium too — the
-  // cap-cluster oscillation was structural. Strokes carry the mass at every
-  // length. Cap is only kept for legacy/none/bald or as a fallback when
-  // skinFill is null. (The shadow + highlight regions inside the cap block
-  // are likewise dropped — they were band-aids on the cap's flatness.)
-  const drawCap = false;
+  // Per Leo pass 7 §10: drop the cap polygon for short / medium / long.
+  // EXCEPTION: when edgeKind extends the silhouette outward (spiked,
+  // edgeTextured), the silhouette OUTLINE draws an empty extended region
+  // (spikes / coily bumps) with no fill. Strokes don't reach into those
+  // extensions. Keep the fill for those cases so the silhouette is
+  // visually filled. No shadow band, no highlight (those were brim hacks).
+  const drawCap = edgeKind === 'spiked' || edgeKind === 'edgeTextured';
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
