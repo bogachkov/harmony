@@ -2,7 +2,7 @@ import type { FaceParams } from '../model/params.ts';
 import type { Projected } from './project.ts';
 import { bounds } from './project.ts';
 import { inkStrokePath } from './strokes.ts';
-import { mergeCapsulesToHull, type Capsule2D } from './hull.ts';
+import { mergeCapsulesToHull, mergeCapsulesToAlpha, type Capsule2D } from './hull.ts';
 
 // Deterministic seeded RNG so identical params produce identical SVG.
 const mulberry32 = (seed: number): (() => number) => {
@@ -163,8 +163,16 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
   // bait + harder regression promise for Holly). If a debug overlay is
   // wanted later, gate behind p.style.debug and emit the categorical
   // group key, not the float.
+  //
+  // Lloyd pass-2 item 4: dispatch convex vs alpha by recipe.hullMode. Read
+  // once at the merge stage (Stage E of Lloyd pass 1 §2), select merger,
+  // call. Per mixture rule, hullMode is a parameter, not a replacement —
+  // both mergers remain reachable. Default 'convex' preserves W1 fixtures'
+  // existing renders; 'alpha' is the eventual default for new adoption.
+  const hullMode = p.hair.recipe?.hullMode ?? 'convex';
+  const merger = hullMode === 'alpha' ? mergeCapsulesToAlpha : mergeCapsulesToHull;
   for (const { caps, fill } of hullGroups.values()) {
-    const hull = mergeCapsulesToHull(caps);
+    const hull = merger(caps);
     if (hull.length < 3) continue;
     const pxHull: Array<readonly [number, number]> = hull.map(([x, y]) => [tx(x), ty(y)] as const);
     paths.push(

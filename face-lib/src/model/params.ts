@@ -108,6 +108,18 @@ export type HairstyleRecipe = {
   // clump radius at the root (also tip; the integrator tapers linearly to 0
   // unless overridden by the caller). Per Lloyd pass 1 §1.
   clumpVolume?: { gravity: number; radial: number; radius: number };
+  // hullMode — the merger function used in stage E for clumpMode === 'volume'.
+  // Per Lloyd pass 2 §4 (NEEDS-CHANGES on the v1 deferral):
+  //   'convex' (default for opted-in v1 volume fixtures) — Andrew's monotone
+  //   chain. Collapses concavities. Cheap, deterministic, the regression-
+  //   history record for shortBob/longCurtain/coilyHalo v1.
+  //   'alpha' — alpha-shape (alpha-α-complex). Preserves concavities so
+  //   parting gaps and inter-clump valleys read honestly. Alpha is auto-tuned
+  //   from the median nearest-neighbour spacing of the union point cloud
+  //   (no hand knob). Eventual default for NEW volume-mode adoption.
+  // Convex is NOT deleted — per mixture-not-survival, it stays a selectable
+  // mode. Ignored when clumpMode === 'flat' (no merger runs).
+  hullMode?: 'convex' | 'alpha';
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
