@@ -25,15 +25,13 @@ work with appropriate parallelism.
 
 ## In flight
 
-| Agent  | Task | Status | Notes |
-| ------ | ---- | ------ | ----- |
-| Lloyd  | 3D clump-volume refactor architecture | RUNNING | Per Leo pass 8 §1 — design before Nick implements |
+(nothing — Lloyd shipped pass 1, Nick shipped pass 2, both complete)
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Nick   | Implement 3D clump-volume primitive | Lloyd's architecture |
+| Nick   | Implement 3D clump-volume primitive per Lloyd pass 1 | Tech Lead's design approval landed; ready to spawn when Tech Lead decides to start the implementation work |
 
 ## Done this sprint
 
