@@ -1066,17 +1066,25 @@ const buildHair = (
   // silhouette. Flat mode (the default for all 13 existing hairstyles) keeps
   // them unchanged.
   const isVolume = recipe.clumpMode === 'volume';
-  const drawCap = !isVolume && (
-    edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0 ||
-    ((style === 'short' || style === 'medium') &&
-     (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped'))
-  );
   // suppressInteriorHairDetail — Timm/flat-fill packs want the cap polygon
   // (the flat hair-mass shape) but NOT the shadow band or highlight band
   // (those are tonal modeling — explicit interior detail per Eisner 1985
   // "Modelling"). Pre-computed up here so the cap-fill block can branch.
   // (params.ts HairstyleRecipe doc, W2 PR #4.)
   const suppressHairCapTone = recipe.suppressInteriorHairDetail === true;
+  // Felix W3 (`tasks/felix-longhair-primitive-rebuild.md`): when interior
+  // detail is suppressed AND style === 'long', the cap polygon MUST draw —
+  // long-hair normally relies on the clump-stroke field for its top-of-head
+  // mass; with that field gated by suppressDetail the head renders BALD
+  // unless the cap takes over. The companion long-hair curtain block below
+  // adds the side/below curtain (the past-chin extension).
+  const longFlatNeedsCap = !isVolume && style === 'long' && suppressHairCapTone;
+  const drawCap = !isVolume && (
+    edgeKind === 'spiked' || edgeKind === 'edgeTextured' || verticalLift > 0 ||
+    ((style === 'short' || style === 'medium') &&
+     (edgeKind === 'smooth' || edgeKind === 'flicked' || edgeKind === 'crowSnipped')) ||
+    longFlatNeedsCap
+  );
   if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
