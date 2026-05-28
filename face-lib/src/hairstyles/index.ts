@@ -13,6 +13,7 @@ import type { DeepPartial, FaceParams } from '../model/params.ts';
 import shortSwept from './shortSwept.ts';
 import shortReceding from './shortReceding.ts';
 import shortPompadour from './shortPompadour.ts';
+import shortPomp from './shortPomp.ts';
 import spikyShort from './spikyShort.ts';
 import bobChinLength from './bobChinLength.ts';
 import curlyDome from './curlyDome.ts';
@@ -26,6 +27,7 @@ export const hairstyles = {
   shortSwept,
   shortReceding,
   shortPompadour,
+  shortPomp,
   spikyShort,
   bobChinLength,
   curlyDome,

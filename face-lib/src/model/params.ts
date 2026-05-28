@@ -57,6 +57,14 @@ export type HairstyleRecipe = {
   // down + slightly outward. 0 = no tail (current default); 1 = heavy
   // shoulder-length fall.
   tailMass?: number;
+  // Vertical lift — the hair mass rises ABOVE the cranium top silhouette,
+  // producing a styled pomaded / swept-back volume. When > 0 the dome apex
+  // is pushed upward and the clump seeds are shifted to the lifted zone so
+  // strokes flow backward (sweep direction) rather than purely radially.
+  // 0 = no lift (default — existing styles unaffected).
+  // 0.3..0.6 = visible pompadour rise; >0.8 = dramatic quiff.
+  // Per mixture-not-survival rule: this is a new axis, not a replacement.
+  verticalLift?: number;
   // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
   // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
 };

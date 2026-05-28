@@ -802,6 +802,7 @@ const buildHair = (
   templeRecession: number, sideFall: number, crownPeakX: number,
   napeExtension: number, edgeKind: FaceParams['hair']['edgeKind'],
   recipe: FaceParams['hair']['recipe'],
+  verticalLift = 0,
 ): Curve[] => {
   if (style === 'none' || style === 'bald') return [];
 
@@ -823,6 +824,12 @@ const buildHair = (
   const recessionMag = templeRecession * headHeight * 0.08;
   const sideFallMag = sideFall * headHeight * 0.35;
   const peakXOffset = crownPeakX * rx;
+  // verticalLift: maximum extra height added to the silhouette dome apex.
+  // 0.5 lift at headHeight ~1.4 gives 0.105 — about 10% of head height, which
+  // is a noticeable rise above the cranium without tipping into "hat" territory.
+  // (headHeight is the full cranium+jaw span; the cranium top is only ~0.5 units,
+  // so 0.105 is ~21% of the cranium radius — a clearly visible lift.)
+  const liftMag = verticalLift * headHeight * 0.15;
   // Gaussian-like temple-band influence centered at t=0.18 and t=0.82 (the temples).
   const tempInfluence = (t: number): number => {
     const left = Math.exp(-Math.pow((t - 0.18) / 0.07, 2));
@@ -894,6 +901,15 @@ const buildHair = (
     }
     // 5. edgeKind — discrete edge modifier.
     y += edgeJitter(t);
+    // 6. verticalLift — push apex zone upward for pompadour / swept-back mass.
+    // Bell centred at t=0.50 (dome apex, x=0). Sigma is narrow to produce a
+    // concentrated peaked mass rather than a broad hump. The asymmetry is
+    // introduced by crownPeakX (which shifts the x-position of the apex
+    // forward) — verticalLift only provides the Y rise; direction is recipe's job.
+    if (liftMag > 0) {
+      const liftBell = Math.exp(-Math.pow((t - 0.50) / 0.18, 2));
+      y += liftMag * liftBell;
+    }
     // Natural sub-millimeter wobble (independent of knobs; baseline ink-life).
     const naturalWobble = headHeight * 0.003 * Math.sin(t * 11.7);
     y += naturalWobble * domeT;
@@ -1159,8 +1175,17 @@ const buildHair = (
     // Short hair clumps stay UP TOP — no side-curtain seeds (no hair on sides).
     // Medium gets some side seeds. Long gets full side coverage.
     const sideSeedShare = isLong ? 0.50 : isMedium ? 0.25 : 0.0;
+    // verticalLift > 0: use a crown positioned slightly FORWARD of centre and
+    // add a parting-like backward bias so strokes flow up-and-back (sweep direction)
+    // rather than radially outward. The effective crown is placed in front of the
+    // geometric top so the field pushes hair AWAY from the front hairline toward
+    // the back — the visual sweep of a pomadour mass.
+    const liftCrownU = verticalLift > 0 ? -Math.PI * 0.12 * verticalLift : 0;  // forward tilt of crown
+    const liftCrownV = verticalLift > 0
+      ? (0.85 + verticalLift * 0.08) * Math.PI / 2   // push crown toward very top
+      : 0.85 * Math.PI / 2;
     const field = cranialField(rx, ry, rz, {
-      crown: { u: 0, v: 0.85 * Math.PI / 2 },
+      crown: { u: liftCrownU, v: liftCrownV },
       gravity,
     });
     // Mulberry32 seeded RNG — deterministic, no per-call drift. Seed should
@@ -1227,8 +1252,20 @@ const buildHair = (
       const frontShare = 1.0 - sideSeedShare;
       if (sideRoll < frontShare) {
         // Front-of-scalp clumps — start near the CROWN (v close to PI/2).
-        centreU = (rng() + rng() - 1) * Math.PI * 0.55;
-        centreV = 0.78 * Math.PI / 2 + (rng() - 0.5) * 0.30 * Math.PI / 2;
+        // verticalLift: bias seeds toward the FRONT FACE of the cranium
+        // (slightly negative u = toward the face) so strokes sweep upward and
+        // back across the lifted mass zone. Without this bias the clumps seed
+        // symmetrically and strokes flow radially rather than backward.
+        // verticalLift: bias seeds toward the front of the scalp (slightly
+        // negative u = face side) so strokes start near the forehead and sweep
+        // up and back through the lifted mass zone. The V boost pushes seeds
+        // toward the very top so clump strokes span from near-forehead up into
+        // the lifted silhouette rather than starting at the crown and flowing
+        // downward (which would produce the wrong "radial fan" look).
+        const liftUBias = verticalLift > 0 ? Math.PI * 0.15 * verticalLift : 0;  // slight forward bias (positive u = face-right-side)
+        const liftVBoost = verticalLift > 0 ? verticalLift * 0.10 * Math.PI / 2 : 0;
+        centreU = liftUBias + (rng() + rng() - 1) * Math.PI * (verticalLift > 0 ? 0.25 : 0.55);
+        centreV = 0.78 * Math.PI / 2 + liftVBoost + (rng() - 0.5) * 0.30 * Math.PI / 2;
       } else if (sideRoll < frontShare + sideSeedShare * 0.5) {
         // Right-side clumps (long/medium only).
         centreU = (0.55 + rng() * 0.35) * Math.PI / 2;
@@ -1358,6 +1395,68 @@ const buildHair = (
   // (Old short-hair stroke-texture overlay + escape-strokes block deleted
   // per Leo pass 7 CC-3. The unified strokes-as-mass loop above now handles
   // all style lengths.)
+
+  // ---- VERTICAL LIFT STROKES — explicit 2D swept-back mass strokes for
+  // pompadour / verticalLift > 0 styles. These strokes are NOT cranial-field
+  // traced: the cranial field is an ellipsoid surface and cannot generate
+  // strokes that rise above the geometric top (v > π/2). Instead we generate
+  // 2D strokes that sweep from the forehead hairline zone upward through the
+  // lifted silhouette, arcing back over the top. This is the correct symbolic
+  // representation of a combed-and-pomaded mass: each stroke starts at the
+  // forehead, rises steeply toward the lift peak, then curves back toward
+  // the crown/nape. The stroke direction carries the "swept-back" read.
+  //
+  // Strokes only generated when verticalLift > 0; default 0 leaves all
+  // existing hairstyles unaffected (mixture-not-survival rule).
+  if (verticalLift > 0 && fillColor) {
+    const liftApexY = ry + liftMag;         // highest point of the lifted silhouette
+    const liftHalfWidth = rx * 0.55;        // horizontal span of the lifted mass
+    const sweepStrokeCount = Math.round(28 + verticalLift * 20);  // 28-48 strokes
+    // Seeded RNG for deterministic lift strokes (separate state from clump rng).
+    let liftRngState = 42 >>> 0;
+    const liftRng = (): number => {
+      liftRngState = (liftRngState + 0x6d2b79f5) >>> 0;
+      let t = liftRngState;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let i = 0; i < sweepStrokeCount; i++) {
+      // Stroke start: scattered across the front hairline zone (near the forehead).
+      // Positive x = right side of the face as drawn.
+      const startX = (liftRng() * 2 - 1) * liftHalfWidth * 0.80;
+      const startY = hairlineY + headHeight * (0.02 + liftRng() * 0.06);
+      // Lift peak: slightly behind the start x (sweep direction) at the apex Y.
+      // The peak is biased toward x=0 (centreline) so the mass converges there.
+      const peakX = startX * (0.3 + liftRng() * 0.3);  // pull toward centreline
+      const peakY = liftApexY * (0.80 + liftRng() * 0.20);
+      // End: behind the crown (negative-ish x relative to start, or at nape).
+      // The backward sweep: end is further back than start, past the apex.
+      const endX = peakX - (liftRng() * liftHalfWidth * 0.40);
+      const endY = ry * (0.70 + liftRng() * 0.20);  // somewhere on the back of the dome
+      // Quadratic sweep through three points: start → peak → end.
+      const sweepSamples = 16;
+      const pts: Vec3[] = [];
+      for (let s = 0; s <= sweepSamples; s++) {
+        const t = s / sweepSamples;
+        const mt = 1 - t;
+        // Quadratic Bezier: B(t) = mt²·start + 2·mt·t·peak + t²·end
+        const x = mt * mt * startX + 2 * mt * t * peakX + t * t * endX;
+        const y = mt * mt * startY + 2 * mt * t * peakY + t * t * endY;
+        pts.push([x, y, 0.015 + t * 0.005]);  // slight Z fade
+      }
+      if (pts.length < 4) continue;
+      const size = 0.8 + liftRng() * liftRng() * 3.0;
+      const pressureMid = 0.65 + liftRng() * 0.30;
+      curves.push({
+        kind: 'feature-ink', closed: false, points: pts,
+        ink: {
+          size, taperStart: 0.08 + liftRng() * 0.10, taperEnd: 0.25 + liftRng() * 0.35,
+          pressureMid, color: fillColor,
+        },
+      });
+    }
+  }
 
   return curves;
 };
@@ -2026,6 +2125,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill,
     p.hair.templeRecession, p.hair.sideFall, p.hair.crownPeakX, p.hair.napeExtension, p.hair.edgeKind,
     p.hair.recipe,
+    p.hair.recipe.verticalLift ?? 0,
   ));
 
   // Hat (sits on top of head; opt-in via p.hat.style)
