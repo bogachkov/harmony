@@ -943,7 +943,7 @@ const buildHair = (
   // Mass cap as a filled closed polygon. noStroke = true; the visible top edge is
   // rendered as a SEPARATE inked stroke (next), so the cap reads as drawn rather
   // than as a flat fill region.
-  if (fillColor) {
+  if (fillColor && style !== 'long') {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
       kind: 'feature', closed: true, points: cap,
@@ -1066,7 +1066,9 @@ const buildHair = (
   };
   const partingX = drawInteriorStrokes ? partingXForKind(recipe.parting) : null;
 
-  if (partingX !== null) {
+  // Long hair: skip the explicit parting curve — the stroke clumps create
+  // the visible parting naturally (gap between two clump regions).
+  if (partingX !== null && style !== 'long') {
     const partingTopY = ry * 0.92;
     const partingBottomY = hairlineY + headHeight * 0.02;
     const partingPts: Vec3[] = [];
@@ -1131,6 +1133,10 @@ const buildHair = (
   // Per user: every parameter randomized via deterministic seeded RNG. Stroke
   // length, thickness, pressure, taper, seed position all vary.
   if (style === 'long' && fillColor) {
+    // No cap polygon and no extra band — strokes carry the visual mass.
+    // The head silhouette outline shows through at the very top as a thin
+    // arc; that's the "back of head" line visible in many comic styles
+    // (Hayashi 2000 §2). Acceptable rather than worse alternatives.
     // Density-only approach: the STROKES are the mass. No fall polygon —
     // polygons read as fabric. Instead, render ~400 strokes whose density,
     // length, and thickness vary so the visual mass emerges from overlapping
@@ -1199,14 +1205,18 @@ const buildHair = (
       let centreV: number;
       const sideRoll = rng();
       if (sideRoll < 0.50) {
+        // Front-of-scalp clumps — start near the CROWN (v close to PI/2) so
+        // strokes cover the top of the cap polygon instead of starting halfway
+        // down it (which produced the visible "cap band on top" Pascal flagged).
         centreU = (rng() + rng() - 1) * Math.PI * 0.55;
-        centreV = 0.55 * Math.PI / 2 + (rng() - 0.5) * 0.45 * Math.PI / 2;
+        centreV = 0.78 * Math.PI / 2 + (rng() - 0.5) * 0.30 * Math.PI / 2;
       } else if (sideRoll < 0.75) {
+        // Right-side clumps — start higher too (above the temple, near crown).
         centreU = (0.55 + rng() * 0.35) * Math.PI / 2;
-        centreV = (0.10 + rng() * 0.65) * Math.PI / 2;
+        centreV = (0.30 + rng() * 0.55) * Math.PI / 2;
       } else {
         centreU = -(0.55 + rng() * 0.35) * Math.PI / 2;
-        centreV = (0.10 + rng() * 0.65) * Math.PI / 2;
+        centreV = (0.30 + rng() * 0.55) * Math.PI / 2;
       }
       const lengthBase = 0.45 + rng() * rng() * 1.80;
       // Per-clump thickness — triple-pull rng^3 distribution gives a long tail
