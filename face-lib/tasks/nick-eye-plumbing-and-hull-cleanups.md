@@ -130,4 +130,98 @@ emit `data-hull-group-id="${groupKey}"` (the categorical, NOT the
 
 ## Handoff
 
-(Nick fills in on completion.)
+Three commits landed on `vector-draw` (pushed):
+
+- `25dc884` — eye plumbing. `buildEye` gains `lidLine / lashes /
+  underlineHint / isLeft`, all defaulted so the existing pure-anchor
+  signature stays a valid call. `lidLine > 0.05` emits a parallel
+  companion stroke above the upper lid; `lidLine > 0.4` switches to a
+  filled "brick" closed poly (the Timm slab from Sito 2004 p.40).
+  `lashes` mirrors the `buildEyeDots:379` block (outer-corner ticks),
+  scaled to `halfWidth`. `underlineHint` mirrors `:404` (narrow
+  under-eye tick). Call sites at `:2287-2297` pass the three
+  `p.eyes.*` knobs into the almond branch.
+- `ce19a47` — `hullGroup` keying. One-line swap at the volume-curve
+  push: `centreU` quadrant instead of `sideRoll` bucket. Thresholds
+  per Lloyd: `±π·0.10`. The same hull-merge boundary, just keyed on
+  projected angular position so two front clumps in different 3D
+  regions no longer merge into one silhouette.
+- `b1ee33a` — `data-hull-group` debug attr dropped from `svg.ts`
+  hull-merge output. Lloyd's stated preference (drop entirely). Comment
+  left flagging the gate-behind-`p.style.debug` path if a debug overlay
+  is wanted later.
+
+LOC: 79+ / 3- on scaffold.ts buildEye (item 1), 10+ / 5- on scaffold.ts
+hullGroup line (item 2), 7+ / 2- on svg.ts (item 3). Total ~35 net new
+LOC as briefed.
+
+### Render verification
+
+Render artifacts: `/tmp/nick-w2-pr1/`.
+
+- **Mixture rule — flat-mode shipped catalog.** Rendered every
+  registered hairstyle (16: 12 shipping + 3 Lloyd fixtures + ... actually
+  15: 12 shipping + 3 Lloyd) × 2 presentations under `style:'tintin'`
+  pre-PR. Diffed against post-item1, post-item2, post-item3.
+  - Item 1: all 30 SVGs **byte-identical** (the dots branch is
+    untouched; tintin uses dots). Mixture promise honored.
+  - Item 2: 26/30 byte-identical (all flat-mode catalog renders); the
+    4 changed are the volume-mode Lloyd fixtures (`longCurtain` and
+    `coilyHalo`, both demographics). Expected — those are the only
+    paths that touch the keying line.
+  - Item 3: same 4 volume-mode renders changed, only `data-hull-group`
+    attr removed; coords, fills, and ordering identical. Pixel-
+    identical visual output (the attr was inside an SVG comment-
+    free `<path>` element with no rendering effect).
+- **Item 2 visual sanity.** `feminine-longCurtain` baseline reads as a
+  nun's wimple (one merged hull bulging beyond the chin); post-item2
+  has a clear centre vertical parting gap and left/right hair masses.
+  `coilyHalo` keeps its hexagon-halo character; the small top-centre
+  dip is the alpha-shape-vs-convex distinction Lloyd flagged for PR #2.
+- **Item 1 visual fixture.** Six renders at
+  `/tmp/nick-w2-pr1/eye-fixture/*.png` against `style:'default'`,
+  `presentation:'masculine'`:
+  1. `01-almond-base` — masculine preset default (`lidLine:0.4`,
+     no explicit override). Thin upper-lid companion stroke visible
+     above each eye.
+  2. `02-almond-lidLine-0.2` — companion stroke closer to the lid.
+  3. `03-almond-lidLine-0.6` — **the load-bearing timmFlat fixture.**
+     The upper-lid switches to the filled "brick" slab. Visually
+     unambiguous Timm/Sito upper-lid weight.
+  4. `04-almond-lidLine-0.6-lashes-0.7` — outer-corner lash ticks
+     fire on top of the brick.
+  5. `05-almond-underlineHint-0.6` — Hergé under-eye tick on the
+     almond.
+  6. `06-almond-all-three` — full stack. Demonstrates `lidLine` /
+     `lashes` / `underlineHint` are independent and composable on the
+     almond branch (matches their behavior on the dots branch).
+
+### Notes / minor
+
+- Leo's audit phrase "all current presets are 0 on the almond branch"
+  turned out to be empirically not quite right — the demographic
+  presets (`masculine.eyes.lidLine: 0.4`, `feminine.eyes.lidLine: 0.5
+  + lashes: 0.6`, `elder.eyes.lidLine: 0.6 + underlineHint: 0.55`,
+  `teen.eyes.lidLine: 0.4`) DO set non-zero values, they were just
+  being silently ignored on the almond branch. Effect on
+  shipped-catalog renders: zero (every shipped style uses `tintin` →
+  dots branch). Effect on `style:'default'` / `'ligneClaire'` renders
+  with demographic presets: those now honor the demographic-set knobs,
+  which is exactly the Leo-STOP fix. Worth a sentence in the W2 retro
+  in case Pascal/Holly later flag a default-style render as "changed".
+- `buildEye` signature added `isLeft: boolean = true` to mirror the
+  outer-corner sign convention from `buildEyeDots`. Default of `true`
+  means no existing caller breaks; new call sites pass `true` / `false`
+  for left / right anchors, matching the dots branch convention.
+- Did not touch the volume/hull path itself (alpha-shape work) — that's
+  PR #2's lane.
+- Pre-existing TypeScript noise in `npx tsc --noEmit` (missing
+  `@types/node`, a couple of unrelated overlap errors at
+  `scaffold.ts:1281`) — none in or downstream of my edits. Not my row.
+
+### What this unblocks
+
+- `timmFlat` impl (W2 row 3): `eyes.style:'almond', lidLine:0.6` is now
+  load-bearing rather than silent. Pack can ship.
+- `hullMode: 'convex'|'alpha'` PR #2: centreU keying + the dropped
+  debug attr clear the file for the alpha-shape work to merge cleanly.
