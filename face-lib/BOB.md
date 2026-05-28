@@ -109,10 +109,44 @@ gap. I should ask, not guess.
   vocabulary is scaffolding for getting work done — it isn't the
   point.
 
+## The real use case Gary needs this for
+
+Gary has visual taste and some artistic talent (his own read, and
+it's objectively fair — see the 60-second sketch, see the corrected
+fact that he draws well). What he does NOT have is *time*.
+
+So the project is a tool for him personally: **rapid, good-enough
+visual assets he can use and tweak in repeatable, consistent ways.**
+Speed and control matter as much as quality. Probably more, given
+the "tweak in repeatable and consistent ways" phrase — that's
+parametric, deterministic, seedable. He can dial knobs, not
+re-illustrate from scratch.
+
+The need:
+- Things he wants to make (games, comics, decks, whatever) that
+  require visual assets.
+- He has the taste to know what good looks like.
+- He doesn't have the hours to produce them by hand.
+- Off-the-shelf gen tools don't give him the *control* — same seed
+  same result, same knob same axis of change. The engine does.
+
+So "good enough" is sharper than I had it. Good enough means:
+- Visually credible — passes his taste filter.
+- Consistent — character A looks like character A across renders.
+- Tweakable — small parameter changes produce predictable small
+  visual changes, not random redraws.
+- Fast — a render is seconds, not minutes of his time.
+
+This sharpens layer 1 of the project. It's not "build a parametric
+engine for the sake of building one." It's "build the tool Gary
+actually wants to use." Every decision should route through "does
+this help Gary get from idea to asset faster, with the look he
+controls?"
+
 ## Open questions I don't have answers to
 
-- The deeper *why* of layer 3 — there was more Gary said earlier that
-  I lost. Ask him when it comes up rather than guess.
+- More of the deeper *why* of layer 3 — there was earlier
+  conversation I lost. Ask him when it comes up rather than guess.
 - Whether the current 10-role crew is right for layer 2 (building it
   with real theory) or whether some of it is process theater. Felix
   was a real add. Some of the others I'm less sure about now.
