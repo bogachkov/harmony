@@ -1,79 +1,68 @@
 # Sprint board
 
-The current sprint. Updated by the Tech Lead each commit. Subagents read
-this on spawn to know what's in flight.
+Current sprint state. Updated by Claudia (PM) at sprint open / close;
+read by every agent on spawn.
 
-When this sprint ends, archive the contents under `## History` at the
-bottom and reset the active sections.
+When a sprint closes, contents move under ## History and the active
+sections reset.
 
 ---
 
 ## Active sprint goal
 
-**Move hair from "2D-on-cranium-surface with hacks" → "3D-aware primitive
-with lead/fill composition."**
+**Q1-W1 — Hair primitive lands in 3D + 1 new style pack to quality bar.**
 
-Subsumes:
-- Pascal's cap-cluster oscillation (4/10 lateral × 3 rounds).
-- The masc swept-volume reference (user's "guy w great hair" image).
-- The user's "hair in 3D space" architectural note.
-- The user's lead/fill two-layer mental model (lead strokes define soul +
-  fill follows the flow).
+Aligned with ROADMAP Q1 ("faces, really really good — 4-10 style packs
+at quality bar"). This sprint is the bridge between the architectural
+work that just landed (recipe primitive, lead/fill rename, bob-cap fix)
+and the style-pack-variety push that fills the rest of Q1.
 
-Sprint unit per the user: ≈ 1 week of human work ≈ 1-2 hours of LLM-team
-work with appropriate parallelism.
+Two parallel tracks:
+
+- **Track A — engine:** Nick implements the 3D clump-volume refactor per
+  Lloyd pass 1 (Tech Lead approved). Lloyd reviews on completion. Holly
+  spawns at the end of the sprint for a regression sweep.
+- **Track B — style:** Rollo + Leo propose ONE new style pack target
+  (research pass; not implementation). Picked from the user's
+  candidates: Disney/Pixar feature, manga (shoujo or shounen), Caniff/
+  Toth ink comics, Bruce Timm flat shape, Studio Ghibli, Schulz/Peanuts.
+  Output is a style-pack-spec md that Nick can implement in Q1-W2.
 
 ## In flight
 
-(nothing — Lloyd shipped pass 1, Nick shipped pass 2, both complete)
+(nothing — sprint just opened)
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Nick   | Implement 3D clump-volume primitive per Lloyd pass 1 | Tech Lead's design approval landed; ready to spawn when Tech Lead decides to start the implementation work |
+| Nick   | Implement 3D clump-volume primitive per Lloyd pass 1 | Awaiting spawn (Claudia first on the queue this sprint) |
+| Leo + Rollo | Style-pack candidate selection + spec | Awaiting spawn (Claudia second on the queue) |
+| Lloyd  | Code review of Nick's 3D implementation | Nick's PR |
+| Holly  | First-ever Holly spawn — test strategy doc + regression sweep | After Nick's 3D refactor lands |
+| Pascal | Quality score on post-3D-refactor render set | After Nick + Holly |
 
-## Done this sprint
+## Done previous sprints
 
-- Nick pass 2 — Bob-cap regression fix + lead/fill rename. `tasks/nick-pass-2.md`.
-  Ship 1: widened `drawCap` at `scaffold.ts:972` so short/medium smooth/flicked/
-  crowSnipped styles draw the cap polygon. Fixes bobChinLength, shortSwept,
-  shortPompadour, shortReceding (all verified rendering with visible mass).
-  Ship 2: `HairstyleRecipe.flowStrokes` → `leads`; `Lead` type (née `FlowStroke`)
-  gains optional `flowWeight`; `fillBias` plumbed to recipe (behaviour OFF pending
-  Lloyd). All hairstyle files + demographics.ts updated. Pixel-equivalent renders
-  confirmed.
-- Lloyd pass 1 — 3D clump-volume refactor architecture.
-  `research/lloyd-pass-1.md` (198 lines). Types: `ClumpSpec` +
-  `ClumpTrace`; `Curve` gains `radiusProfile` / `hullGroup` /
-  `kind:'clump-volume'`; `HairstyleRecipe` gains
-  `clumpMode:'flat'|'volume'` (default 'flat'). Refactor seam:
-  `clumpStroke(field, ClumpSpec): ClumpTrace` — one function, one
-  return type. New file `src/render/hull.ts` (~150 LOC).
-  Two divergences from Leo (§0). Net +150 LOC (not Leo's +118 —
-  `flat` mode keeps cap polygon alive). Three test cases for Nick.
-  One tech-debt warning (convex hull collapses concavities).
-  Awaiting Tech Lead review before Nick spawns to implement.
-- Tech Lead — formalized six-role crew in `AGENTS.md`. Tech Lead +
-  Leo + Pascal + Rollo + Nick + Lloyd.
-- Nick v1 — `verticalLift` recipe parameter + `shortPomp` preset. Cap
-  fill enabled for lifted zone. Bezier math fixed. (Known regression:
-  centerline convergence too tight; queued for Nick.)
-- Rollo pass 1 — catalog review. `research/rollo-pass-1.md`. Flagged
-  two bugs (bobChinLength center-parting trails into forehead;
-  longTail falls merge with face outline at print scale). Flagged two
-  largest gaps: tight-coily / TWA entry, short-disheveled entry.
-- Nick tuning pass 1 — three bug fixes shipped (commits 0e2e0ab,
-  872aa45, 9173655). shortPomp topknot fixed; bobChinLength forehead
-  scar fixed; longTail face-merge fixed. `tasks/nick-tuning-pass-1.md`.
-- Leo pass 8 — 3D abstraction + lead/fill + bob diagnosis audit.
-  Decisions: 3D clump-volume abstraction (~+200 net LOC, refactor
-  seam at `clumpStroke()`); lead/fill IS the right two-layer model
-  and is already half-built (`flowStrokes` are leads, clump centres
-  are fill — needs rename + coupling, ~50 LOC, mixture-safe);
-  bob-regression is a 3-line widen of `drawCap` condition at
-  `scaffold.ts:972`. Full audit in `research/hair-tooling.md` §11.
+### Sprint pre-Q1 (the long session that built the foundation)
+
+- Leo passes 3, 4, 5, 6, 7, 8 — pedagogy + audits.
+- Lloyd pass 1 — 3D clump-volume architecture (TL approved).
+- Rollo pass 1 — catalog review.
+- Hair-theorist pass — physics doc.
+- Nick tuning pass 1 — three bug fixes (shortPomp topknot, bob scar,
+  longTail merge).
+- Nick pass 2 — bob HIGH regression fixed; lead/fill rename with
+  deprecation alias.
+- Recipe primitive (`HairstyleRecipe` + 11 hairstyle files).
+- Six-role crew formalized in AGENTS.md.
+- Collab artifacts created: SPRINT / BACKLOG / tasks/.
+- ROADMAP + PROCESS docs created.
+- Nine-role crew (added David CEO, Claudia PM, Holly QA).
+- Mixture-not-survival rule encoded as durable principle.
+- Forest registry initialized in BACKLOG (filed aesthetics).
 
 ## History
 
-(previous sprints archived here when this one closes)
+(sprints archived here when they close — none yet under the new
+roadmap/process framework)
