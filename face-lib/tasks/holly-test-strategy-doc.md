@@ -104,5 +104,45 @@ Q2 opens against it.
 
 ## Handoff
 
-(Holly fills in on completion. Name the minimal scaffolding Q2 should
-open against so Claudia can queue it into Q2-open.)
+**Delivered:** `face-lib/research/test-strategy.md` — the convention doc
+(gate taxonomy / honest coverage matrix / reachability guard / Q2
+scaffold). Note: spawn brief suggested filename `test-strategy.md`; this
+task file's deliverable line says `holly-test-strategy.md`. Shipped as
+`test-strategy.md` per the spawn instruction — flag if Claudia wants it
+renamed.
+
+**The convention in one line:** gate every change by *what it claims
+about the output* — byte-identical for "unchanged" (refactors),
+visual-diff + a declared blast radius for "bounded intended change,"
+aesthetic scoring + re-bless for "better art." Byte-identical stays the
+only hard machine gate but is necessary-not-sufficient: it can't tell
+intended from collateral drift (W3 `tintin` demographic push → declared
+blast radius), it's meaningless under non-determinism (suspected clump-
+hair unseeded randomness → determinism is a precondition), and it's blind
+to reachability (→ registry fixtures).
+
+**Coverage:** gate on a spanning+risk matrix (~40–60 cells: pack spine ×
+demo spine × off-grid probes × hair-interaction × reachability fixtures),
+NOT the 816-cell cross-product. The 816 sweep (`felix-broad-regression.ts`
+hash-manifest pattern) stays a weekly/pre-merge deep sweep + the gallery.
+Gallery cells outside the gate matrix are decorative, not verified.
+
+**Reachability guard (mixture rule):** one render fixture per filed
+aesthetic (BACKLOG FA table), swept for reachability (hard, non-waivable)
++ stability (byte, blessable). Registry table is source of truth; filing
+an aesthetic = row + fixture+baseline in one PR. Note the existing forest
+gap (exp-wavy-1 "gem" — currently unreachable); a row with no reachable
+selector is a registry debt, not a passing cell.
+
+**Minimal scaffolding Q2 opens against (the handoff):** promote
+`scripts/felix-broad-regression.ts` → `scripts/regression-sweep.ts` with
+three modes: `--gate` (CI-required: minimal matrix + registry fixtures,
+fails on any reachability failure or undeclared byte diff), `--full`
+(manual deep sweep + gallery), `--bless --cells <list>` (re-baseline
+declared cells only, refuses blanket re-bless). Fixture tree
+`face-lib/regression/{matrix.json, registry.json, baselines/{catalog,
+registry}/}`, filenames = selectors. Blessing = baseline diff in the PR
+(git history of `baselines/` is the regression record).
+
+**Status:** DONE. Doc only, no production code (the `regression-sweep`
+code pass is separate W4-fill / Q2-open — see return note).
