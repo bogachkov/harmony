@@ -1258,9 +1258,14 @@ const buildHair = (
         const size = sizeBase * (0.60 + rng() * rng() * 1.00); // intra-clump variance
         const pressureMid = 0.65 + rng() * 0.30;
         const surfaceOffset = 0.018 + rng() * 0.012;
-        // Short hair: clip at hairline (otherwise strokes spill onto forehead).
-        // Long hair: no clip — strokes fall past the chin freely.
-        const stopAt = isLong ? undefined : (pt: Vec3): boolean => {
+        // SHORT hair: clip front-region strokes at hairline (otherwise hair
+        // covers the forehead, which short hair shouldn't). Side-region strokes
+        // and medium/long strokes are NOT clipped — they're expected to fall
+        // past the temples (bob, long-side-curtain).
+        const stopAt = (isLong || isMedium) ? undefined : (pt: Vec3): boolean => {
+          // Only apply hairline clip to strokes seeded near the front (u near 0).
+          // Side-seeded strokes (u near ±PI/2) get no clip even on short.
+          if (Math.abs(centreU) > Math.PI * 0.40) return false;
           let bestY = hairlineY;
           let bestDist = Infinity;
           for (const h of hairline) {
