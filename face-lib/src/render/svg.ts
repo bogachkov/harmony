@@ -158,12 +158,17 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
       hullGroups.set(groupKey, { caps: [...c.capsules], fill, avgZ: c.avgZ });
     }
   }
-  for (const { caps, fill, avgZ } of hullGroups.values()) {
+  // Lloyd pass-2 item 3: no debug attr on hull paths. The earlier
+  // data-hull-group="<avgZ>" leaked floats into SVG output (Hyrum's-law
+  // bait + harder regression promise for Holly). If a debug overlay is
+  // wanted later, gate behind p.style.debug and emit the categorical
+  // group key, not the float.
+  for (const { caps, fill } of hullGroups.values()) {
     const hull = mergeCapsulesToHull(caps);
     if (hull.length < 3) continue;
     const pxHull: Array<readonly [number, number]> = hull.map(([x, y]) => [tx(x), ty(y)] as const);
     paths.push(
-      `<path d="${pointsToPath(pxHull, true)}" fill="${xmlEscape(fill)}" stroke="none" data-hull-group="${xmlEscape(String(avgZ.toFixed(3)))}"/>`,
+      `<path d="${pointsToPath(pxHull, true)}" fill="${xmlEscape(fill)}" stroke="none"/>`,
     );
   }
 
