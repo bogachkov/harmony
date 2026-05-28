@@ -49,11 +49,20 @@ one PR if Nick prefers (small + small + small). 3 is its own PR.
 
 All four must be true:
 
-- [ ] **Eye plumbing landed.** `buildEye` almond branch honors
+- [x] **Eye plumbing landed.** `buildEye` almond branch honors
   `lidLine` / `lashes` / `underlineHint`; existing `tintin`-style
   dots renders unchanged (mixture rule: new behavior is plumbed
   through, default values of 0 preserve current renders). Lloyd
-  review not required (size + simplicity).
+  review not required (size + simplicity). **Landed PR #1 — three
+  commits `25dc884` / `ce19a47` / `b1ee33a` on vector-draw. 30/30
+  catalog renders byte-identical in dots mode; 26/30 flat-mode
+  byte-identical post-centreU fix (longCurtain wimple gone;
+  coilyHalo hexagon retained for PR #2). Nick flagged Leo's
+  "presets are all 0 on almond" was slightly wrong — demographic
+  presets DO set non-zero `lidLine` that was being silently
+  dropped pre-fix; default/ligneClaire renders with demographic
+  presets now honor those knobs. Catalog unaffected. Filed for
+  Pascal/Holly.**
 - [ ] **`hullMode: 'convex' | 'alpha'` knob landed.** Alpha-shape
   merger in `src/render/hull.ts` (alpha auto-tuned from clump
   spacing per Lloyd §7). Convex stays as a mode. The three W1
@@ -103,11 +112,17 @@ What is explicitly NOT in W2's gate:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| —     | —    | —      | Sprint just opened; Bob spawns per queue below. |
+| Nick  | `tasks/nick-alpha-shape-hullmode.md` (PR #2) | spawning | Alpha-shape merger + `hullMode` knob. Lloyd reviews on completion. |
 
 ## Done this sprint (W2)
 
-(empty — sprint just opened.)
+- **Nick PR #1** — `tasks/nick-eye-plumbing-and-hull-cleanups.md`.
+  Three commits on vector-draw: `25dc884` (eye plumbing),
+  `ce19a47` (centreU keying fix), `b1ee33a` (debug attr drop).
+  Catalog dots-mode 30/30 byte-identical; flat-mode 26/30 byte-
+  identical post-centreU (longCurtain parting gap restored).
+  Demographic-preset lidLine-on-default/ligneClaire side-effect
+  filed for Pascal/Holly to flag if anything reads off.
 
 ## Blocked / pending
 
