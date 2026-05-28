@@ -1,6 +1,7 @@
 import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
+import { darken, lighten } from '../math/color.ts';
 // cranialField and clumpStroke are imported on-demand when future per-school hair
 // characterization strokes are added (Caniff hatching, manga fringe wedges) — see
 // research/hair-tooling.md §4. Not used in the current pass: the parting and the
@@ -954,6 +955,73 @@ const buildHair = (
       kind: 'feature', closed: true, points: cap,
       role: 'hair-top', fill: fillColor, noStroke: true,
     });
+
+    // SHADOW REGION — darker tone painted over the LOWER portion of the cap to
+    // give the mass real weight. Without this the hair reads as a flat color
+    // shape regardless of how good the silhouette is. Pedagogy: Eisner 1985
+    // "Modelling"; Toth uses shadow regions as a primary mass cue.
+    //
+    // The shadow polygon is constructed by taking the hairline as its lower
+    // edge and a ~40%-up-the-cap interior contour as its upper edge. The contour
+    // is computed by lerping each topSil point toward the matching hairline
+    // point (matched by X within the cap span).
+    const shadowColor = darken(fillColor, 0.30);
+    const shadowUpperEdge: Vec3[] = [];
+    // For each hairline point, find the topSil point at roughly the same X and
+    // lerp 40% up from hairline toward topSil. (The hairline runs left-to-right
+    // and topSil runs right-to-left; the cap polygon order means we walk
+    // topSil first then hairline.)
+    for (let i = 0; i < hairline.length; i++) {
+      const h = hairline[i] as Vec3;
+      // Find nearest topSil point by X.
+      let bestJ = 0;
+      let bestDx = Infinity;
+      for (let j = 0; j < topSil.length; j++) {
+        const t = topSil[j] as Vec3;
+        const dx = Math.abs(t[0] - h[0]);
+        if (dx < bestDx) { bestDx = dx; bestJ = j; }
+      }
+      const top = topSil[bestJ] as Vec3;
+      const lerp = 0.40;
+      const x = h[0] + (top[0] - h[0]) * lerp;
+      const y = h[1] + (top[1] - h[1]) * lerp;
+      const z = h[2] + (top[2] - h[2]) * lerp;
+      shadowUpperEdge.push([x, y, z]);
+    }
+    // Polygon: lower edge = hairline (left-to-right), upper edge = the interior
+    // contour reversed (right-to-left). Closing makes the bottom band of the
+    // cap fill with the shadow color.
+    const shadowPoly: Vec3[] = [...hairline, ...[...shadowUpperEdge].reverse()];
+    curves.push({
+      kind: 'feature', closed: true, points: shadowPoly,
+      fill: shadowColor, noStroke: true,
+    });
+
+    // HIGHLIGHT BAND — lighter tone painted as a small lens/band on the top-
+    // front-quarter of the cap. Comic-art convention: catch-light at the
+    // strongest curve closest to the light source. Reads as a specular hint
+    // without dropping into per-strand drawing (Leo STOP #2).
+    //
+    // Implemented as a sliver between two short adjacent arcs near the top of
+    // topSil: pick a band of ~6 sample points around t=0.30 (left of crown),
+    // and a lower curve offset down toward the cap interior.
+    const highlightColor = lighten(fillColor, 0.18);
+    const highlightStart = Math.floor(topSil.length * 0.22);
+    const highlightEnd = Math.floor(topSil.length * 0.38);
+    if (highlightEnd > highlightStart + 2) {
+      const upperBand = topSil.slice(highlightStart, highlightEnd);
+      const lowerBand: Vec3[] = upperBand.map((p) => {
+        // Offset each point inward toward the centre of the cap by a small fraction.
+        const inwardY = -headHeight * 0.025;
+        const inwardX = -p[0] * 0.10;
+        return [p[0] + inwardX, p[1] + inwardY, p[2]];
+      });
+      const highlightPoly: Vec3[] = [...upperBand, ...lowerBand.reverse()];
+      curves.push({
+        kind: 'feature', closed: true, points: highlightPoly,
+        fill: highlightColor, noStroke: true,
+      });
+    }
   }
 
   // Mass silhouette OUTLINE as inked stroke (perfect-freehand): confident, slightly
