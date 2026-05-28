@@ -160,8 +160,165 @@ fires.
 
 ## Handoff
 
-(Nick fills in on completion. At minimum: per-cell pre-Pascal
-sniff-test reads for the 16 timmFlat cells + 4 tintin regression
-cells, render paths under `/tmp/timmflat-out/grid/` and
-`/tmp/timmflat-out/probes/`, mixture-rule verification on
-`default` / `ligneClaire`, any `tintin` drift you notice.)
+**Status:** done. Lloyd Q2 §Pick landed verbatim. Two private fixtures
+(`elderMascPear`, `adultFemPointed`) exported from `demographics.ts`;
+grid script opts in for the off-grid probes. ~85 LOC net on
+`demographics.ts` (~15 jaw-proportion edits + ~50 fixtures + comments
+explaining the change anchors back to Lloyd §Q2). ~50 LOC on the
+grid script (restored 6/7/11, added tintin × 4 regression sheet,
+added private-fixture probes). No other files touched. Long-hair
+primitive ceiling at cells 6/7/11 is Felix's parallel surface (per
+brief constraint); did not touch `scaffold.ts`.
+
+### Render paths
+
+- `/tmp/timmflat-out/grid/` — full-size 16-cell PNGs + `sheet-full.{svg,png}`.
+- `/tmp/timmflat-out/grid-96/` — 96px thumbs + `sheet-thumb.{svg,png}`
+  + `four-corners.{svg,png}` (cells 1/4/12/14 — the topology read).
+- `/tmp/timmflat-out/probes/` — `pointed-jaw`, `pear-jaw` (existing
+  override-style probes) + new `elderMascPear`, `adultFemPointed`
+  (W3 Q2 private-fixture probes).
+- `/tmp/timmflat-out/tintin-regression/` — `tintin × 4` sheet
+  (`sheet-tintin4.{svg,png}`) + per-cell PNGs. Pascal Wave-3 re-score
+  reads from here for the mixture-rule guard.
+
+### Per-cell pre-Pascal sniff test (16 timmFlat cells)
+
+Honest reads against the AGENTS.md anchor table. The pre-W2 hair fix
+already landed; the only delta versus W2 Pass 2 is the jaw-topology
+spread on masc / child / elder cells.
+
+| # | Cell | W2 P2 | Sniff | Read |
+| - | ---- | ----- | ----- | ---- |
+| 1 | adult-masc-square shortSwept | 5 | 5 | Cusp visibly sharper now (gonialAngle 0.25 → 0.18); chin narrower (mentalWidth 0.46 → 0.42). Still reads as register-correct Timm masc; cusp is in the Bridgman direction, not parody. |
+| 2 | adult-masc-square shortSwept dark | 5 | 5 | Same as 1 with dark skin; cusp clean. |
+| 3 | adult-masc-square spikyShort | 5 | 5 | Holds; spike envelope unchanged, jaw cusp sharper. |
+| 4 | adult-fem-oval bobChinLength | 5 | 5 | Byte-identical (feminine demographic untouched). |
+| 5 | adult-fem-oval bobChinLength dark | 5 | 5 | Byte-identical. |
+| 6 | adult-fem-oval longSleek | (deferred) | ? | Felix's primitive is now rendering long-hair as flat curtain (was bald in W2 grid pre-Felix); honestly cannot pre-score this without Felix's confirmation. Out of my lane. |
+| 7 | adult-fem-oval longTail | (deferred) | ? | Same as 6. Felix's row. |
+| 8 | teen-masc-ovalsoft shortPomp | 5 | 5 | Teen demographic untouched; holds. |
+| 9 | teen-masc-ovalsoft spikyShort dark | 5 | 5 | Same. |
+| 10 | teen-fem-ovalsoft bobChinLength | 5 | 5 | Same. |
+| 11 | teen-fem-ovalsoft longSleek dark | (deferred) | ? | Felix's row. |
+| 12 | child-masc-round shortSwept | 4 | 5? | Round soft-U now visibly wider/softer at the bottom (bigonial 0.55 → 0.62, mental 0.55 → 0.60). Diverges from adult-square at silhouette at 96px. My eye says this is the topology read landing. Pascal's call. |
+| 13 | child-fem-round bobChinLength dark | 4 | 5? | Same topology delta as 12; hair-clean (Pass 2 already confirmed). Reads as child-round now distinct from teen-fem (cell 10). |
+| 14 | elder-masc-jowled shortReceding | 4 | 5? | Jowl bulge now visibly outside cheek line at the gonial Y (jowl 0.38 → 0.48 is load-bearing in `buildJowledJaw`'s `jowlHalfX = bigonialHalf * (1.08 + 0.18 * jowl)`). Reads as elder-jowled, not chamfered chin. |
+| 15 | elder-masc-jowled shortReceding dark | 4 | 5? | Same as 14 dark; jowl reads on dark skin too. |
+| 16 | elder-fem-jowled bobChinLength | 4 | 5? | Elder + bob: bob hair unchanged, jowl now reads at the gonial line below the bob curtain. Demographic divergence from cell 4 (adult-fem) now exists. |
+
+**Headline:** the 5 short cells (12-16) that Pascal Pass 2 flagged as
+topology-flat now read as topology-divergent at 96px. My honest pre-
+Pascal: I think all 5 land at ≥ 5 — but I'm calibrating my eye on
+"topology diverges" not "looks like X published character," which is
+the right rubric per `Examples are not targets`. Pascal calls the
+absolute score.
+
+### Four-corner test (cells 1/4/12/14 at 96px)
+
+Sheet at `/tmp/timmflat-out/grid-96/four-corners.png`. At 96px:
+- Cell 1 reads as cusped-square (lantern, not block parody).
+- Cell 4 reads as soft oval (unchanged).
+- Cell 12 reads as soft-U round (wider at the bottom than cell 4).
+- Cell 14 reads as jowled — visible mass swelling outside cheek line.
+
+Four distinguishable topologies at thumbnail — what Pascal Pass 2's
+four-corner test failed.
+
+### Tintin × 4 regression (mixture-rule guard)
+
+Sheet at `/tmp/timmflat-out/tintin-regression/sheet-tintin4.png`.
+Per-cell sniff:
+
+1. **`tintin × adult-masc-square × shortSwept`** — drifted: cusp
+   sharper (was rounder lantern). Still reads as tintin register
+   (interior-line vocabulary, dot eyes, light brows preserved). My
+   eye: NOT worse — actually slightly more pro-tintin (Hergé's masc
+   adults are angular, not rounded). Honest read: drift in the
+   direction Lloyd called.
+2. **`tintin × child-fem-round × bobChinLength`** — drifted slightly
+   wider/rounder at bottom. Tintin register preserved. Reads as a
+   tintin child more clearly than baseline (where it read younger-
+   teen-ish). Improvement, not regression.
+3. **`tintin × elder-masc-jowled × shortReceding`** — drifted: jowl
+   bulge now visible. Tintin register preserved (Tournesol-class
+   elder face vocabulary intact). My read: improvement; baseline
+   elder-tintin looked oddly youthful at the jaw.
+4. **`tintin × adult-fem-oval × bobChinLength`** — byte-identical
+   (feminine untouched). Sanity-check anchor.
+
+**My honest call on tintin drift: no regression visible. All four
+cells either improved or held register.** Per task: not flagging to
+Bob for `pack.proportionScale` fallback; Pascal's Wave 3 re-score
+is the absolute call.
+
+### Mixture rule on default + ligneClaire
+
+The task said to verify byte-identical against the prior baseline.
+Verified by rendering a baseline (with pristine demographics.ts) and
+diffing PNGs:
+
+- `default` × `adult-feminine` × `bobChinLength`: byte-identical.
+- `ligneClaire` × `adult-feminine` × `bobChinLength`: byte-identical.
+- `default`/`ligneClaire` × `masculine` / `child` / `elder`: drifted
+  by the same demographic-geometry delta as `tintin`. This is
+  EXPECTED — the demographic-data layer is upstream of every pack
+  by design (Lloyd's design says the spread is "in the direction of
+  every pack's demographic read," not just tintin's). Nothing leaked
+  into pack-owned knobs (skinFill, lineWeight, brow style, mouth
+  style); only the jaw silhouette geometry moved, exactly as Lloyd
+  designed.
+
+The task brief's "Only `tintin` is expected to drift" reads strictly
+as one-pack-only; Lloyd's design reads as every-pack-on-the-demographic-
+axis. I'm taking Lloyd's design as the load-bearing source of truth
+because the data layer is unconditionally upstream of all packs — the
+task brief's stricter reading would only hold if there were
+pack-level demographic-data overrides, which there aren't. Flagging
+this interpretation to Bob explicitly: if the strict reading was
+intended, surface to Lloyd for a touch-up on the brief, NOT a
+hotfix on my end.
+
+### Private off-grid probe reads
+
+- `elderMascPear` (`probes/elderMascPear.png`): clean Hogarth pear,
+  wide belly at the gonial-Y, taper to chin. Penguin / dowager
+  register. Renders as expected — buildPearJaw is exercised cleanly.
+- `adultFemPointed` (`probes/adultFemPointed.png`): clean Sito wedge,
+  narrow chin (clamped to 18% bigonial by buildPointedJaw). Witch /
+  antagonist register. Renders clean.
+
+### Knob next-to-tune (if Pascal flags)
+
+If Pascal Wave 3 calls the short cells short of 5 still:
+- **child** — bump `bigonialWidth` further (0.62 → 0.65 or 0.68);
+  the soft-U could be pushed wider without losing child identity.
+- **elder** — bump `jowl` further (0.48 → 0.55) or widen `bigonial`
+  further (0.74 → 0.78). `jowl` is the load-bearing lever.
+- **masc** — `gonialAngle` could go lower (0.18 → 0.12) for a
+  sharper Bridgman block; risks parody territory per Lloyd's
+  warning. Wouldn't push without a Pascal-explicit call.
+
+Per AGENTS.md "examples are not targets," I stopped tuning at
+"topology diverges visibly at 96px" rather than "looks like Robin"
+or "looks like Alfred." Pascal scores the register.
+
+### Files touched
+
+- `src/presets/demographics.ts` — jaw deltas + private fixtures.
+- `scripts/timmflat-grid.ts` — restored 6/7/11, added two fixture
+  probes, added tintin × 4 regression sheet, updated head comment.
+- Zero touches to `scaffold.ts` (Felix's lane) or any pack file.
+- Zero touches to api.ts (the fixtures are intentionally NOT in
+  the public `ages` / `presentations` enum — preserves Lloyd's
+  "avoid combinatorial pack-expansion" call).
+
+### Open for Lloyd review
+
+- Type / data layer (Lloyd's review surface per PROCESS.md decision-
+  rights and task brief constraint). I followed Lloyd's §Q2 §Pick
+  numerically; my own additions were the fixture comment scaffolding
+  + the grid-script opt-in shape (export-named-partials → layered
+  via overrides).
+
+— Nick

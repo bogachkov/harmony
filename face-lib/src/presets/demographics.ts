@@ -15,8 +15,15 @@ export const ages = {
         topology: 'round',         // no corner; soft U
         ramusHeight: 0.22,
         gonialAngle: 0.95,
-        bigonialWidth: 0.55,
-        mentalWidth: 0.55,
+        // W3 Q2 — widen bigonial envelope for round-vs-square divergence at 96px.
+        // Prior 0.55 produced narrow soft U that read square-ish under Timm flat-fill
+        // (Pascal Pass 2 cells 12/13). Lloyd Q2 §Pick: 0.62 preserves no-cusp identity
+        // while widening the soft-U so the round topology actually exercises buildRoundJaw's
+        // padHalf ≥ 0.75 × cheek branch.
+        bigonialWidth: 0.62,
+        // W3 Q2 — pad chin slightly so child-round reads as a soft full pad, not a
+        // narrowing into the chin. Pairs with widened bigonial above. Lloyd Q2 §Pick.
+        mentalWidth: 0.60,
         mentalProtrusion: 0,
         jowl: 0,
       },
@@ -83,10 +90,17 @@ export const ages = {
         topology: 'jowled',
         ramusHeight: 0.48,
         gonialAngle: 0.55,            // softer corner — age = sag, not block
-        bigonialWidth: 0.70,
+        // W3 Q2 — wider envelope so the jowl swell shows at 96px; the prior 0.70
+        // produced a too-narrow jowl ring that read as a chamfered chin (Pascal
+        // Pass 2 cells 14/15). Lloyd Q2 §Pick.
+        bigonialWidth: 0.74,
         mentalWidth: 0.42,
         mentalProtrusion: 0.015,
-        jowl: 0.38,                    // visible cushion but not pouch
+        // W3 Q2 — load-bearing: `jowl` drives buildJowledJaw's bulge amplitude
+        // (`jowlHalfX = bigonialHalf * (1.08 + 0.18 * jowl)`); prior 0.38 left the
+        // bulge nearly inside the cheek envelope. Lloyd Q2 §Pick: 0.48 pushes the
+        // gonial-Y bulge clearly outside the cheek line for visible elder topology.
+        jowl: 0.48,
       },
       face: {
         upperThirdRatio: 0.30,
@@ -133,9 +147,18 @@ export const presentations = {
       jaw: {
         topology: 'square',
         ramusHeight: 0.44,
-        gonialAngle: 0.25,            // visible corner, not knife-cusp
-        bigonialWidth: 0.82,          // wide but not Bridgman-textbook
-        mentalWidth: 0.46,
+        // W3 Q2 — sharper gonial cusp (Bridgman direction). Prior 0.25 left
+        // adult-masc-square reading as a softened lantern under Timm flat-fill;
+        // Pascal Pass 2 four-corner cell 1 vs cell 4 collapsed to same broad-bottomed
+        // silhouette at 96px. Lloyd Q2 §Pick: 0.18 sharpens the cusp without going
+        // action-figure parody.
+        gonialAngle: 0.18,
+        // W3 Q2 — wider bigonial drives the SQUARE silhouette envelope harder.
+        // Lloyd Q2 §Pick.
+        bigonialWidth: 0.86,
+        // W3 Q2 — narrower chin pad sharpens the cusp-to-chin taper.
+        // Lloyd Q2 §Pick.
+        mentalWidth: 0.42,
         mentalProtrusion: 0.015,
         jowl: 0.08,
       },
@@ -220,3 +243,56 @@ export const presentationNames = Object.keys(presentations) as PresentationName[
 
 export const agePreset = (name: AgeName): DeepPartial<FaceParams> => ages[name];
 export const presentationPreset = (name: PresentationName): DeepPartial<FaceParams> => presentations[name];
+
+// ---- Private off-grid demographic-data fixtures (W3 Q2) ----
+//
+// Lloyd's W2 design (research/lloyd-cascade-architecture.md §Q2) folds Rollo's
+// BACKLOG `pointed`/`pear` jaw-topology row in as PRIVATE demographic-data probes,
+// NOT as new public entries in `ages` / `presentations`. The point: exercise the
+// pear / pointed builders through demographic-data-shaped partials so the grid
+// script can opt in for off-grid probes, without bloating the public preset
+// matrix into a combinatorial pack-expansion problem.
+//
+// Use via the grid script's overrides argument; consumers pass these alongside
+// a public (age, presentation) pair that establishes the substrate, and the
+// fixture's `head.jaw` block swaps topology + tunes the proportions the chosen
+// builder reads. Not part of `ages` / `presentations` — `*Names` arrays are
+// unchanged, the public enum is unchanged, the cascade pipeline does not know
+// about these.
+
+// elderMascPear — dowager / Penguin register. Hogarth 1965 pear-jaw (wide at
+// the gonial-belly, taper to chin). Built on the elder-masculine substrate;
+// the fixture itself only overrides the jaw block so it can be layered on top
+// of `age: 'elder', presentation: 'masculine'` without re-asserting the rest of
+// the elder/masc demographic surface.
+export const elderMascPear: DeepPartial<FaceParams> = {
+  head: {
+    jaw: {
+      topology: 'pear',
+      // Pear builder reads `bigonialHalf` and `jowl` to set the belly bulge.
+      // Wide bigonial + heavy jowl pushes the dowager silhouette further out
+      // than the elder substrate alone.
+      bigonialWidth: 0.88,
+      mentalWidth: 0.40,
+      ramusHeight: 0.46,
+      jowl: 0.55,
+    },
+  },
+};
+
+// adultFemPointed — sharp-chin / witch / antagonist register. Sito p.41 wedge.
+// Built on the adult-feminine substrate; swaps topology to `pointed` and
+// narrows the chin pad so the cusp shows. Per Leo's `leo-jaw.md` §2 the
+// pointed builder clamps `chinHalf` to at most 18% of `bigonialHalf` regardless
+// of what's passed, so narrow `mentalWidth` here is belt-and-braces.
+export const adultFemPointed: DeepPartial<FaceParams> = {
+  head: {
+    jaw: {
+      topology: 'pointed',
+      bigonialWidth: 0.70,
+      mentalWidth: 0.18,
+      mentalProtrusion: 0.02,
+      gonialAngle: 0.40,
+    },
+  },
+};

@@ -1,35 +1,49 @@
-// Render the W2-revised 13-cell timmFlat ship grid + four-corner thumbnail
-// test + two off-grid probes (pointed-jaw / pear-jaw).
+// Render the full 16-cell timmFlat ship grid + four-corner thumbnail
+// test + four off-grid probes (pointed-jaw / pear-jaw + W3 Q2 fixtures
+// adultFemPointed / elderMascPear) + tintin × 4 regression sheet.
 //
-// Cells 6, 7, 11 are EXPLICITLY DROPPED per Claudia's W2 re-plan
-// (SPRINT.md Q1-W2 extended) — long-hair primitive ceiling, deferred to W3.
-// The cell numbering is preserved (1..16 minus 6/7/11) so cross-references
-// with the original 16-cell spec, Pascal's W2 close pass, and the W3 promotion
-// list keep stable indices.
+// W3 Nick Q2 (`tasks/nick-q2-demographic-topology.md`) restored the 6/7/11
+// long-hair cells to the grid array — Pascal Wave 3 re-score scores ALL 16,
+// not just the demographic-topology gap cells. The long-hair primitive
+// rebuild runs in parallel under Felix (`tasks/felix-longhair-primitive-
+// rebuild.md`); until that lands, cells 6/7/11 still hit the long-hair
+// primitive ceiling and Pascal will score them low — that's expected and
+// owned by Felix's row, not by this script.
 //
 // Outputs:
-//   /tmp/timmflat-out/grid/<NN>-<label>.png        — full-size grid (13 PNGs)
+//   /tmp/timmflat-out/grid/<NN>-<label>.png        — full-size grid (16 PNGs)
 //   /tmp/timmflat-out/grid/sheet-full.svg          — composite sheet (full size)
-//   /tmp/timmflat-out/grid-96/<NN>-<label>.png     — 96×96 thumbnails (13 PNGs)
+//   /tmp/timmflat-out/grid-96/<NN>-<label>.png     — 96×96 thumbnails (16 PNGs)
 //   /tmp/timmflat-out/grid-96/sheet-thumb.svg      — composite 96px sheet
 //   /tmp/timmflat-out/grid-96/four-corners.png     — cells 1/4/12/14 at 96×96
 //   /tmp/timmflat-out/probes/pointed-jaw.png       — off-grid Joker register
 //   /tmp/timmflat-out/probes/pear-jaw.png          — off-grid Penguin register
+//   /tmp/timmflat-out/probes/adultFemPointed.png   — W3 Q2 private fixture
+//   /tmp/timmflat-out/probes/elderMascPear.png     — W3 Q2 private fixture
+//   /tmp/timmflat-out/tintin-regression/*          — tintin × 4 mixture-rule
+//                                                    regression sheet (W3 Q2
+//                                                    guard per Lloyd's caveat)
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import type { ComposeArgs, DeepPartial, FaceParams } from '../src/api.ts';
 import { composeFace } from '../src/api.ts';
 import { svgToPng } from '../src/render/raster.ts';
+// W3 Q2 — opt in for the two private demographic-data fixtures (NOT new public
+// `ages` / `presentations` entries; they live next to the public presets in
+// demographics.ts as named partials and are layered via the overrides argument).
+import { elderMascPear, adultFemPointed } from '../src/presets/demographics.ts';
 
 // Output base (override with single positional arg). Subdirs grid/, grid-96/,
-// probes/ are created beneath it.
+// probes/, tintin-regression/ are created beneath it.
 const OUTBASE = process.argv[2] ?? '/tmp/timmflat-out';
 const outdirFull = `${OUTBASE}/grid`;
 const outdirThumb = `${OUTBASE}/grid-96`;
 const outdirProbe = `${OUTBASE}/probes`;
+const outdirTintin = `${OUTBASE}/tintin-regression`;
 mkdirSync(outdirFull, { recursive: true });
 mkdirSync(outdirThumb, { recursive: true });
 mkdirSync(outdirProbe, { recursive: true });
+mkdirSync(outdirTintin, { recursive: true });
 
 // --- Skin-tone override per spec/Rollo addendum ---
 // Default skin: pack-level '#fdd6b3' (already in timmFlat).
@@ -126,8 +140,17 @@ const cells: Cell[] = [
   { n: 5,  label: 'adult-fem-oval-bobChinLength-dark',
     args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'bobChinLength',
             overrides: mergeOverrides(TIMM_NO_LEADS, darkSkin) } },
-  // n: 6  — adult-fem-oval-longSleek — DROPPED (W3 promotion, long-hair primitive ceiling).
-  // n: 7  — adult-fem-oval-longTail  — DROPPED (W3 promotion, long-hair primitive ceiling).
+  // n: 6 / 7 / 11 restored for W3 Wave-3 Pascal re-score (all 16 cells). The
+  // long-hair primitive ceiling that capped these at 2/2/2 in W2 is owned by
+  // Felix's parallel field-tracer rebuild (tasks/felix-longhair-primitive-
+  // rebuild.md); until that lands these cells will still read low — flagged
+  // in the Pascal Wave-3 brief, not a Q2 (this PR) responsibility.
+  { n: 6,  label: 'adult-fem-oval-longSleek',
+    args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'longSleek',
+            overrides: TIMM_NO_LEADS } },
+  { n: 7,  label: 'adult-fem-oval-longTail',
+    args: { style: 'timmFlat', age: 'adult', presentation: 'feminine', hairstyle: 'longTail',
+            overrides: TIMM_NO_LEADS } },
   { n: 8,  label: 'teen-masc-ovalsoft-shortPomp',
     args: { style: 'timmFlat', age: 'teen', presentation: 'masculine', hairstyle: 'shortPomp',
             overrides: TIMM_NO_LEADS } },
@@ -137,7 +160,9 @@ const cells: Cell[] = [
   { n: 10, label: 'teen-fem-ovalsoft-bobChinLength',
     args: { style: 'timmFlat', age: 'teen', presentation: 'feminine', hairstyle: 'bobChinLength',
             overrides: TIMM_NO_LEADS } },
-  // n: 11 — teen-fem-ovalsoft-longSleek-dark — DROPPED (W3 promotion).
+  { n: 11, label: 'teen-fem-ovalsoft-longSleek-dark',
+    args: { style: 'timmFlat', age: 'teen', presentation: 'feminine', hairstyle: 'longSleek',
+            overrides: mergeOverrides(TIMM_NO_LEADS, darkSkin) } },
   { n: 12, label: 'child-masc-round-shortSwept',
     args: { style: 'timmFlat', age: 'child', presentation: 'masculine', hairstyle: 'shortSwept',
             overrides: TIMM_NO_LEADS } },
@@ -338,5 +363,90 @@ const pearSvg = composeFace(pearProbe);
 writeFileSync(`${outdirProbe}/pear-jaw.svg`, pearSvg);
 writeFileSync(`${outdirProbe}/pear-jaw.png`, svgToPng(pearSvg));
 process.stderr.write(`Wrote off-grid probes: ${outdirProbe}/{pointed-jaw,pear-jaw}.{svg,png}\n`);
+
+// --- W3 Q2 private demographic-data fixture probes -----------------------
+// Lloyd's W2 design pass folds Rollo's BACKLOG `pointed`/`pear` row in as two
+// PRIVATE demographic-data fixtures (NOT new public ages/presentations). The
+// fixtures import as named partials from `demographics.ts`; they're layered on
+// top of a public (age, presentation) substrate so the demographic gloss
+// (presentation-feminine eyes/lashes, age-elder hairline/jowl-cushion) still
+// reaches the render.
+//
+// elderMascPear: dowager / Penguin register, on the elder-masculine substrate.
+// adultFemPointed: witch / antagonist register, on the adult-feminine substrate.
+const elderMascPearProbe: ComposeArgs = {
+  style: 'timmFlat',
+  age: 'elder',
+  presentation: 'masculine',
+  hairstyle: 'shortReceding',
+  overrides: mergeOverrides(TIMM_NO_LEADS, elderMascPear),
+};
+const adultFemPointedProbe: ComposeArgs = {
+  style: 'timmFlat',
+  age: 'adult',
+  presentation: 'feminine',
+  hairstyle: 'bobChinLength',
+  overrides: mergeOverrides(TIMM_NO_LEADS, adultFemPointed),
+};
+const elderMascPearSvg = composeFace(elderMascPearProbe);
+writeFileSync(`${outdirProbe}/elderMascPear.svg`, elderMascPearSvg);
+writeFileSync(`${outdirProbe}/elderMascPear.png`, svgToPng(elderMascPearSvg));
+const adultFemPointedSvg = composeFace(adultFemPointedProbe);
+writeFileSync(`${outdirProbe}/adultFemPointed.svg`, adultFemPointedSvg);
+writeFileSync(`${outdirProbe}/adultFemPointed.png`, svgToPng(adultFemPointedSvg));
+process.stderr.write(`Wrote private-fixture probes: ${outdirProbe}/{elderMascPear,adultFemPointed}.{svg,png}\n`);
+
+// --- tintin × 4 demographic regression sheet (W3 Q2 mixture-rule guard) ----
+// Lloyd's Q2 design was explicit: pushing the demographic jaw-spread WILL drift
+// `tintin × demographic` renders (not byte-identical). The regression guard is
+// a 4-cell tintin sheet Pascal re-scores alongside the timmFlat grid (per
+// `tasks/pascal-w3-close-rescore.md`). Picks: a representative sample across
+// the same demographic axes timmFlat exercises (one masc, one fem, one child,
+// one elder) so the drift is visible across the matrix, not just one axis.
+type TintinCell = { n: number; label: string; args: ComposeArgs };
+const tintinCells: TintinCell[] = [
+  { n: 1, label: 'tintin-adult-masc-square-shortSwept',
+    args: { style: 'tintin', age: 'adult', presentation: 'masculine', hairstyle: 'shortSwept' } },
+  { n: 2, label: 'tintin-child-fem-round-bobChinLength',
+    args: { style: 'tintin', age: 'child', presentation: 'feminine', hairstyle: 'bobChinLength' } },
+  { n: 3, label: 'tintin-elder-masc-jowled-shortReceding',
+    args: { style: 'tintin', age: 'elder', presentation: 'masculine', hairstyle: 'shortReceding' } },
+  { n: 4, label: 'tintin-adult-fem-oval-bobChinLength',
+    args: { style: 'tintin', age: 'adult', presentation: 'feminine', hairstyle: 'bobChinLength' } },
+];
+type TintinRendered = { n: number; label: string; svg: string };
+const tintinRenders: TintinRendered[] = [];
+for (const c of tintinCells) {
+  const svg = composeFace(c.args);
+  tintinRenders.push({ n: c.n, label: c.label, svg });
+  writeFileSync(`${outdirTintin}/${String(c.n).padStart(2, '0')}-${c.label}.png`, svgToPng(svg));
+  writeFileSync(`${outdirTintin}/${String(c.n).padStart(2, '0')}-${c.label}.svg`, svg);
+}
+// Composite sheet for the tintin × 4 regression (4-wide strip).
+const tvbs = tintinRenders.map((r) => parseVb(r.svg));
+const tCols = 4;
+const tSlotW = Math.max(...tvbs.map((v) => v.w));
+const tSlotH = Math.max(...tvbs.map((v) => v.h));
+const tLabelStripH = 22;
+const tSheetW = tCols * tSlotW + (tCols + 1) * pad;
+const tSheetH = tSlotH + tLabelStripH + 2 * pad;
+const tParts: string[] = [];
+tParts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${tSheetW}" height="${tSheetH}" viewBox="0 0 ${tSheetW} ${tSheetH}">`);
+tParts.push(`<rect width="100%" height="100%" fill="#cfcabb"/>`);
+tintinRenders.forEach((r, i) => {
+  const v = tvbs[i]!;
+  const x = pad + i * (tSlotW + pad) + (tSlotW - v.w) / 2;
+  const y = pad;
+  tParts.push(`<g transform="translate(${x} ${y})">${stripWrapper(r.svg)}</g>`);
+  const labelY = y + tSlotH + 16;
+  const labelX = pad + i * (tSlotW + pad) + tSlotW / 2;
+  const safeLabel = `${r.n}. ${r.label}`.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  tParts.push(`<text x="${labelX}" y="${labelY}" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">${safeLabel}</text>`);
+});
+tParts.push(`</svg>`);
+const tSheet = tParts.join('\n');
+writeFileSync(`${outdirTintin}/sheet-tintin4.svg`, tSheet);
+writeFileSync(`${outdirTintin}/sheet-tintin4.png`, svgToPng(tSheet));
+process.stderr.write(`Wrote tintin × 4 regression sheet: ${outdirTintin}/sheet-tintin4.{svg,png}\n`);
 
 process.stderr.write('Done.\n');

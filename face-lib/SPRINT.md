@@ -26,7 +26,7 @@ Pascal re-score across the full 16-cell grid.
 
 Five boxes:
 
-- [ ] **Q2 — demographic-topology push lands.** Lloyd's design at
+- [x] **Q2 — demographic-topology push lands.** Lloyd's design at
   `research/lloyd-cascade-architecture.md` §Q2. Edit `demographics.ts`
   jaw proportion spread (`bigonialWidth`/`mentalWidth`/`gonialAngle`/
   `jowl` across child/masculine/elder) + add two private fixtures
@@ -35,7 +35,8 @@ Five boxes:
   **Mixture-rule guard:** `tintin × demographic` will drift (not
   byte-identical); Pascal re-scores 4 representative `tintin` cells
   alongside the timmFlat re-score. Fallback `pack.proportionScale`
-  knob only if `tintin` slides.
+  knob only if `tintin` slides. **LANDED — Nick handoff in
+  `tasks/nick-q2-demographic-topology.md`. Open for Lloyd review.**
 
 - [ ] **Q1 — cascade-merge hybrid manifest lands.** Lloyd's design
   §Q1. Re-order STYLE to a NEW slot 6 (post-hairstyle, pre-expression)
@@ -92,11 +93,25 @@ Five boxes:
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| (queue empty — Bob spawns Wave 1 once David's hire call lands or after a brief wait) | — | — | See §Spawn order below |
+| Felix | Long-hair primitive rebuild | in flight (parallel) | Working tree shows scaffold.ts edits + scripts/felix-longhair-probe.ts present pre-Nick-Q2; Nick did NOT touch the file. Felix to commit separately. |
 
 ## Done this sprint (W3)
 
-*(empty — sprint just opened)*
+- **Nick — Q2 demographic-topology push** (`tasks/nick-q2-demographic-
+  topology.md`). Lloyd Q2 §Pick landed verbatim in `demographics.ts`:
+  `child.jaw` bigonial 0.55→0.62 + mental 0.55→0.60; `masculine.jaw`
+  bigonial 0.82→0.86 + mental 0.46→0.42 + gonialAngle 0.25→0.18;
+  `elder.jaw` bigonial 0.70→0.74 + jowl 0.38→0.48. Two private
+  off-grid fixtures (`elderMascPear`, `adultFemPointed`) exported as
+  named partials — NOT new public ages/presentations. Grid script
+  restored cells 6/7/11, opts in for the two private fixtures, and
+  renders the `tintin × 4` regression sheet alongside the 16-cell
+  timmFlat grid. Four-corner test (cells 1/4/12/14) at 96px now reads
+  as four distinguishable topologies — what Pascal Pass 2 failed.
+  Nick's honest pre-Pascal read: all 5 short cells (12-16) should
+  land at ≥ 5; Pascal calls the absolute score in Wave 3. No `tintin`
+  regression visible; `default`/`ligneClaire` × untouched-demographic
+  byte-identical. **Open for Lloyd review** (type / data layer).
 
 ## Blocked / pending (W3)
 
