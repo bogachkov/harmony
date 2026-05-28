@@ -32,7 +32,7 @@ Two parallel tracks:
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| David  | Pass 2 — validate Bob's proposed Q3/Q4 scope revision | RUNNING | Per Gary's "you decide but David in loop." Bob decides; David surfaces concerns. |
+| Claudia | First sprint plan — Q1-W1 against finalized ROADMAP | RUNNING | `tasks/claudia-q1w1-plan.md`. Owns SPRINT.md going forward. Returns spawn order Bob executes. |
 
 ## Blocked / pending
 

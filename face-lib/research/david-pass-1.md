@@ -197,3 +197,54 @@ David flagging, not deciding:
   honesty, scope-outs, Q2 prep, quality-bar restated, Pascal
   calibration audit). All within David authority; none pivots. Bob
   can land these without re-spawning David.
+
+## Pass 2 — scope revision validation
+
+### 1. Is Bob's monsters-vs-animals pushback sound?
+
+Partly. The architectural claim is real — animals exercise the cranium
+topology dispatcher as a generalization test; monsters (asymmetry +
+multi-appendage as parametric choices) are arguably an easier extension.
+Defensible AS tech. BUT Gary said "I can sacrifice monsters" — he named
+monsters as the cuttable. Bob is reframing Gary's product preference as
+architecturally backwards. Bob's "engine reveals its own generality" is
+tech-aesthetic; Gary asked for shippable categories, not engine
+self-revelation. Honest read: Bob's tech argument is correct AS tech
+and likely wrong AS a product call. Gary's storyboard "why" also needs
+animals more than monsters (downstream demand) — so product and tech
+converge on the same cut by coincidence. Land the revision on Gary's
+product logic, not engine-generalization logic.
+
+### 2. Does Q3 = "people done well" have enough teeth?
+
+No. "Cross-style consistency, full-character coherence, LLM-tool-call
+surface tested" is a category list, not a gate. Recommend Q3 ships iff
+(a) all Q1 style packs extend across Q2 body/clothes/pose at Pascal ≥5
+/ Rollo-ship, AND (b) a real LLM-tool-call session produces N coherent
+character requests end-to-end. Without concrete gate, "people done
+well" becomes "people slightly better" and the team coasts.
+
+### 3. Is monsters-as-stretch the right framing?
+
+Tighten it. "Stretch if capacity" is mushy and invites Q4 scope creep
+that under-delivers on animals. Better: monsters explicitly out of this
+AI year, revisited at next annual. Gary offered the sacrifice — take
+it cleanly.
+
+### 4. What the revision missed
+
+- **Q2 unchanged is suspicious.** If Q3 is the "people done well" gate,
+  Q2 bodies/clothes IS the Q3 substrate — needs explicit per-style-pack
+  handoff requirement, not generic body grafted on faces.
+- **Style-pack-per-animal open question** gets sharper, not softer,
+  now that animals carry Q4. Flag for Gary at next checkpoint.
+- **API hardening** was Q4 lane. Where does it go now? Don't let it
+  vanish.
+
+### Summary
+
+- Support with edits: tighten Q3 gate to concrete (style-pack × body/
+  pose × LLM-tool-call coherence) criteria, not category list.
+- Support with edits: drop monsters fully ("out of year"), not stretch.
+- Push back on framing: land on Gary's product logic (monsters named
+  cuttable), not Bob's engine-generalization argument.
