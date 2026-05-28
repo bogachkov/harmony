@@ -39,7 +39,30 @@ parallel is *complementary*: Timm hair is typically the canonical
 "flat shape" use-case for `clumpMode: 'flat'`, so the pack lands
 cleanly without needing volume.
 
-**Rollo (asset half):** *placeholder — Rollo to append below.*
+**Rollo (asset half), signed:** From the art-director chair, `timmFlat`
+is the rare style-pack pick where the commercial-asset case writes
+itself. The DCAU is *the* canonical late-20th-century-American animation
+visual ID — instantly legible to anyone over 25 in the West, and a
+working ID for indie game NPC portraits, web-comic supporting cast,
+storyboard-style marketing, and animated explainer-video character
+plates. Pascal-the-comic-art-critic might judge it harshly against a
+Hergé page (flat color is "less drawn" than ink-and-wash by some
+yardsticks), but on my lens the pack is unusually high-leverage:
+silhouette + flat fill is *the* asset-grade trick for thumbnail
+legibility, and we get it from primitives the engine already has. The
+demographic-grid story is what convinced me: Timm's published corpus
+literally IS a demographic cross-product across the categorical-jaw-
+topology enum — Batman (adult-masc-square), Bruce Wayne (adult-masc-
+oval), Alfred (elder-masc-oval-jowled), Joker (adult-masc-pointed),
+Harley (adult-fem-round), Catwoman (adult-fem-oval), Robin (teen-masc-
+oval), Tim Drake / Dick Grayson young (teen-masc), Mrs. Crock (elder-
+fem-square). The pack ships demographic depth FOR FREE because the
+tradition itself is built on demographic differentiation through
+silhouette. That's the inverse of `tintin`, where demographic variation
+is fighting the tradition's natural pull toward "everyone is Tintin."
+Forest-rule: I checked the BACKLOG registry — Timm adds reachable
+territory (flat-color graphic-shape + categorical-jaw-as-style-signal),
+deletes none. Confirms Leo's read on the parameter level.
 
 ---
 
@@ -363,33 +386,317 @@ flag it as a primitive blocker I missed.)
 
 ## Rollo's half
 
-*Placeholder — Rollo to append. Expected sections per the brief:*
+### NPC slots `timmFlat` fills that `default` / `tintin` / `ligneClaire` don't
 
-1. *3-5 specific NPC slots Timm flat-shape fills that `default` /
-   `tintin` / `ligneClaire` don't. ("Indie roguelike merchant" not
-   "fantasy character" — concrete.)*
-2. *Concrete demographic grid: which age × jaw × hair × skin-tone
-   combinations must render at Pascal-≥5 / Rollo-would-ship before
-   we call the pack shipped.*
-3. *2-3 ADJACENT MISSING points within the Timm parameter space —
-   coverage gaps Nick should know about before W2 starts.*
-4. *Mixture-rule check from the asset/forest side: does adopting this
-   pack risk shifting the default render away from current `tintin`
-   output? (Leo says no on the parameter level — Rollo confirms from
-   the catalog perspective.)*
+Five concrete slots, each one a real production context I would put
+this pack in front of a client for. The shared property: every slot
+wants **thumbnail-first silhouette** plus **flat-color shippability
+into engines that don't do per-pixel shading** (Unity sprite, Godot
+2D, Pixi, web-canvas, mobile screen). Tintin/LC ink-line work needs
+high-DPI to read; Timm is built for the 32×32 portrait icon.
 
-*Leo's expectation, signaled for Rollo's awareness, not as a
-prescription on Rollo's lane:*
-- *Timm hair pairs cleanly with `shortSwept`, `shortPomp`,
-  `spikyShort`, `longSleek`, `longTail`, `bobChinLength`. Should NOT
-  initially pair with `longWitch` / `longCurly` / `curlyDome` —
-  those depend on interior-stroke clump topology that Timm
-  explicitly suppresses (decision §5). Could be revisited in W3.*
-- *Jaw topology grid is the Pascal test for this pack. If a
-  Timm-styled `oval` adult-feminine and `oval` adult-masculine render
-  the same silhouette at thumbnail, the demographic data isn't
-  exercising the topology enum hard enough — that's a demographics-
-  data bug to surface in W2, not a pack bug.*
+1. **Indie superhero-roguelike NPC roster portrait.** The exact slot
+   the DCAU was designed for, transposed to a small studio's
+   character-select grid. Square portrait, flat skin tone, hard
+   black outline, single hair color, eye-mask room. Asset constraint:
+   reads at 96×96 px in the UI and at 512×512 in the codex page. Timm
+   nails both ends because the silhouette IS the design.
+   Pascal-quality not required — Rollo-ship is the bar.
+
+2. **Animated explainer-video / SaaS marketing character plate.**
+   Mailchimp-class onboarding illustration: friendly demographic-
+   diverse character heads next to a feature description. Wants:
+   flat brand color underneath, single dark outline, two-three
+   distinct readable face types per scene. `tintin` reads as "comic
+   book character" (wrong vibe for a marketing brand voice);
+   `timmFlat` reads as "approachable modern brand illustration"
+   because the flat-color register is the contemporary lingua franca.
+   This is a slot tintin literally cannot serve.
+
+3. **Web-comic / web-toon supporting-cast headshot panel.** Mid-
+   2010s-and-after web-comics (Lore Olympus, Heartstopper, et al.)
+   converged on a flat-fill register that is recognizably Timm-
+   descended. Side characters in those comics are the slot — not
+   protagonists (whose faces need finer modeling), but the bartender,
+   the older neighbor, the high-school teacher, the cop. Asset
+   constraint: reads at panel size while not stealing focus from a
+   protagonist drawn at higher fidelity. Flat-fill characters serving
+   detailed-line protagonists is a published convention.
+
+4. **VTuber / streamer mascot portrait at low complexity.** Live2D
+   and rigged-2D mascots that prioritize clean silhouette over
+   detailed rendering — the streaming-overlay-corner asset. Pack's
+   flat-color + categorical-jaw register fits the production reality
+   (rigger needs clean closed shapes; per-pixel modeling fights the
+   rig). `tintin`'s ink line and `ligneClaire`'s uniformity also work
+   here, but `timmFlat` opens the "stylized-cartoon mascot" subset
+   that the ligne-claire packs don't.
+
+5. **Storyboard / pre-viz character heads for a pitch deck.** When
+   you need 12 distinct talking heads in a pitch document and you
+   don't have weeks per head. Timm-flat reduces to "pick a jaw
+   topology, pick a hair silhouette, pick three flat colors" — the
+   fastest-to-distinct-character workflow in the catalog. This is
+   Bancroft's *Creating Characters with Personality* pedagogy
+   (cited by Leo) operationalized into an asset pipeline.
+
+(Concur with Leo's signaled hair-pairing list — `shortSwept`,
+`shortPomp`, `spikyShort`, `longSleek`, `longTail`, `bobChinLength`
+are the cleanest pairs at W2. `longWitch` / `longCurly` / `curlyDome`
+contain interior-stroke clump topology that fights decision §5 and
+should NOT be in the W2 grid; revisit W3 or later.)
+
+### Demographic grid — concrete cells the pack must ship at quality bar
+
+This is the grid against which "timmFlat ships" or "timmFlat ships
+shallow." Per ROADMAP "demographic depth > pack count," shallow does
+not count. Grid is grounded in what the engine actually has wired
+today: `ages = {child, teen, adult, elder}`, `presentations =
+{masculine, feminine}`, jaw topologies dispatched by those
+demographics (round / oval / square / jowled — `pointed` and
+`pear` are wired in the topology enum per Leo but NOT yet exercised
+through demographic presets; flagged below as an adjacent gap).
+
+**The MUST-SHIP grid (16 cells = 8 demographic cells × 2 skin tones).**
+Each cell is one render at Pascal ≥ 5 / Rollo-would-ship for the pack
+to count as shipped. Anything less and it ships "shallow."
+
+| # | Age   | Presentation | Jaw topology (engine) | Hair preset       | Skin tone   |
+| - | ----- | ------------ | --------------------- | ----------------- | ----------- |
+| 1 | adult | masc         | square                | `shortSwept`      | default     |
+| 2 | adult | masc         | square                | `shortSwept`      | dark        |
+| 3 | adult | masc         | square                | `spikyShort`      | default     |
+| 4 | adult | fem          | oval                  | `bobChinLength`   | default     |
+| 5 | adult | fem          | oval                  | `bobChinLength`   | dark        |
+| 6 | adult | fem          | oval                  | `longSleek`       | default     |
+| 7 | adult | fem          | oval                  | `longTail`        | default     |
+| 8 | teen  | masc         | oval (soft)           | `shortPomp`       | default     |
+| 9 | teen  | masc         | oval (soft)           | `spikyShort`      | dark        |
+|10 | teen  | fem          | oval (soft)           | `bobChinLength`   | default     |
+|11 | teen  | fem          | oval (soft)           | `longSleek`       | dark        |
+|12 | child | masc         | round                 | `shortSwept`      | default     |
+|13 | child | fem          | round                 | `bobChinLength`   | dark        |
+|14 | elder | masc         | jowled                | `shortReceding`   | default     |
+|15 | elder | masc         | jowled                | `shortReceding`   | dark        |
+|16 | elder | fem          | jowled                | `bobChinLength`   | default     |
+
+The grid exercises:
+- **Every wired age**: child / teen / adult / elder.
+- **Every wired presentation**: masc / fem.
+- **Every wired-AND-dispatched jaw topology**: round (child) / oval
+  (teen, fem-adult) / square (masc-adult) / jowled (elder). The two
+  un-dispatched topologies (`pointed`, `pear`) are NOT in the must-
+  ship grid — flagged below as adjacent-gap territory the pack
+  *can* reach but doesn't have to for shipping.
+- **Six hair presets** from the Leo-approved pair list: `shortSwept`,
+  `shortPomp`, `spikyShort`, `bobChinLength`, `longSleek`,
+  `longTail`, `shortReceding`. That's 7 of the 13 in catalog — enough
+  to demonstrate the pack reads across hair without claiming "every
+  hair × every demographic" (which would be 13 × 8 = 104 cells,
+  Haddock-density).
+- **Two skin tones** (default + dark) at minimum, hit on every
+  demographic axis. Not one cell of "all light" plus one "all dark";
+  scattered across age × presentation so skin-tone × jaw-topology ×
+  hair gets cross-exercised.
+
+**The Pascal-anchor test for this grid:** cell-1 (Batman-shape,
+adult-masc-square) and cell-4 (Catwoman-shape, adult-fem-oval) must
+read as **clearly different characters** at 96×96 thumbnail. Cell-12
+(child-round) and cell-14 (elder-jowled) must read as **clearly
+different ages** at the same size. If those four corners pass, the
+middle of the grid is plausibly carryable. If the four corners
+collapse to similar silhouettes, the demographic-data layer isn't
+exercising the topology enum hard enough — Leo flagged this exact
+risk in his signal, I'm restating it as a grid-level acceptance
+criterion.
+
+**What this grid is NOT trying to do:** ship every wired-and-
+dispatched cross-product. Notably absent and **deliberately deferred**:
+
+- `longCurly`, `longWavy`, `curlyDome`, `longWitch` × any
+  demographic — these contain interior strokes that Timm decision §5
+  forbids. Revisit when (and if) we add a `texturedFlat` Timm
+  sub-variant in W3+.
+- TWA / tight-coily — already a BACKLOG gap (Rollo pass-1, top-3
+  missing axis). The pack does NOT solve this; flag stands.
+- `pointed` and `pear` jaw topologies × any demographic — see
+  adjacent-gap section below.
+
+### Adjacent missing points in the forest registry
+
+With `timmFlat` added, four gaps remain visible in the reachable
+parameter surface. These help Claudia decide W2/W3 pack candidates.
+None block W2 implementation; all are upside if/when promoted.
+
+1. **`pointed` and `pear` jaw topologies are wired in the enum but
+   NOT dispatched by any demographic preset.** The Timm canon
+   literally requires `pointed` to render Joker, Mr. Freeze
+   antagonist-class characters, and `pear` to render Penguin-class
+   characters. With the current demographic presets, the pack
+   renders the Batman/Catwoman/Alfred axis cleanly but **cannot
+   reach the Joker axis** without ad-hoc parameter overrides at
+   render-time. This is a **demographics-data gap**, not a
+   timmFlat-pack gap — surfacing it because adding the pack makes
+   the gap visible. **Recommendation: file a BACKLOG entry for a
+   `villain`/`character` demographic-or-archetype axis that
+   dispatches `pointed` and `pear` topologies.** Not a W2 blocker;
+   Nick can render the must-ship grid cells without it.
+
+2. **Tight-coily / TWA × Timm is a double-gap that closes in one
+   move.** Rollo pass-1 top-3 missing axis is TWA at the catalog
+   level. `timmFlat` style + TWA hair would be a **highly
+   shippable asset** (modern Black-character portraits in flat-
+   color animation are a major contemporary slot — Boondocks-
+   descended, *Spider-Verse* supporting cast, Cartoon Saloon's
+   *Wolfwalkers* register). When/if the BACKLOG TWA primitive lands,
+   pair it through `timmFlat` first — the pack's flat-fill
+   convention is the cleanest backdrop for the coily-halo
+   silhouette. **Promote-together candidate** for W3 or W4.
+
+3. **No "Timm villain" eye treatment without the per-feature line-
+   weight multiplier.** Timm canon: hero eyes have heavy upper-lid
+   line + flat almond; villain eyes (Joker, Two-Face) have the
+   SAME treatment but with the lid weight cranked further and a
+   shadow cast across the upper eye-socket. With current `eyes.lidLine:
+   0.6` as a scalar, all timmFlat characters share one lid-weight
+   register — heroes and villains read at the same intensity. The
+   per-feature line-weight multiplier Leo flagged is the unlocking
+   primitive. **Asset implication: pack ships hero/protagonist
+   register cleanly at W2; villain register is reachable but
+   reads slightly under-intense until the multiplier lands.** This
+   is a known ceiling, not a blocker.
+
+4. **No swept-back-long hair × Timm.** Rollo pass-1 top-3 missing
+   axis is swept-back-long (period-drama matriarch, severe
+   antagonist). `timmFlat` × swept-back would be a strong asset
+   — think *Batman Beyond* Bruce-as-elder, Mrs. Crock, Maleficent-
+   adjacent silhouettes. The hair primitive isn't there yet (also
+   BACKLOG); when it lands, `timmFlat` is its natural first home.
+
+### Mixture-rule preservation check — asset/forest side
+
+**Does adding `timmFlat` threaten any already-reachable aesthetic
+in the BACKLOG forest registry?**
+
+Walked the registry entry-by-entry against the proposed pack:
+
+| Filed aesthetic                | Reached via              | At risk from `timmFlat`? |
+| ------------------------------ | ------------------------ | ------------------------ |
+| Chaotic/stringy/witch hair     | `longWitch` preset       | No — not in W2 grid; preset itself unchanged. |
+| Coily halo silhouette          | `curlyDome` preset       | No — not in W2 grid; preset unchanged. |
+| Shoulder-falling sleek         | `longSleek` preset       | No — preset unchanged; `timmFlat`×`longSleek` is an ADDITION (cell 6/11). |
+| Big curly mass                 | `longCurly` preset       | No — not in W2 grid; preset unchanged. |
+| Gentle wave                    | `longWavy` preset        | No — not in W2 grid; preset unchanged. |
+| Shounen silhouette teeth       | `spikyShort` preset      | No — preset unchanged; cross-applied in cells 3/9. |
+| Mature recession               | `shortReceding` preset   | No — preset unchanged; cross-applied in cells 14/15. |
+| Falling-past-the-shoulders     | `longTail` preset        | No — preset unchanged; cross-applied in cell 7. |
+| Swept-back volume              | `shortPomp` preset       | No — preset unchanged; cross-applied in cell 8. |
+
+**Result: zero filed aesthetics at risk.** Confirms Leo's parameter-
+level read from the catalog/asset side. The `timmFlat` pack is a
+sibling key in `styles.ts`; every hairstyle preset remains reachable
+through `default` and `tintin` exactly as before. The cross-product
+`{tintin, ligneClaire, default} × {all 13 hairstyles}` is undisturbed;
+`timmFlat × {7 grid-listed hairstyles}` is pure expansion.
+
+**Default-render drift check:** the `default` style preset is the
+empty object `{}` in `styles.ts`. Adding a new sibling key cannot
+mutate it. No drift. Confirmed.
+
+**One soft asset-side caveat (not a mixture-rule violation, a usage
+signal):** if Claudia/Bob start defaulting demo galleries to
+`timmFlat` because it "ships fastest," there's a risk the
+tintin/ligneClaire packs get under-exercised and silently bit-rot.
+Not a code-level forest violation — a process-level one. Flag for
+Claudia: keep gallery rotation across packs, don't let the most-
+camera-ready pack monopolize the gallery surface.
+
+### Concur with Leo's would-be-nicer triage
+
+Asked: do any of Leo's two new BACKLOG candidates (per-feature line-
+weight multiplier; categorical brow-shape enum) actually become
+**required** when I look at the asset-side grid?
+
+**Concur with Leo: both are deferrable.**
+
+- The **per-feature line-weight multiplier** is the higher-leverage
+  of the two from the asset side — it's what blocks the villain-
+  register adjacent gap (#3 above) and gates the pack's true-canon
+  Pascal ceiling (Leo estimated ~7 without it, ~8 with). But it is
+  NOT required for the must-ship grid to hit Pascal ≥ 5 / Rollo-
+  would-ship. Heroes and supporting cast in the grid render fine
+  on a uniform lid-line. Promote in W3 if Pascal's grid-review
+  calls for it; otherwise W4+.
+- The **categorical brow-shape enum** is a quality-ceiling
+  enhancement, not a floor primitive. `brows.style: 'single'` plus
+  the demographic-owned `brows.fullness` carries the grid. The enum
+  becomes more interesting when we ship a second graphic-shape
+  pack (shounen, Caniff) and want shared brow-shape vocabulary —
+  defer until then.
+
+Neither is a W2 blocker. No additional primitives needed from
+Rollo's asset lens.
+
+### Proposed parameter delta — Rollo addendum (color / background / asset-side)
+
+Per the brief: Rollo to append color/background choices to Leo's
+parameter delta. Sticking strictly to the proportions-forbidden rule
+in `styles.ts` — touching only `style.*` fields, no head/face
+proportions.
+
+```ts
+// Appended to Leo's timmFlat block — Rollo's color/background/asset deltas
+// (replaces Leo's placeholder values where I have a stronger asset call)
+
+timmFlat: {
+  style: {
+    // ... Leo's values for lineWeight / jitter / color stand as proposed.
+    skinFill: '#fdd6b3',     // Leo's value — concur for default skin
+    // For the "dark" skin-tone cells in the demographic grid, the pack
+    // should compose with a demographic-owned skin-tone override OR
+    // accept a per-render skinFill override. Asset-side note for Nick:
+    // do NOT bake a single skinFill into the pack as the only option;
+    // the grid REQUIRES at least one alternate skin tone reaching cells
+    // 2, 5, 9, 11, 13, 15. If skinFill at the pack level wins over
+    // demographic-tone selection, that's an integration bug — surface
+    // to Claudia. Suggested alternate value for dark cells:
+    //   skinFill: '#6e3f24'   (warm dark brown, Timm's Static Shock /
+    //                          John Stewart / Tatsu register)
+    hairFill: '#1a1a1a',     // Leo's default — concur, but flagged below
+    //   Hair color must be per-render overrideable, not pack-locked.
+    //   Default '#1a1a1a' covers ~60% of Timm canon (dark-haired
+    //   characters); the grid contains cells where hair must read as
+    //   blonde (Harley register, Mrs. Crock register), brown (Bruce
+    //   Wayne register), or grey (Alfred register). Same integration
+    //   concern as skinFill: pack-default must not block per-character
+    //   override.
+    background: '#e8e4d8',   // soft warm-neutral, NOT pure white. Timm
+    //   model sheets are typically presented on a warm-neutral plate;
+    //   pure white reads as "missing background" in an asset context.
+    //   Distinct from tintin's '#fff8e8' cream (warmer/yellower) and
+    //   from a stark white. Nick may swap to a per-NPC-slot accent
+    //   background at render time (slot #1 above wants a solid color
+    //   block; slot #2 wants brand-color; slot #5 wants transparent for
+    //   pitch-deck compositing).
+    //   OPEN: should `background: null` be supported at the pack level
+    //   for the transparent-output case (slot 5)? Defer to Nick at
+    //   implementation — small primitive question, not a spec-level
+    //   decision.
+  },
+  // No additional eye/brow/nose/mouth/hair deltas beyond Leo's block.
+  // No head.* / proportions touched (forbidden by styles.ts rule).
+}
+```
+
+**Rollo's verification of Leo's parameter delta against the
+demographic grid:** walked every cell against every knob Leo
+proposed. No cell requires a write Leo didn't list. **Leo's delta is
+complete from the asset/grid perspective.** The only adds from my
+lens are color-palette refinements (above) and the per-render
+override discipline notes.
+
+*— Rollo, Q1-W1 art-director pass for the timmFlat style pack.
+   Asset half complete. Spec ready for Nick's W2 implementation.*
 
 ---
 

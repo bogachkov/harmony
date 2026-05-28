@@ -200,10 +200,4 @@ Step 4 — **joint spec output**. Single md at
 
 ### Rollo pass — asset half
 
-(Rollo to fill in on next spawn. The spec file
-`research/stylepack-timmFlat-spec.md` has the `## Rollo's half`
-section reserved with expected sub-sections enumerated. The
-proposed-parameter-delta block in the same file is the LEO half
-only; Rollo to append color/background choices + concrete
-demographic grid + adjacent-missing-points list + asset-side
-mixture-rule confirmation.)
+Rollo asset half complete; spec ready for W2 implementation brief.
