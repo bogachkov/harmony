@@ -237,4 +237,86 @@ Both are legitimate. Concrete design options:
 
 ## Handoff
 
-(Lloyd fills in on completion.)
+**Lloyd — design pass complete. Filed at
+`research/lloyd-cascade-architecture.md` (177 lines, slightly over
+the 150 cap; the brief covers two distinct architectural questions
++ sizing — defensible).**
+
+### Q1 verdict — cascade-merge
+
+Picked **option 4 hybrid**: re-order STYLE from cascade slot 2 to a
+NEW slot 6 (post-hairstyle, pre-expression) AND add per-pack
+`declares: string[]` manifest naming the knob paths the pack
+asserts as declarative truth. The pack applies TWICE — first pass
+at slot 2 (substrate, unchanged), second pass at slot 6 (writes
+ONLY manifest-listed paths). Default `declares: []` → second pass
+no-op → existing packs byte-identical.
+
+`timmFlat.declares` covers the contested set: `hair.recipe.leads`,
+`hair.recipe.parting`, four `mouth.*` keys, three `eyes.*` keys,
+`brows.style`, three `nose.*` keys.
+
+Manifest paths type-constrained at compile time to a string-union
+of pack-allowed keys per `styles.ts:13-26`'s header rule.
+Demographic-only knobs (`head.jaw.*`, `head.face.*`, etc.)
+inadmissible — engine-vs-style separation enforced by the type
+system.
+
+**W3 sizing:** ~65 LOC net across `model/params.ts`,
+`presets/styles.ts`, `api.ts`, `scripts/timmflat-grid.ts`. Half to
+one day for Nick.
+
+### Q2 verdict — demographic-topology gap
+
+Fix at **demographic-preset-data layer**, NOT the topology
+dispatcher. Builders in `scaffold.ts:119-339` DO diverge per
+topology (verified by read). The `bigonialWidth`/`mentalWidth`/
+`gonialAngle`/`jowl` spread in `demographics.ts` is too compressed
+to read at 96px through the Timm flat-fill register (which strips
+the interior line-density that masks under-spread in `tintin`).
+
+Concrete preset edits (illustrative; Nick tunes against Timm
+renders): child.jaw bigonial 0.55→0.62, mental 0.55→0.60;
+masculine.jaw bigonial 0.82→0.86, mental 0.46→0.42, gonialAngle
+0.25→0.18; elder.jaw bigonial 0.70→0.74, jowl 0.38→0.48 (jowl is
+the load-bearing knob — what `buildJowledJaw:282` amplifies on).
+
+Folds in Rollo's BACKLOG `pointed`/`pear` row as two PRIVATE
+demographic-data fixtures (`elderMascPear`, `adultFemPointed`),
+NOT public enum additions (avoids combinatorial pack expansion).
+
+**W3 sizing:** ~50 LOC net in `presets/demographics.ts` +
+`scripts/timmflat-grid.ts`. Half day plus tuning.
+
+**Mixture-rule caveat:** existing `tintin` × demographic renders
+WILL drift on Q2 (not byte-identical). Acceptable per Lloyd
+judgment because prior values were calibrated against interior-
+line-density masking. Regression guard: Pascal re-scores `tintin`
+× 4 representative cells alongside the timmFlat re-score. If
+`tintin` regresses, fall back to `pack.proportionScale?: number`
+(default 1.0) — mechanism deferred until regression fires.
+
+### Coupling (Q3)
+
+Mechanically independent. **Land Q2 first** (smaller, no
+architectural risk, gives Pascal early re-score signal); Q1
+second (architectural, benefits from confirmed register read
+before cascade restructure). One touch-point: Q1's allowed-path
+string-union MUST exclude `head.jaw.*` + `head.face.*` —
+engine-vs-style separation at the type system.
+
+### Nick W2 PR #4 interaction
+
+If `recipe.suppressLeads: true` lands in PR #4, it ships timmFlat
+in W2 but becomes redundant under this design. Delete in the same
+Nick W3 commit that lands the manifest — default `false` means
+zero caller impact. Two-line cleanup.
+
+### Decision rights
+
+Neither Q1 nor Q2 design is Q1-envelope-changing (no breaking
+type change, no deprecated alias guard touched, no schema break).
+Lloyd TL authority per AGENTS.md. **No Gary escalation required.**
+Surfacing for Gary's awareness per Pascal's W2 flag: "pack as
+declarative truth vs overrides at render time" is now answered —
+hybrid via the manifest mechanism.
