@@ -25,16 +25,16 @@ work with appropriate parallelism.
 
 ## In flight
 
-| Agent  | Task | Status | Notes |
-| ------ | ---- | ------ | ----- |
-| Leo    | Pass 7 cap-cluster oscillation audit | RUNNING | Will be extended on return with 3D-abstraction + lead/fill questions rather than spawning a fresh audit. |
+(nothing — all agents idle)
 
 ## Blocked / pending
 
 | Agent  | Task | Blocked on |
 | ------ | ---- | ---------- |
-| Lloyd  | Architecture review of 3D hair refactor | Leo's 3D-abstraction answer |
-| Nick   | Implement 3D-aware hair primitive | Lloyd's design |
+| Leo    | 3D-abstraction audit + lead/fill audit | Needs to be spawned — Tech Lead intended to extend the prior Leo brief on return, but the prior Leo already returned and was implemented; the 3D audit was never actually launched |
+| Lloyd  | Architecture review of 3D hair refactor | Blocked on Leo's 3D-abstraction answer (above) |
+| Nick   | Implement 3D-aware hair primitive | Blocked on Lloyd's design |
+| Nick   | Restore bob/short cap rendering (HIGH regression — see BACKLOG) | Likely subsumed by Leo's 3D audit; verify with Leo first |
 
 ## Done this sprint
 
