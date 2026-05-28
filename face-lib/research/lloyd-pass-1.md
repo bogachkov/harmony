@@ -283,3 +283,95 @@ a replacement — exactly the rule that applied to `clumpMode`.
 - **4. Alpha-shape deferral** — NEEDS-CHANGES (pull into Q1-W2 as
   `hullMode: 'convex' | 'alpha'` parameter; convex stays as a mode
   per mixture rule; current artefacts are unshippable).
+
+---
+
+## Pass 3 — Nick alpha-shape implementation review
+
+Both artefacts I flagged in Pass 2 §4 are gone. `coilyHalo` reads as a
+roughly-radial concave halo with edge texture; `longCurtain` reads as
+two side curtains with the centre parting preserved. The fix works on
+the first tuning pass. Dispatch is clean (`hullMode` read once at
+stage E in `svg.ts`, merger selected, called). Mixture rule honoured —
+both functions live, both modes reachable.
+
+### 1. LOC overrun — ~340 vs my ~80 projection
+
+**APPROVED-AS-IS.** My §7 number was naive about input scale, not Nick
+over-engineering. I sized "~80 LOC" against a lightweight boundary-
+extraction (probably gift-wrap on the union of capsule outlines)
+assuming a hundreds-of-points cloud. Real fixtures produce 4500-capsule
+hullGroups → 72k raw outline verts. At that scale you need three things
+my §7 didn't account for: (a) a grid pre-dedup to cap point density
+(without it Bowyer-Watson chokes — Nick measured ~400ms post-dedup,
+hanging without); (b) a robust Delaunay (Bowyer-Watson is the cleanest
+textbook choice); (c) edge-stitching + largest-component selection
+because the α-complex can fragment. Each is necessary; none is gold-
+plating. Nick's ~217 non-comment LOC for that pipeline is reasonable.
+The honest LOC bill on alpha-shape extraction at this input scale was
+always ~200, not 80. My miss, not Nick's overrun. **Comment density at
+~40% is correct** for this file — I asked for the α-heuristic to be
+defended in-source and the calibration trail for `ALPHA_FACTOR` is
+exactly the kind of context the next reader needs.
+
+### 2. Decision #1 — defaults for the W1 fixtures
+
+**APPROVED-AS-IS.** Nick's conservative call holds. My Pass 2 §4
+framing of "alpha as the eventual default for new adoption" still
+stands — alpha IS the canonical merger going forward. But the W1
+fixtures earned their place as regression-history records of the v1
+convex artefact (hexagon, wimple, trapezoid); flipping them silently
+costs Holly the byte-identical baseline she'll diff against next
+sprint. Sibling `*Alpha` fixtures keep BOTH modes addressable as
+named presets, which is the load-bearing mixture-rule outcome. Any
+W3 volume-mode pack should set `hullMode: 'alpha'` explicitly per
+Nick's §5 — that puts the default-for-new-adoption decision at the
+recipe site where it belongs, not in a global default flip.
+
+### 3. `ALPHA_FACTOR = 1.5` — internal constant vs recipe parameter
+
+**APPROVED-AS-IS for v1; flagged for Claudia.** 1.5 holds up because
+of an interaction Nick spotted that I missed: the grid pre-dedup
+stabilises the NN distribution so the auto-tune measures the
+capsule-body scale, not intra-cluster noise. That's the property that
+makes a single constant work across input densities, and it's worth
+keeping the heuristic internal until a caller needs to dial it. The
+analogy to my Pass 2 §1 tangent-decay exposure does NOT yet hold:
+tangent-decay had a plausible per-regime caller (straight vs wave vs
+curl); `ALPHA_FACTOR` does not have a caller asking for it. When a W3
+pack wants a tighter halo edge or a looser drape, expose then. **Note
+for Claudia:** if exposure lands, it's `recipe.hullAlpha?: number`
+overriding the auto-tune — one parameter, not an architecture change.
+Not a W2 ask; W3-when-bitten.
+
+### 4. Dead-code cleanup status
+
+**NEEDS-CHANGES — surgical.** `hull.ts:70-86` still carries the
+`theta/cx/cy` derivation with `void cx; void cy;` discards I flagged
+in Pass 2. This PR touched `hull.ts` heavily for alpha-shape but did
+not sweep the existing dead block. Smallest fix is deleting lines
+71-73 + 86 (the four `theta`/`cx`/`cy`/`void` lines) and trimming the
+"computed both via theta and phi" sentence in the comment. ~5 LOC out,
+no behaviour change, no further review needed.
+
+### Cross-cutting
+
+- **Determinism preserved** per Nick's check (30/30 byte-identical
+  catalog; alpha output stable across runs). Good.
+- **Convex fallback on degenerate alpha is silent.** Nick flagged
+  this; I agree it's fine for v1. Holly may want a debug hook when
+  she writes the regression suite — defer to her brief.
+- **`hullMode` lives on recipe, not on Curve.** Right call. Per-curve
+  granularity would be a YAGNI knob.
+
+### Verdicts
+
+- **1. LOC overrun** — APPROVED-AS-IS (my §7 projection was naive
+  about input scale; Nick's implementation is honest to the workload).
+- **2. Decision #1 defaults** — APPROVED-AS-IS (conservative split
+  preserves regression history; mixture rule satisfied via siblings).
+- **3. `ALPHA_FACTOR = 1.5`** — APPROVED-AS-IS for v1; flag to
+  Claudia that exposure becomes `recipe.hullAlpha?: number` when a
+  W3 pack asks for it (not now).
+- **4. Dead-code cleanup** — NEEDS-CHANGES (delete `hull.ts:71-73,86`;
+  ~5 LOC; trivial follow-up commit).

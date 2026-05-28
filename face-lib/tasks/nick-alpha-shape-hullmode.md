@@ -319,3 +319,28 @@ full 103-image gallery at `/tmp/nick-w2-pr2/gallery-check/`.
 both flagged artefacts (hexagon halo + nun's wimple) on the first tuning
 pass with Lloyd's recommended ALPHA_FACTOR. Did not have to keep tuning;
 diagnosis was right; landing.
+
+## Lloyd review (Pass 3 — research/lloyd-pass-1.md)
+
+- **1. LOC overrun (~340 vs ~80)** — **APPROVED-AS-IS.** §7 number
+  was naive about input scale (4500-capsule hullGroups → 72k raw verts
+  was not modelled). Grid pre-dedup + Bowyer-Watson + α-complex +
+  boundary stitch are each necessary at this workload; honest LOC bill
+  was always ~200, not 80. Comment density at ~40% is correct.
+- **2. Decision #1 (W1 defaults stay convex; sibling alpha fixtures)**
+  — **APPROVED-AS-IS.** Conservative split preserves the regression-
+  history baseline; mixture rule satisfied via siblings. Any W3
+  volume-mode pack sets `hullMode: 'alpha'` explicitly per Nick's §5.
+- **3. `ALPHA_FACTOR = 1.5` internal vs parameter** — **APPROVED-AS-IS
+  for v1**, flagged to Claudia. Grid pre-dedup stabilises the NN
+  distribution so the constant works across input densities. Expose
+  as `recipe.hullAlpha?: number` overriding the auto-tune when a W3
+  pack asks for it; not now.
+- **4. Dead-code cleanup (Pass 2 §1 leftover at hull.ts:71-73,86)** —
+  **NEEDS-CHANGES.** Surgical: delete the `theta/cx/cy/void` lines
+  plus trim the "computed both via theta and phi" sentence. ~5 LOC
+  out, no behaviour change, no re-review needed.
+
+Net: PR ships. One trivial cleanup commit follows (Nick or Bob inline,
+either is fine — this is the kind of one-line sweep PROCESS.md lists
+as Bob's exception).
