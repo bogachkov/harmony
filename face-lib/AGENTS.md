@@ -3,6 +3,22 @@
 Six agent roles, each with a distinct mandate. Don't blur the lanes — that
 is what defeated us in the long iteration loop on faces.
 
+## Collab artifacts (read these on spawn)
+
+Every agent reads these as part of their brief — they carry state across
+sessions and across agent spawns. Light markdown, no overhead.
+
+- `face-lib/SPRINT.md` — current sprint goal, per-agent status (in-flight,
+  blocked, done). Updated by the Tech Lead each commit.
+- `face-lib/BACKLOG.md` — known gaps, regressions, deferred items, and the
+  filed-aesthetic registry (per the mixture-not-survival rule). Anything
+  here can be promoted into the next sprint.
+- `face-lib/tasks/` — individual task files for detailed briefs and
+  handoffs the SPRINT.md row-summary can't carry. Convention in
+  `tasks/README.md`.
+- `face-lib/research/` — agent deliverables (Leo audits, Rollo passes,
+  hair-theory, etc). One file per pass.
+
 ## Tech Lead — the parent agent (default Claude)
 
 Plans with the user. Frames sprints. Holds the bigger picture. Delegates
