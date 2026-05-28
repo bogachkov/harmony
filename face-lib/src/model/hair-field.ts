@@ -262,34 +262,6 @@ export const clumpStroke = (
   return trace;
 };
 
-// One-commit shim to ease the diff. Returns just the centreline as Vec3[].
-// Callers that pre-date the ClumpSpec API use this to keep behaviour
-// identical while the rest of the codebase migrates. Deletion plan: Lloyd
-// pass 1 §3, "delete in the follow-up commit before PR merges."
-//
-// @deprecated — pass a ClumpSpec to clumpStroke directly.
-export const clumpStrokeLegacy = (
-  field: CranialField,
-  startUV: UV,
-  length: number,
-  samples: number,
-  surfaceOffset = 0,
-  stopAt?: (p: Vec3) => boolean,
-): Vec3[] => {
-  const trace = clumpStroke(field, {
-    rootUV: startUV,
-    length,
-    samples,
-    gravity: 0,
-    radial: 0,
-    radius0: 0,
-    radius1: 0,
-    surfaceOffset,
-    stopAt,
-  });
-  return trace.map((s) => s.p);
-};
-
 // Convert a Cartesian point on the ellipsoid back to UV coordinates.
 // Useful for placing stroke starts at e.g. the hairline.
 export const xyzToUV = (p: Vec3, rx: number, ry: number, rz: number): UV => {

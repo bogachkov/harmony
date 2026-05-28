@@ -2,8 +2,7 @@ import type { FaceParams } from './params.ts';
 import type { Vec3 } from '../math/vec3.ts';
 import { ellipsoidPoint } from '../math/vec3.ts';
 import { darken, lighten } from '../math/color.ts';
-import { cranialField, clumpStroke, clumpStrokeLegacy } from './hair-field.ts';
-import type { ClumpTrace } from './hair-field.ts';
+import { cranialField, clumpStroke } from './hair-field.ts';
 
 // A Curve is a 3D polyline. The renderer projects each point and strokes them as one path.
 // `role` lets the renderer identify special curves (silhouette, hair) for fills.
@@ -1387,10 +1386,22 @@ const buildHair = (
           rawStroke = trace.map((s) => s.p);
           traceRadii = trace.map((s) => s.r);
         } else {
-          // Legacy shim: pre-Lloyd-pass-1 surface-bound polyline. Dies at the
-          // end of this PR; keeps flat mode bit-for-bit identical.
-          rawStroke = clumpStrokeLegacy(field, { u, v }, length, 28, surfaceOffset, stopAt);
-          if (rawStroke.length < 4) continue;
+          // FLAT path: zero gravity/radial/radius — the integrator's flat
+          // fast-path is bit-for-bit identical to the pre-refactor UV-stepping
+          // math (per Lloyd pass 1 §5). Same surface-bound polyline as before.
+          const trace = clumpStroke(field, {
+            rootUV: { u, v },
+            length,
+            samples: 28,
+            gravity: 0,
+            radial: 0,
+            radius0: 0,
+            radius1: 0,
+            surfaceOffset,
+            stopAt,
+          });
+          if (trace.length < 4) continue;
+          rawStroke = trace.map((s) => s.p);
         }
         const ampJitter = waviness * (0.75 + rng() * 0.50);
         const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
