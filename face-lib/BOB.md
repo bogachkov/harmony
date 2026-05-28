@@ -193,6 +193,35 @@ Identity is preserved by construction.
 Generation-vs-modification is the axis. Diffusion redraws. We edit
 state.
 
+### Scope clarification (what this is NOT)
+
+Not a physics engine. Not a world representation engine. If we
+ever truly need that, import one. The dragon/rain example was a
+joke about diffusion-model failure mode, not a spec for what we're
+building.
+
+### The concrete use case
+
+Indie game dev. Gary wants to make games and needs visual assets.
+The off-the-shelf option is online pixel-art asset packs — but
+those bind you to someone else's style, scope, and consistency
+rules.
+
+Our engine is the alternative: he uses the API to generate SVG
+assets *that fit his taste*, with tweaking and iteration to refine.
+Repeatable, consistent, his.
+
+**Quality target, named explicitly:** Chrono Trigger. Maybe
+Suikoden. That register — confident 16-bit-era character art,
+expressive, stylized, consistent. NOT Final Fantasy X (which Gary
+thinks sucks anyway — that's a separate beef, but the point is
+hyper-realistic 3D-CG is not the target).
+
+So the bar is "Chrono Trigger character portrait" not "movie-quality
+illustration." That's a sharper, more reachable target than
+"master-tier confident-pro" framed in the abstract. The team's
+been chasing the wrong ceiling.
+
 ### Stop habits
 
 - Don't re-explain back to Gary what he just told me. He's not
