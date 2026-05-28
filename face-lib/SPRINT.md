@@ -71,13 +71,15 @@ What is explicitly NOT in W1's gate:
 
 | Agent  | Task | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| Leo    | `leo-face-integration-audit.md` — eye/mouth/brow integration | RUNNING | Spawn 4. Last box (4) to close W1. |
-| Lloyd  | `lloyd-pass-2-review.md` — code review of Nick's 3D implementation | RUNNING | Bob-triggered post Nick PR. Four concerns to verdict (3 Nick-flagged + 1 Bob-from-renders). |
+| Lloyd  | `lloyd-pass-2-review.md` — code review of Nick's 3D implementation | RUNNING | Bob-triggered post Nick PR. Four concerns to verdict. Last in-flight task before Claudia re-spawns. |
 
 **Done this sprint (W1):**
 - Leo W1 stylepack pedagogy half (timmFlat picked + spec'd) — closes half of box 3.
 - Rollo W1 stylepack asset half (NPC slots + demographic grid + mixture check) — closes box 3 fully.
 - **Nick 3D clump-volume refactor (7 commits ending 909244c) — closes boxes 1+2.** All 13 existing styles bit-for-bit identical in flat mode. Volume mode renders three fixtures (`shortBob` byte-identical, `longCurtain` gravity, `coilyHalo` radial). Net +444 LOC engine + 148 fixtures. Convex-hull artefact more dramatic than Lloyd §7 predicted — Bob raising with Lloyd review whether alpha-shape moves earlier than "deferred until adoption."
+- **Leo face-integration audit (`research/leo-face-integration-audit.md`) — closes box 4.** Eyes = STOP, small (~25 LOC eye-primitive plumbing prereq before timmFlat impl — `buildEye` almond branch silently drops `lidLine`/`lashes`/`underlineHint`). Brows / Mouth / Integration = GO-WITH-CAVEATS for W2. Cross-cutting: Pascal's "features-as-decals" complaint is structurally real (no orbital socket, no brow ridge plane, no mouth-on-mandible attachment); timmFlat dodges it because Timm canon literally IS decals — pack 3+ (Caniff/manga/realistic) will hit it hard and need a socket-recess primitive pass. Six BACKLOG candidates flagged. Probe sheet at `/tmp/leo-probe-styles/`.
+
+**All four W1 ship-gate boxes now closed.** Claudia re-spawns after Lloyd's review returns (his verdicts may affect W2 scope, e.g., alpha-shape timing).
 
 ## Blocked / pending
 
