@@ -16,7 +16,6 @@ import shortPompadour from './shortPompadour.ts';
 import spikyShort from './spikyShort.ts';
 import bobChinLength from './bobChinLength.ts';
 import curlyDome from './curlyDome.ts';
-import longFlowing from './longFlowing.ts';
 import longWavy from './longWavy.ts';
 import longCurly from './longCurly.ts';
 import longSleek from './longSleek.ts';
@@ -29,7 +28,6 @@ export const hairstyles = {
   spikyShort,
   bobChinLength,
   curlyDome,
-  longFlowing,
   longWavy,
   longCurly,
   longSleek,

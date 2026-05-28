@@ -943,7 +943,13 @@ const buildHair = (
   // Mass cap as a filled closed polygon. noStroke = true; the visible top edge is
   // rendered as a SEPARATE inked stroke (next), so the cap reads as drawn rather
   // than as a flat fill region.
-  if (fillColor && style !== 'long') {
+  // Per Leo pass 7 §10: drop the cap polygon for short and medium too — the
+  // cap-cluster oscillation was structural. Strokes carry the mass at every
+  // length. Cap is only kept for legacy/none/bald or as a fallback when
+  // skinFill is null. (The shadow + highlight regions inside the cap block
+  // are likewise dropped — they were band-aids on the cap's flatness.)
+  const drawCap = false;
+  if (fillColor && drawCap) {
     const cap: Vec3[] = [...topSil, ...hairline];
     curves.push({
       kind: 'feature', closed: true, points: cap,
@@ -1132,19 +1138,29 @@ const buildHair = (
   //
   // Per user: every parameter randomized via deterministic seeded RNG. Stroke
   // length, thickness, pressure, taper, seed position all vary.
-  if (style === 'long' && fillColor) {
-    // No cap polygon and no extra band — strokes carry the visual mass.
-    // The head silhouette outline shows through at the very top as a thin
-    // arc; that's the "back of head" line visible in many comic styles
-    // (Hayashi 2000 §2). Acceptable rather than worse alternatives.
-    // Density-only approach: the STROKES are the mass. No fall polygon —
-    // polygons read as fabric. Instead, render ~400 strokes whose density,
-    // length, and thickness vary so the visual mass emerges from overlapping
-    // strokes near the top (dense thatch) and the wisps emerge as fewer long
-    // strokes reach the bottom.
+  // Per Leo pass 7 §10: strokes-as-mass extends to short and medium too.
+  // The cap-cluster oscillation was structural — the same flat cap polygon
+  // underlying all 4 short styles was the bug. Strokes only, all lengths.
+  // Length range and gravity vary by style:
+  //   short  — clumps 0.18-0.50 long, low gravity (mass hugs scalp)
+  //   medium — clumps 0.40-1.10 long, medium gravity (chin-length fall)
+  //   long   — clumps 0.45-2.25 long, high gravity (curtain past shoulders)
+  if (style !== 'none' && style !== 'bald' && fillColor) {
+    // Style-dependent stroke generation parameters.
+    const isLong = style === 'long';
+    const isMedium = style === 'medium';
+    const gravity = isLong ? 1.1 : isMedium ? 0.8 : 0.5;
+    // Short strokes still need enough length to extend from the crown DOWN
+    // to the hairline — too short and the result is "scribble on the very
+    // top of the head" (per the first short-pass iteration).
+    const lengthMin = isLong ? 0.45 : isMedium ? 0.40 : 0.45;
+    const lengthSpread = isLong ? 1.80 : isMedium ? 0.70 : 0.55;
+    // Short hair clumps stay UP TOP — no side-curtain seeds (no hair on sides).
+    // Medium gets some side seeds. Long gets full side coverage.
+    const sideSeedShare = isLong ? 0.50 : isMedium ? 0.25 : 0.0;
     const field = cranialField(rx, ry, rz, {
       crown: { u: 0, v: 0.85 * Math.PI / 2 },
-      gravity: 1.1,
+      gravity,
     });
     // Mulberry32 seeded RNG — deterministic, no per-call drift. Seed should
     // come from style.jitterSeed eventually; hardcoded 1 for the experiment
@@ -1198,27 +1214,30 @@ const buildHair = (
     // Per Leo SM-1: total stroke ceiling ~450. Per SM-4: phase is DISCRETE per
     // clump (each stroke belongs to exactly one clump), not derived from
     // continuous position math.
-    const clumpCount = 28;
+    // Short needs MORE clumps because each stroke is much shorter — fewer
+    // pixels covered per stroke means we need more strokes for the same
+    // visual density. Leo pass 7 §10 + CC-3.
+    const clumpCount = isLong ? 28 : isMedium ? 36 : 50;
     for (let c = 0; c < clumpCount; c++) {
       // ---- Per-clump correlated properties (rolled ONCE per clump).
       let centreU: number;
       let centreV: number;
       const sideRoll = rng();
-      if (sideRoll < 0.50) {
-        // Front-of-scalp clumps — start near the CROWN (v close to PI/2) so
-        // strokes cover the top of the cap polygon instead of starting halfway
-        // down it (which produced the visible "cap band on top" Pascal flagged).
+      const frontShare = 1.0 - sideSeedShare;
+      if (sideRoll < frontShare) {
+        // Front-of-scalp clumps — start near the CROWN (v close to PI/2).
         centreU = (rng() + rng() - 1) * Math.PI * 0.55;
         centreV = 0.78 * Math.PI / 2 + (rng() - 0.5) * 0.30 * Math.PI / 2;
-      } else if (sideRoll < 0.75) {
-        // Right-side clumps — start higher too (above the temple, near crown).
+      } else if (sideRoll < frontShare + sideSeedShare * 0.5) {
+        // Right-side clumps (long/medium only).
         centreU = (0.55 + rng() * 0.35) * Math.PI / 2;
         centreV = (0.30 + rng() * 0.55) * Math.PI / 2;
       } else {
+        // Left-side clumps.
         centreU = -(0.55 + rng() * 0.35) * Math.PI / 2;
         centreV = (0.30 + rng() * 0.55) * Math.PI / 2;
       }
-      const lengthBase = 0.45 + rng() * rng() * 1.80;
+      const lengthBase = lengthMin + rng() * rng() * lengthSpread;
       // Per-clump thickness — triple-pull rng^3 distribution gives a long tail
       // so ~10% of clumps are visibly heavier "dominant locks."
       const sizeBase = 0.6 + rng() * rng() * rng() * 4.5;
@@ -1238,7 +1257,18 @@ const buildHair = (
         const size = sizeBase * (0.60 + rng() * rng() * 1.00); // intra-clump variance
         const pressureMid = 0.65 + rng() * 0.30;
         const surfaceOffset = 0.018 + rng() * 0.012;
-        const rawStroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset);
+        // Short hair: clip at hairline (otherwise strokes spill onto forehead).
+        // Long hair: no clip — strokes fall past the chin freely.
+        const stopAt = isLong ? undefined : (pt: Vec3): boolean => {
+          let bestY = hairlineY;
+          let bestDist = Infinity;
+          for (const h of hairline) {
+            const dist = Math.abs(h[0] - pt[0]);
+            if (dist < bestDist) { bestDist = dist; bestY = h[1]; }
+          }
+          return pt[1] < bestY - headHeight * 0.005;
+        };
+        const rawStroke = clumpStroke(field, { u, v }, length, 28, surfaceOffset, stopAt);
         if (rawStroke.length < 4) continue;
         const ampJitter = waviness * (0.75 + rng() * 0.50);
         const freqJitter = waveFrequency * (0.9 + rng() * 0.2);
@@ -1254,89 +1284,9 @@ const buildHair = (
     }
   }
 
-  // ---- SHORT-HAIR STROKE TEXTURE (Pascal pass 7 §1 — "the six non-long
-  // styles are still Microsoft Paint"). Overlay 40-60 short strokes on the
-  // cap polygon for any non-long style, color-matched to the hair fill but
-  // SLIGHTLY DARKER (darken 0.15) so they read as interior texture rather
-  // than additional fill. Strokes follow the cranial field so they have
-  // believable hair-fall direction. No clumping (short hair doesn't form
-  // long visible locks); just textured fill.
-  if (style !== 'long' && style !== 'none' && style !== 'bald' && fillColor && !isReceding) {
-    const shortField = cranialField(rx, ry, rz, {
-      crown: { u: 0, v: 0.85 * Math.PI / 2 },
-      gravity: 0.5,
-    });
-    let shortRng = 23 >>> 0;
-    const srng = (): number => {
-      shortRng = (shortRng + 0x6d2b79f5) >>> 0;
-      let t = shortRng;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    const shortTextureColor = darken(fillColor, 0.18);
-    const shortStrokeCount = 50;
-    // Stop short strokes at the hairline so they don't leak onto the forehead
-    // (visible artifact on bobChinLength v1 where some strokes hung below).
-    const stopAtHairline = (pt: Vec3): boolean => {
-      let bestY = hairlineY;
-      let bestDist = Infinity;
-      for (const h of hairline) {
-        const dist = Math.abs(h[0] - pt[0]);
-        if (dist < bestDist) { bestDist = dist; bestY = h[1]; }
-      }
-      return pt[1] < bestY - headHeight * 0.005;
-    };
-    // ESCAPE STROKES — short downward strokes spilling past the hairline so
-    // the cap's bottom edge stops reading as a hard horizontal brim (Pascal
-    // pass 7 §1 — "cap polygon's bottom edge is a horizontal brim"). 14
-    // escape strokes distributed along the hairline; each starts ON the
-    // hairline and drops short distance below, varying in length and offset.
-    const escapeCount = 14;
-    for (let i = 0; i < escapeCount; i++) {
-      const arcT = (i + 0.5) / escapeCount;
-      const idx = Math.floor(arcT * (hairline.length - 1));
-      const anchor = hairline[idx] as Vec3;
-      const jitterX = (srng() - 0.5) * 0.030;
-      const startX = anchor[0] + jitterX;
-      const startY = anchor[1] + headHeight * 0.005;     // just above hairline
-      // Some escape strokes longer than others; bias short.
-      const dropLen = headHeight * (0.015 + srng() * srng() * 0.060);
-      const endX = startX + (srng() - 0.5) * 0.020;
-      const endY = anchor[1] - dropLen;
-      const pts: Vec3[] = [
-        [startX, startY, anchor[2]],
-        [endX, endY, anchor[2]],
-      ];
-      curves.push({
-        kind: 'feature-ink', closed: false, points: pts,
-        ink: {
-          size: 0.8 + srng() * 1.2,
-          taperStart: 0.05,
-          taperEnd: 0.80,    // strong taper at the tip = wispy escape
-          pressureMid: 0.75,
-          color: fillColor,
-        },
-      });
-    }
-    for (let i = 0; i < shortStrokeCount; i++) {
-      // Distribute across the FRONT of the scalp (above the hairline).
-      const u = (srng() + srng() - 1) * Math.PI * 0.55;
-      const v = 0.55 * Math.PI / 2 + srng() * 0.40 * Math.PI / 2;
-      const length = 0.20 + srng() * 0.35;
-      const surfaceOffset = 0.020;
-      const stroke = clumpStroke(shortField, { u, v }, length, 16, surfaceOffset, stopAtHairline);
-      if (stroke.length < 3) continue;
-      const size = 0.6 + srng() * srng() * 1.4;
-      curves.push({
-        kind: 'feature-ink', closed: false, points: stroke,
-        ink: {
-          size, taperStart: 0.10, taperEnd: 0.45,
-          pressureMid: 0.70 + srng() * 0.25, color: shortTextureColor,
-        },
-      });
-    }
-  }
+  // (Old short-hair stroke-texture overlay + escape-strokes block deleted
+  // per Leo pass 7 CC-3. The unified strokes-as-mass loop above now handles
+  // all style lengths.)
 
   return curves;
 };

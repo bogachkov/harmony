@@ -869,206 +869,120 @@ cited.
 
 ## 10. Pass 7 — cap-cluster oscillation audit
 
-*Pascal's third lateral 4/10. Per AGENTS.md L22-25: oscillation across
-three rounds = wrong primitive, not wrong parameter. Pascal's specific
-charge: the four cap-cluster styles (shortSwept, shortPompadour,
-bobChinLength, curlyDome — 8/16 images) are **one silhouette with
-cosmetic fuzz**. Long hair differentiates because strokes ARE the mass
-(§9). Short hair doesn't because strokes are TEXTURE-ON-CAP.*
+*Pascal's third lateral 4/10. Per AGENTS.md L22-25 = wrong primitive,
+not wrong parameter. The cap-cluster (shortSwept, shortPompadour,
+bobChinLength, curlyDome) is one silhouette with cosmetic fuzz. Long
+hair differentiates because strokes ARE the mass (§9). Short doesn't
+because strokes are texture-on-cap.*
 
-### 10.1 Are the 5 knobs the right parameterization? Read the values.
+### 10.1 Are the 5 knobs the right parameterization?
 
-Honest read of the four hairstyle files + scaffold.ts:817-901:
+Values for the 4 styles: shortSwept (recession 0.30 / fall 0 / peakX
++0.10 / nape 0 / flicked); shortPompadour (0.10 / 0 / +0.30 / 0 /
+smooth); bobChinLength (0 / 0.55 / 0 / 0.35 / smooth); curlyDome (0 /
+0.30 / 0 / 0.20 / edgeTextured). Set is correct (Faigin ch.9). Two
+killers at thumbnail:
 
-| Knob | shortSwept | shortPompadour | bobChinLength | curlyDome |
-|---|---|---|---|---|
-| `templeRecession` | 0.30 | 0.10 | 0 | 0 |
-| `sideFall` | 0 | 0 | 0.55 | 0.30 |
-| `crownPeakX` | +0.10 | +0.30 | 0 | 0 |
-| `napeExtension` | 0 | 0 | 0.35 | 0.20 |
-| `edgeKind` | flicked | smooth | smooth | edgeTextured |
+1. **`napeExtension` is dead code at front-view** (scaffold.ts:902-905
+   literally `void napeExtension`). Half my differentiation lives
+   behind a stub.
+2. **Sub-perceptual amplitudes.** `recessionMag = recession·H·0.08`
+   at 0.30 = 2.4% H Y-dip; `peakXOffset = peak·rx` at 0.10 = 1% face
+   X-shift. Only `sideFallMag` at 0.55 = 19% H is visible. Three of
+   four knobs deliver <3% H — <8px on a 360px thumbnail, unresolvable
+   through a 1.5px wobbled outline.
 
-The differences are real and per-knob orthogonal — Pass 4's audit was
-honest. But two killers at thumbnail viewing scale:
+SS-3 (orthogonal knobs) locks us into small additive deltas that
+don't compound. Set survives; amplitudes are sub-resolution at
+thumbnail.
 
-1. **`napeExtension` is dead code at front-view.** scaffold.ts:902-905
-   literally `void napeExtension`. So bobChinLength's 0.35 vs swept's 0
-   contributes **zero pixels**. Half my "differentiation" lives behind
-   a stub.
-2. **The amplitudes are sub-perceptual.** `recessionMag = templeRecession ·
-   H · 0.08` — at templeRecession=0.30 that's 2.4% headHeight Y-dip.
-   `peakXOffset = crownPeakX · rx` at 0.10 = 1% face-width X-shift.
-   `sideFallMag = sideFall · H · 0.35` at 0.55 = 19% H drop — this is the
-   one that DOES read (look at fem-bob vs fem-pomp: the side-curtain
-   stub IS visible). But three of the four knobs deliver <3% H
-   deformation. At a 360px-wide thumbnail that's <8px. Pascal cannot
-   resolve 8px of contour shift through a perfect-freehand stroked
-   outline that's already 1.5px thick with wobble.
+### 10.2 "Hard horizontal line." Yes — the shadow polygon edge.
 
-The knob *set* is correct (Faigin's hair-as-mass factoring still
-holds). The **amplitudes** are calibrated for a smooth artist-eye
-review, not for thumbnail legibility. SS-3 (orthogonal knobs) is
-locking us into small additive deltas that don't compound.
-
-### 10.2 "Hard horizontal line above the escape strokes." Yes, it is.
-
-scaffold.ts:946-952 builds `cap` as `[...topSil, ...hairline]` then
-fills it. The HAIRLINE polyline (928-941) has:
-
-- `baseArc = -H * 0.012 * (1 - sin(πt))` → 1.2% H lift at temples,
-  zero in center. At a 600px render = 7px arc. Sub-perceptual.
-- `irregularity = H * 0.008 · sin(πt) · (sin(17.3t)·0.6 + sin(31.7t)·0.4)`
-  → 0.8% H jitter, peaked center, two frequencies. 5px peak-to-peak.
-  At thumbnail = aliased to a wiggle that reads as fill-texture, not
-  as fibre boundary.
-
-Then scaffold.ts:962-992 paints a SHADOW POLYGON whose lower edge IS
-the same hairline. So the hard line Pascal sees is the hairline-as-
-shadow-polygon-bottom-edge, NOT the cap-fill-bottom-edge. The cap fill
-is a tone, the shadow is a darker tone, and the shadow's bottom is the
-hairline. That's the brim. The escape strokes (1290-1321) drop FROM
-the same Y±5px. Result: tonal-band → brim → fringe of equal-spaced
-dropping strokes. **That's a hat with a tassel.**
-
-Toth's broken hairline (hair-theory §6, *Genius Isolated* ch.4) breaks
-the line by letting clumps BRIDGE the fill — the silhouette's lower
-edge becomes the union of irregular clump bottoms, not a polyline.
-Increasing `irregularity`'s amplitude 3-4× would help marginally;
-replacing the polyline with a clump-bottom union is the structural fix.
+scaffold.ts:946-952 builds `cap = [...topSil, ...hairline]` then
+fills. The hairline polyline (928-941) has `baseArc -H·0.012·(1-sin
+πt)` = 1.2% H temple lift (7px@600); `irregularity H·0.008·…` = 0.8%
+H jitter (5px PP). Sub-perceptual. Then 962-992 paints a SHADOW
+polygon whose lower edge IS that same hairline. Pascal's "hard line"
+is the cap-tone → shadow-tone → brim → equal-spaced drops cascade.
+**Hat with a tassel.** Toth (*Genius Isolated* ch.4) breaks the line
+by letting clumps BRIDGE the fill — silhouette bottom = union of
+clump bottoms, not a polyline. Crank `irregularity` 3-4× helps
+marginally; clump-bottom union is the structural fix.
 
 ### 10.3 14 escape strokes — why "comb fringe"?
 
-scaffold.ts:1295-1321. Per-stroke RNG IS used: jitterX ±0.015, dropLen
-0.015-0.075H (cubed → biased short), endX jitter ±0.010, size 0.8-2.0,
-all from a Mulberry32. So Pascal's "uniform" claim isn't literally true
-at the stroke level. What IS uniform:
+scaffold.ts:1295-1321. Per-stroke RNG IS used (jitterX, dropLen
+cubed, endX, size). Uniformity is on the WRONG axes:
 
-- **Anchor spacing.** `arcT = (i + 0.5) / 14` — strokes are spaced at
-  EXACTLY `H/14` along the hairline. That's the comb-teeth signal:
-  not the length of each tooth but the **regular X-spacing of the
-  origins**. Real fringe clumps in Toth/Caniff cluster (2-3 anchors
-  jammed, then a gap, then 2 more) — Poisson-disk or clumped sampling,
-  not uniform.
-- **Anchor Y.** Every stroke starts at `anchor[1] + 0.005·H` — i.e. on
-  the same Y curve (the hairline). Real escape wisps originate from
-  DIFFERENT depths into the cap (some break the hairline edge from
-  above, some hang from a clump 5mm up).
-- **All strokes drop downward.** `endY = anchor[1] - dropLen`, endX
-  jitter ±0.010 — angle variance <8°. Real fringe strokes fan ±30°
-  (some curl inward toward brow, some hook outward at the temple).
-- **Color = fillColor.** All 14 escapes are the SAME ink colour. Real
-  hair has variable density per strand — light hairs over shadow
-  hairs. Three tonal classes minimum (dark base / mid / catch-light).
+- **Anchor X-spacing.** `arcT=(i+0.5)/14` — exact H/14. Teeth signal
+  isn't per-tooth length, it's the regular origin spacing. Toth /
+  Caniff cluster (2-3 jammed, gap, 2 more); needs Poisson-disk or
+  per-clump anchoring.
+- **Anchor Y.** All start at `anchor[1]+0.005·H` — one curve. Real
+  wisps originate from different depths into the cap.
+- **Angle.** endX jitter ±0.010 → angle variance <8°. Real fringe
+  fans ±30° (curl inward to brow, hook outward at temple).
+- **Single ink colour.** All 14 = fillColor; real hair needs 3 tonal
+  classes (dark base / mid / catch).
 
-So Pascal sees uniformity of *origin distribution and angle*, not of
-per-stroke length. The RNG is on the wrong axes.
+### 10.4 Pick — (a) extend §9 stroke-as-mass to short and medium.
 
-### 10.4 Pick — the structural fix is (a) extend §9 stroke-as-mass to short.
+**Drop the cap polygon for SHORT and MEDIUM. Stroke density only.**
 
-**Drop the cap polygon for SHORT styles too. Use stroke density only.**
+- §9 proved this on long. Cap fill survived in short by inertia, not
+  pedagogy. Faigin ch.9, Toth IDW2011 ch.4, Loomis 1956 pl.38 =
+  silhouette-via-clump-bottoms; none paint polygon-fill with
+  stroke-outline. The cap is a procedural artefact.
+- Fixes §10.2+§10.3 simultaneously: no polygon → no brim → no escape
+  primitive (cap-bottom strokes ARE the wisps); no amplitude crank
+  (§10.1) — silhouette becomes emergent from the clump field.
+- Reuses §9.5 (28 centres, correlated phase/size). Shorter
+  `lengthBase` (0.20-0.50 vs 0.45-2.25) + biased crown-V → short.
+- (b) "3× amplitudes" preserves the wrong primitive, trips SS-1+SS-3.
+  (c) "per-style cap constructor" = 4 bespoke shapes = AGENTS.md §6
+  "invent primitives, hand-tune" verbatim. (a) collapses 4 STOP-flag
+  risks into one move already validated on long.
 
-Justification:
+**LOC ≈ 120 delta**: DELETE 946-1019 (cap+shadow+highlight, −73);
+DELETE 1264-1339 (texture+escape, −75); ADD §9 long-block extension
+for short/medium with recipe-driven `lengthRange`/`clumpCount`/crownV
+(~80). KEEP `topSil` as an OPTIONAL outline stroke (no fill) for
+styles needing a visible cap edge (pompadour, spiky). KEEP parting
+(1071-1091) and flowStrokes (1098-1121) — they ride on top of the
+clump field unchanged. **This is the next move.**
 
-- §9 already proved this works: long hair differentiates because
-  strokes ARE the mass. The cap fill survived in short because of
-  inertia, not pedagogy. Faigin ch.9, Toth IDW2011 ch.4, Loomis 1956
-  pl.38 are all *silhouette-via-clump-bottoms* — NONE of them paint
-  a polygon fill with a stroke outline. The cap polygon is a
-  procedural artefact.
-- It fixes 10.2 and 10.3 simultaneously: no polygon → no horizontal
-  brim → no need for escape strokes as a separate primitive (the cap-
-  bottom strokes ARE the wisps); no need for §10.1's amplitude crank
-  because the silhouette becomes emergent from the clump field.
-- It re-uses the clumping topology Fred just shipped (§9.5, 28 clump
-  centres, correlated phase/size). Run it with shorter `lengthBase`
-  (0.20-0.50 instead of 0.45-2.25) and different crown-V, and short
-  hair falls out for free.
-- Option (b) "3x amplitudes" preserves the wrong primitive and would
-  trip SS-3 (interaction debt) and SS-1 (over-caricature). Option (c)
-  "per-style cap constructor" is the path to 4 hand-tuned bespoke
-  shapes — vibe-coding masquerading as architecture, AGENTS.md §6
-  failure mode verbatim. Option (a) collapses 4 STOP-flag risks into
-  one architectural move that's already validated on long hair.
+### 10.5 Collapse longFlowing.
 
-**LOC estimate:** ~120 LOC delta. Specifically:
+waviness 0.012 = 5px PP at 600px render. Sub-perceptual. Other field
+deltas (forehead 0.30 vs 0.32, nape 0.50 vs 0.40) are noise. Delete
+longFlowing. Catalog keeps sleek/wavy(0.030)/curly(0.075) — three
+honest wave-axis points. "Subtly wavy long" = HS-3 antipattern
+verbatim.
 
-- DELETE scaffold.ts:946-1019 (cap fill + shadow polygon + highlight
-  band): -73 LOC.
-- DELETE 1264-1339 (short-hair texture overlay + 14 escape strokes):
-  -75 LOC.
-- ADD: extend the §9 `style === 'long'` block to handle `'short'` and
-  `'medium'` with different `lengthBase` / `clumpCount` / crown-V per
-  hairstyle recipe field. ~80 LOC.
-- KEEP: `topSil` polyline as the silhouette-outline STROKE (for the
-  styles where a visible cap edge IS desired — pompadour, spiky), but
-  rendered as a perfect-freehand ink stroke only, no fill.
-- KEEP: parting curve (1071-1091) and flowStrokes (1098-1121) — they
-  ride on top of the clump field unchanged.
+### 10.6 STOP flags — cap-cluster, additive to §6 / §8.5 / §9.6
 
-**This is the next move. Not amplitude tuning. Not per-style caps.**
-
-### 10.5 longSleek vs longFlowing — collapse longFlowing.
-
-Read longSleek.ts (waviness:0, freq:0) vs longFlowing.ts (waviness:
-0.012, freq:1.6). 0.012·H amplitude over a stroke = ~5px peak deflect
-at 600px render. Pascal called it sub-perceptual; he's right.
-longFlowing's only differentiator is that 5px sinusoid. The other
-fields (forehead 0.30 vs 0.32, sideFall 0.45 vs 0.45, nape 0.50 vs
-0.40, volume 0.08 vs 0.10) are noise.
-
-**Collapse longFlowing → delete the file, keep longSleek as the "sleek
-straight" entry.** Don't replace it; the catalog already has longWavy
-(0.030, 2.2 — visible) and longCurly (0.075, 5.0 — visible). Three
-points on the wave axis are enough; the fourth was Fred reaching for
-"flowing" as a vibe word, not a discrete pedagogical category. HS-3
-flag explicitly: "wavy bob ≠ straight bob" as separate hairstyles is
-the antipattern. Same applies here: "subtly wavy long" ≠ a hairstyle.
-
-### 10.6 STOP flags — cap-cluster pass 7
-
-Additive to §6, §8.5, §9.6.
-
-- **CC-1. Do NOT crank amplitudes on the 5 silhouette knobs.** The bug
-  is that knobs deform a *polygon edge* that's then traced with a 1.5px
-  ink stroke. Tripling `recessionMag` produces a noticeable contour
-  shift in 2D, then perfect-freehand smooths half of it back. Output
-  ceiling stays the same. (§10.1 + §10.4.)
-- **CC-2. Do NOT replace the cap with a per-style polygon constructor.**
-  Pompadour-as-rolled-forward-volume is a real shape, but coding it as
-  bespoke geometry per style is the failure mode AGENTS.md §6 names
-  "invent primitives, hand-tune until output looks ok." If a pompadour
-  needs forward roll, that's a `crownPeakX +0.40` clump-density bias on
-  the §10.4 stroke field, not a new constructor.
-- **CC-3. Do NOT preserve the 14-escape-stroke primitive.** It is a
-  brim-tassel hack from pass 6's panic. §10.4 deletes it. Don't
-  re-add when the new short-as-clumps lands and looks sparse on
-  iteration 1; the fix is more clumps near the hairline, not bringing
-  the comb back.
-- **CC-4. Do NOT keep `napeExtension` if it stays void.** Either wire
-  it (in 3/4 view, future pass) or remove the param. Dead knobs lie to
-  the reader of the preset files. (Per §10.1 finding.)
-- **CC-5. Do NOT ship longFlowing.** §10.5. Three wave-axis points is
-  the budget (sleek/wavy/curly). Subtle-waviness is not a hairstyle.
+- **CC-1. No amplitude crank on the 5 knobs.** Tripling `recessionMag`
+  produces a contour shift; perfect-freehand smooths half back.
+- **CC-2. No per-style polygon constructor.** Pompadour-roll lives as
+  a clump-density bias on §10.4's stroke field, not new geometry.
+- **CC-3. No re-adding the 14-escape primitive.** §10.4 deletes it.
+  Fix sparseness with more hairline-band clumps, not a comb.
+- **CC-4. No keeping `napeExtension` as a stub.** Wire or remove.
+- **CC-5. No shipping longFlowing.** Three wave points is the budget.
 
 ### Executive summary — for Fred
 
-1. **The cap-cluster collapse is structural, not parametric. Drop the
-   cap polygon (and the shadow band, and the 14 escape strokes) for
-   SHORT and MEDIUM styles. Extend §9's stroke-as-mass approach to
-   them.** Short hair = ~28 clump centres with `lengthBase 0.20-0.50`,
-   crown-V at 0.78·π/2, density biased toward the hairline. ~120 LOC
-   delta (mostly deletion). Recipe-driven `clumpDensity` /
-   `clumpLengthRange` fields per hairstyle replace `templeRecession`
-   et al. for differentiation.
-2. **Delete longFlowing.** Waviness 0.012 is sub-perceptual; the
-   catalog already has 3 honest wave-axis points (sleek/wavy/curly).
-3. **The 5 silhouette knobs survive but get demoted.** They control
-   the outer silhouette OUTLINE stroke only (not a fill); their job
-   becomes secondary characterization, not primary differentiation.
-   `napeExtension` removed until 3/4 view lands.
+1. **Cap-cluster collapse is structural. Drop the cap polygon (+ shadow
+   band + 14 escape strokes) for SHORT and MEDIUM. Extend §9 stroke-as-
+   mass: ~28 clumps, `lengthBase 0.20-0.50`, crown-V 0.78·π/2, density
+   biased to hairline. ~120 LOC delta (mostly deletion). Recipe-driven
+   `clumpLengthRange`/`clumpCount` replace `templeRecession` et al. as
+   the primary differentiator.**
+2. **Delete longFlowing.** Sub-perceptual; three wave-axis points
+   (sleek/wavy/curly) is the budget.
+3. **The 5 silhouette knobs survive but get demoted** — they control
+   an optional outer outline stroke only, not a fill. `napeExtension`
+   removed until 3/4 view lands.
 
-*Sources added pass 7:* none new — Toth IDW 2011 ch.4 (clump-bridged
-silhouette, "broken edge over fill"), Faigin 2012 ch.9 (silhouette
-via clump-bottoms), Loomis 1956 pl.38 (mass-via-clumps for short
-hair), all previously cited. Pascal verdict-3 oscillation per
-AGENTS.md L22-25.
+*Sources pass 7:* none new — Toth IDW 2011 ch.4 (clump-bridged
+silhouette), Faigin 2012 ch.9, Loomis 1956 pl.38, previously cited.
