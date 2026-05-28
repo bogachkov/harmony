@@ -30,7 +30,9 @@ Two parallel tracks:
 
 ## In flight
 
-(nothing — David's review complete, waiting on Gary's call on the four escalated questions)
+| Agent  | Task | Status | Notes |
+| ------ | ---- | ------ | ----- |
+| David  | Pass 2 — validate Bob's proposed Q3/Q4 scope revision | RUNNING | Per Gary's "you decide but David in loop." Bob decides; David surfaces concerns. |
 
 ## Blocked / pending
 
