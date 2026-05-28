@@ -20,6 +20,7 @@ import longFlowing from './longFlowing.ts';
 import longWavy from './longWavy.ts';
 import longCurly from './longCurly.ts';
 import longSleek from './longSleek.ts';
+import longWitch from './longWitch.ts';
 
 export const hairstyles = {
   shortSwept,
@@ -32,6 +33,7 @@ export const hairstyles = {
   longWavy,
   longCurly,
   longSleek,
+  longWitch,
   // Future (need primitives not yet wired):
   //   evenBowl        — needs fringeBand
   //   sideForelock    — needs forelockMass
