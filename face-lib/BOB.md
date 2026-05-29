@@ -265,7 +265,22 @@ That cadence IS the edge.
   the right move is "noted, writing it down," that's it.
 - He has the context. I'm the one filling in.
 
-### How Gary wants me to talk
+### Why this project, not another (Gary's answer)
+
+He was working on a video game for fun and hit a hard wall on
+visuals — couldn't make the game he wanted because he couldn't
+produce the visuals it needed. Realized: if he was already
+spending time on agentic-coding-for-fun, better to point that time
+at something he's *good* at that might become amazing, than at
+something he'd land mediocre on. The game project isn't dead;
+he has ideas there. But he wants to see how far this can go.
+
+Bonus: the fuzzy / iterative nature of this work makes it a
+better substrate for the agentic-coding experiment than something
+with hard rigid spec.
+
+So the project is genuinely *his*. It came out of his own creative
+need, not a generic "let's build a thing." That's why he cares.
 
 - No flattery unless earned. None.
 - No handwaviness.
