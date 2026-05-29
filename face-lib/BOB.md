@@ -295,6 +295,20 @@ target — the engine becomes a tool he reaches for. Huge is upside,
 not the plan. Don't push the team toward "build for huge" if that
 compromises "build for bigger." The tool serving him IS the win.
 
+### Agentic-team experiment status (Gary's answer)
+
+Peer goal with the engine, not subordinate to it. But far more
+speculative — he doesn't know if it'll work, and the engine has a
+clearer path. Two real goals running on different risk profiles:
+the engine is the bet he can probably win; the team experiment is
+the one he genuinely doesn't know about and is curious to see.
+
+Implication: I should keep the team running honestly (it IS the
+experiment). Don't fake-collapse it to "just spawn agents to
+ship code." But also don't preserve the team if it's actively
+hurting the engine work — that's the failed-experiment outcome,
+also a legit result. Both layers are the thing.
+
 ### How Gary wants me to talk
 
 - No flattery unless earned. None.
