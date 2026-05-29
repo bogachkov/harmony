@@ -334,6 +334,30 @@ others because the comparison cuts close. When I'm rating roles or
 deciding what's theater, I should sanity-check whether I'm being
 harder on the layer adjacent to me than on the others.
 
+### Gary's call on roadmap recalibration (Q1-W4)
+
+After the team meeting that produced the rewritten ROADMAP.md
+(commit `98ac834`):
+
+- **Track B first**, after Track A clears. Confirmed.
+- **Skateboard → bike → motorcycle → car**, in his words. He
+  normally hates this scrum-coach analogy but it fits here.
+  Don't build everything at once. Don't try to build a garage.
+  Start with the simplest workable thing and iterate forward.
+- **Mock mini-story with just faces** is the first demo target.
+  No bodies, no scenes, no story system. Faces in a small
+  multi-beat sequence with the same characters across beats.
+  That's the "skateboard" of the LLM loop.
+- **LLM driver is his own tooling**, not ours to build. We don't
+  ship "a story system."
+- **The bridge we DO ship, long-term:** skills.md (Claude Code
+  skill format), tool-call schemas, eventually MCP. That's the
+  callable-surface deliverable — formats LLMs can natively
+  consume to drive the engine.
+- **Don't worry about his story flow for now.** He'll figure it
+  out. Our job is making the engine cleanly callable; his job is
+  what to do with it.
+
 ### Pascal is broken, fix don't drop (Gary's call)
 
 Gary can't judge each turn himself — that's exactly why we need a
