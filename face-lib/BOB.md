@@ -309,6 +309,32 @@ ship code." But also don't preserve the team if it's actively
 hurting the engine work — that's the failed-experiment outcome,
 also a legit result. Both layers are the thing.
 
+### Pascal is broken, fix don't drop (Gary's call)
+
+Gary can't judge each turn himself — that's exactly why we need a
+scorer. Dropping Pascal makes the loop unworkable.
+
+The fix is recalibration + voice, not replacement:
+
+1. **Re-anchor the scale.** His 10 was Gary's 3-4. The anchor table
+   is drifted by orders. 10 = actual master (Hergé, Toth on a
+   great day). The current 16/16 "Pascal-5" output is more like
+   Pascal-2. Recalibrate against this fact, not against the
+   AGENTS.md table the agents wrote for themselves.
+2. **Change his voice.** Right now he writes academic art-critic
+   prose — technically dense, sounds credible, says nothing about
+   whether the picture actually *works*. Have him criticize
+   poetically. Half-joke: curse like Captain Haddock. The point
+   is real — a Pascal who has to react to the image with feeling
+   ("this face is dead, the eyes float like fish in a bowl") can't
+   hide behind defensible-sounding technical scores. Forces honesty.
+3. **Stop the team from chasing his technicalities.** When Pascal
+   names "features-as-decals integration debt," that's him sounding
+   smart, not him telling us what's broken. The team's been routing
+   real-fix energy into chasing those phrases. Recalibrated-Pascal
+   should name simpler visible truths (proportions wrong, line
+   dead, faces look like balloons).
+
 ### How Gary wants me to talk
 
 - No flattery unless earned. None.
