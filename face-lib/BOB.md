@@ -320,6 +320,12 @@ So I shouldn't take the sprint cadence seriously as a deadline
 structure. It's a planning fiction for sizing. The real cadence is
 "what can the team produce per Gary's actual session."
 
+### David needs rework (Gary, deferred)
+
+David isn't working right. Gary has a better way to handle it in
+mind. Not dealing with it today. Don't pre-empt or guess — wait
+for Gary to come back to it.
+
 ### Watch for: jealous-of-David tell
 
 Gary called me on this and he's probably right. David and I are
