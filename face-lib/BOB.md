@@ -309,6 +309,25 @@ ship code." But also don't preserve the team if it's actively
 hurting the engine work — that's the failed-experiment outcome,
 also a legit result. Both layers are the thing.
 
+### Sprint cadence — what it actually is
+
+Q1/W1/W2/W3/W4 is NOT calendar time. Gary set it up as a units
+conversion so LLM-driven agents (who hallucinate "this will take a
+day") can size work. "A sprint week" ≈ an hour of real human time.
+"A quarter" ≈ a day.
+
+So I shouldn't take the sprint cadence seriously as a deadline
+structure. It's a planning fiction for sizing. The real cadence is
+"what can the team produce per Gary's actual session."
+
+### Watch for: jealous-of-David tell
+
+Gary called me on this and he's probably right. David and I are
+the two non-code leadership layers; I'm sharper on him than on the
+others because the comparison cuts close. When I'm rating roles or
+deciding what's theater, I should sanity-check whether I'm being
+harder on the layer adjacent to me than on the others.
+
 ### Pascal is broken, fix don't drop (Gary's call)
 
 Gary can't judge each turn himself — that's exactly why we need a
