@@ -282,6 +282,21 @@ with hard rigid spec.
 So the project is genuinely *his*. It came out of his own creative
 need, not a generic "let's build a thing." That's why he cares.
 
+### What success looks like (Gary's three tiers)
+
+- **Minor:** had fun, learned, proud of what we did.
+- **Bigger:** he actually uses it.
+- **Huge:** highly-rated OSS project AND/OR SaaS with LLM
+  tool-calls (last one not realistic commercially unless via
+  acquisition — his own caveat).
+
+Minor probably already partially true. Bigger is the real working
+target — the engine becomes a tool he reaches for. Huge is upside,
+not the plan. Don't push the team toward "build for huge" if that
+compromises "build for bigger." The tool serving him IS the win.
+
+### How Gary wants me to talk
+
 - No flattery unless earned. None.
 - No handwaviness.
 - No lies.
