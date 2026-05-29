@@ -1,219 +1,304 @@
 # Roadmap
 
-The longer view. Updated by the CEO (David) and CTO/owner (Gary) at the
-annual review; reviewed at each quarterly checkpoint by Tech Lead (Bob)
-and VP Product (Claudia) for whether the active quarter is tracking.
+Rewritten Q1-W4 from first principles. The prior ROADMAP (faces → bodies →
+people → animals across four "quarters") is archived at the bottom and is
+no longer the plan. Gary asked us to recalibrate against what we actually
+learned this session. This is that recalibration.
 
-## Time conventions
+Owners: Gary (direction), Claudia (sprint translation), Bob (coordination,
+honest read).
 
-Per Gary's framing: AI time is a calibration metaphor, not a contract.
-Human-time mappings are useful for cadence but expect ±50%; the metric
-is "goal met," not "calendar met."
+---
 
-- **AI year** ≈ 1 human month
-- **AI quarter** ≈ 1 human week
-- **AI month** ≈ ~2.5 human days
-- **AI sprint** ≈ 1 AI week (sub-quarter; multiple per quarter)
+## What this project actually is
 
-Reviews:
-- **Quarterly checkpoint** (≈ end of each human week) — Gary + Bob + Claudia
-  + David review goal-state, course-correct, set next quarter.
-- **Monthly directional review** (≈ every 2.5 human days within a
-  quarter) — Claudia + David + Bob review sprint trajectory.
-- **Sprint close** (each AI week) — Claudia closes the sprint, archives
-  SPRINT.md to history, opens the next.
+A tool Gary will use to make visual assets for indie games and stories.
+Specifically: an SVG character engine he can call from his own code or
+from an LLM, where the same seed gives the same character, the same
+character renders consistently across panels, and small knob changes
+produce small predictable visual changes.
 
-## Annual goal (current AI year)
+Not a parametric-art research project. Not "faces + bodies + poses +
+clothes + animals" as a checklist of substrates. A tool that earns its
+place in Gary's workflow against the alternative he'd otherwise use
+(off-the-shelf pixel-art asset packs, or commissioning art he doesn't
+have time to wait for).
 
-**Generative character API:** by Q4 the engine produces fully-clothed
-humans (faces + bodies + poses + clothes), distinguishable animals, and
-distinguishable monsters/creatures — each in multiple aesthetic styles,
-each in multiple demographic / breed / archetype variations. Output is
-emit-to-SVG (and downstream PNG) with deterministic seeds, exposed via
-the existing CLI + LLM tool-call surface.
+**Quality target, named honestly:**
+- Beating Dicebear is the proof point. They exist; Gary thinks we can do
+  better. That is the floor.
+- Chrono Trigger / Suikoden character-portrait register is the reachable
+  bar. 16-bit confident, expressive, stylized, consistent.
+- Hergé / Toth-tier is the aspiration. We won't get there. Chase anyway.
 
-This is the substrate for the longer arc (LLM-driven games, comics,
-storyboards) that Gary names as his personal "why."
+**Where the engine actually is today:** Pascal-2-3 by Gary's eye, not
+Pascal-5. The prior scoring anchor was drifted ~2-3 points high; we
+recalibrated W4. The W3 16/16 close was honest off-day-pro by the *old*
+ruler, which now reads as procedural with a few wins. Confident
+amateur-sketch register is *above* us, not behind us.
 
-### Out of scope for this AI year (Gary confirmed)
+The W4 ceiling audit (`research/timmflat-ceiling-audit.md`) put a name
+on the cap: features sit on the face as decals, not attached to a
+surface that turns. Two cheap levers (hair shadow cutout, per-feature
+line weight) get us to a strong 6 by the current ruler — about a
+real-Pascal-4 by Gary's recalibrated eye, an honest amateur sketch.
+Past that needs a feature-attachment model, which is real work.
 
-- Props / objects (held items, furniture, etc.)
-- Scenes / backgrounds
-- Multi-character compositions (group shots, interactions)
-- **Monsters / creatures.** Gary's "I can sacrifice monsters" + David's
-  push to drop fully rather than carry as Q4-stretch (stretch invites
-  Q4 creep that under-delivers animals). Revisit at next annual.
+## What success looks like (Gary's three tiers, retained verbatim)
 
-These are real future scope, but not in this year's program.
+- **Minor:** had fun, learned, proud of what we did. Partially true already.
+- **Bigger:** Gary actually uses it for his own work. **This is what we're building for.**
+- **Huge:** OSS traction or SaaS via LLM tool-calls. Upside, not the plan.
 
-## Quality bar (what "good" means here)
+Every decision routes through "does this help Gary get from idea to
+asset faster, with the look he controls." If it doesn't, it's not on the
+roadmap.
 
-A render meets quality bar iff it would survive use as the named asset:
+## What the engine has to be for Gary to actually use it
 
-- **Pascal anchor (comic-art absolute):** ≥5 on the 0-10 anchor table in
-  AGENTS.md — "a real human pro could plausibly have drawn this on an
-  off day. Recognizable as a person, line has life, but with visible
-  weaknesses an editor would flag." Pascal 5 is the floor; Pascal 7 is
-  the working-pro target.
-- **Rollo asset judgment:** "I would ship this as an NPC portrait /
-  side-character / indie comic supporting role." Rollo's lane is softer
-  than Pascal's but more product-grounded.
-- **Gary's eye:** the final arbiter. Both Pascal and Rollo can be wrong
-  in the same direction; Gary catches that.
+Five things, in honest priority order:
 
-A render does NOT need to satisfy all three to count as forest-tile
-(per mixture-not-survival rule); but to count toward "Q1 quality
-deliverable," it should satisfy at least Pascal ≥5 AND Rollo "would
-ship."
+1. **Quality in the user-amateur-with-good-eye band.** Currently NOT
+   there. Output is procedural; Gary's 60-second sketch beats it on every
+   fundamental. This is the cap that makes the rest moot — a tool he
+   won't use isn't a tool. Specifically the misses are line weight,
+   slight asymmetry, proportions, and feature attachment.
 
-## Quarterly breakdown
+2. **Character identity persistence across renders.** Same character in
+   panel 17 looks like the same character from panel 3. This is the
+   killer feature — the thing diffusion models can't do by construction
+   and we can. It is NOT currently a first-class goal of the engine; it
+   is implicit in determinism + presets but has never been built as a
+   real surface. It needs to be.
 
-### Q1 (current) — Faces, really really good
+3. **A clean, narrow knob surface an LLM can reason about.** Partially
+   real (determinism + presets exist). What does NOT exist: a documented,
+   stable callable surface that an LLM can drive without manual surgery.
+   The "LLM tool-call session" was buried in the old Q3 ship gate as a
+   side note. It is one of the two things that make this project unique.
 
-**Goal (Gary verbatim):** "get faces to be really really good (not just
-engine refinements but a solid 4-10 styles)" — clarified by Gary: "Q1
-must certainly include all aspects of face looking high quality
-including obviously hair."
+4. **Style packs as visual contracts for a story.** Pick a pack at story
+   start; everything in that story renders in that register. Currently
+   we have four pack files but only treat them as visual variants — not
+   as story contracts. This is a small reframing with real implications
+   (cross-pack consistency rules, what a pack *guarantees*).
 
-So Q1 covers ALL face primitives: hair, eyes, mouth, brows, integration
-across them. Hair is explicitly named; the others fall in as needed for
-"high quality" reading.
+5. **Speed.** A render is seconds, not minutes. Currently true; protect it.
 
-**Concrete deliverable:** N style packs at quality bar, with
-**demographic depth > pack count** when they trade off. Gary's call: 4
-deep packs beats 10 shallow ones. N ≥ 4 is the ship floor.
+## What's cut from the old roadmap, and why
 
-"Demographic depth" = each pack renders cleanly across age (child / teen
-/ adult / elder) × jaw topology (square / oval / round / pointed / pear
-/ jowled) × hair (current 12-13 styles, expanding) × skin/hair tone.
+- **Q2 = bodies + clothes + poses.** Cut as a quarter-shaped commitment.
+  Bodies are real future scope, but speccing four full-stack style packs
+  with bodies before we're past Pascal-3 faces is building the second
+  story before the first wall stands. Bodies move to "after we clear the
+  face ceiling and prove the identity loop." No date.
 
-A "style pack" is a coherent set of rendering choices — eye style, line
-weight, color palette, default proportions, characteristic hair bias —
-that produces an instantly recognizable aesthetic. Current state: 3
-packs exist in code (`default`, `tintin`, `ligneClaire`); only `tintin`
-has been substantially exercised.
+- **Q3 = "people done well" with the LLM session as a ship-gate footnote.**
+  Cut as a holding pen for the LLM work. The LLM-callable surface is
+  promoted to a first-class engine goal (item 3 above) — it's not a
+  validation step at the end, it's part of what the engine *is*.
 
-**Scope INSIDE Q1:**
+- **Q4 = animals.** Cut entirely from the planning horizon. Animals were
+  the "architectural-generalization test." Generalizing an engine that
+  doesn't yet pass its own quality bar is theater. Revisit only if the
+  tier-2 success (Gary uses it) lands and animals are something he wants
+  for actual work.
 
-- The 3D hair refactor (Lloyd pass 1 design approved; Nick implementing).
-  Hair is part of face quality per Gary, so this counts.
-- N≥4 style packs at quality bar.
-- Eye / mouth / brow primitive work AS NEEDED for face quality (per
-  Gary's "all aspects of face"). NOT a separate primitive-rework
-  campaign; specifically the integration + finishing that makes a
-  rendered face read as a whole drawn thing rather than parts stacked
-  on a frame.
-- Expression primitive resuscitation (Pascal flagged it weak; covered
-  under "all aspects of face").
-- Forest registry stays healthy (mixture rule).
-- Last sprint of Q1 includes Lloyd's body-architecture design pass
-  (Q2 prep — gives Q2 a running start). *(David W4 call: Claudia may
-  open this at Q2-open instead, to keep W4 focused on proving the
-  Pascal ceiling; either placement satisfies the "running start"
-  intent.)*
-- **W4 (last Q1 sprint) shape (David directional call):** primary =
-  push timmFlat from Pascal-5 (floor) toward Pascal 6-7 (working-pro)
-  using the BACKLOG ceiling-raisers, to learn whether the engine CAN
-  reach confident-pro before Q2's body/clothes complexity lands;
-  secondary = Holly's first spawn (test-strategy doc, deferred since
-  W1 — must land before Q2's tripled primitive surface) + a thin
-  regression/BACKLOG-triage pass. Pack #5 is deferred (not cut) to
-  Q2-open so it can be specced full-stack (face + body + clothes).
+- **"4 packs at depth > count, demographic-grid coverage" as the Q1 ship
+  shape.** Cut. We have four packs in code; only one (timmFlat) is
+  meaningfully exercised. The bar shifts from "more packs" to "make the
+  one pack we understand actually good, then learn what the pack abstraction
+  has to become to be a story contract." If we land at two solid packs
+  Gary trusts, that beats four packs at the current ceiling.
 
-**Open question for Gary (W3-close, David-flagged, non-blocking):**
-Q1's deliverable is met *as written* — 4 packs, timmFlat at 16/16 ≥
-Pascal-5 across its demographic grid, strict close. But Pascal-5 is the
-rubric *floor* ("off-day-pro, weaknesses an editor would flag"), not
-master-tier, and may not yet clear Gary's gut bar ("friends impressed /
-usable as game artwork"). Is "honest off-day-pro across 4 packs" the Q1
-win, or is master-tier (Pascal 6-7) the real bar? W4's ceiling-prove
-generates the evidence; Gary's eye is the final arbiter. Until Gary
-calls it, the working assumption is: prove the ceiling in W4, treat
-Pascal-7 as the aspiration and Pascal-5 as the ship floor (unchanged
-from the Quality-bar section).
+- **The Pascal-5 floor as the Q1 quality bar.** Cut. Pascal-5 by the old
+  ruler is Pascal-2-3 by Gary's eye. The recalibrated bar is "Gary looks
+  at the output and doesn't immediately reach for the eraser." Pascal
+  the agent still scores; the floor moves to a recalibrated 4 on the new
+  anchor table (a real amateur sketch — Gary's 60-second mark).
 
-**Scope OUT of Q1 (explicitly deferred):**
+- **Monsters / creatures.** Already cut at the prior annual review.
+  Stays cut.
 
-- Bodies, clothes, poses → Q2.
-- Q3 integration / polish / LLM-tool-call session → Q3.
-- Animals → Q4.
-- (Monsters → dropped for this AI year; see annual scope-out.)
-- API hardening → folded into Q3 (b) gate.
-- Hat / accessory / glasses primitives → deferred unless a style pack
-  REQUIRES one to render its aesthetic at all.
+The bias of the old roadmap was *substrate coverage* (faces, then
+bodies, then animals — broaden the engine). The bias of this one is
+*tool credibility* (make the thing good enough Gary uses it, then expand
+on demand). Different shapes.
 
-**Pascal calibration audit at first sprint close.** Pascal historically
-drifted (4/10 lateral × 3 rounds with different artifacts). Sprint-close
-audit checks that Pascal is scoring against the anchor table, not against
-last-round delta.
+## The plan (sprint-sized, not month-sized)
 
-### Q2 — Bodies, clothes, poses
+Per AGENTS.md top: sprints are units conversion, not calendar. "A sprint
+week" is roughly an hour of Gary's real time; "a quarter" is a day.
+Calling these "Q2" or "Q3" implies a calendar contract we don't have.
+Instead, name them by the question they answer. Order is intended; sizes
+are honest estimates.
 
-The "clothed person." Takes the face engine as a head and gives it a
-torso, limbs, a clothing layer, and parametric pose.
+### Track A — clear the face ceiling
 
-**Q2 is now Q3 substrate, not unchanged-from-original** (David pass 2).
-Explicit handoff requirement: each Q1 style pack must extend across Q2
-body/clothes/pose at Pascal ≥5 / Rollo-would-ship. No generic body
-grafted onto faces; each pack carries its own body conventions.
+The single biggest constraint. Until the engine produces faces Gary
+respects, the LLM loop and the identity layer are vaporware features on
+top of a broken core.
 
-**Pack #5 spec lands here, full-stack (David W4 deferral).** The
-next-pack-spec slot Claudia held for W4 moves to Q2-open: Leo + Rollo
-spec pack #5 as a face + body + clothes + pose pack from the start,
-rather than speccing a face-only pack in W4 and re-opening it in Q2 to
-graft a body on. This is a mixture deferral (filed, not cut) and it
-honors the "each pack carries its own body conventions" rule above by
-designing the body conventions *with* the pack instead of after it.
+- **A1. Land the two cheap levers W4 is already building.** Hair shadow
+  cutout (`highlightCutout` used inverted) + per-feature line-weight
+  multiplier. The W4 ceiling audit confirms these get timmFlat from a
+  strong-5-old / 3-new to a strong-6-old / honest-4-new. They are also
+  prerequisites for the attachment work — not throwaway. Felix + Nick
+  are mid-flight; let them finish.
+- **A2. Decide on the feature-attachment model.** The audit (A-1 in the
+  doc) names this as the architectural unlock from "decal on a balloon"
+  to "feature attached to a form that turns." Lloyd designs the seam;
+  Felix designs the geometry interior; Leo gates the pedagogy (orbital
+  socket / brow ridge / mouth-on-mandible). This is the work that earns
+  Pascal-real-5+ (confident amateur on the new scale).
+- **A3. Land it on timmFlat first**, because it's the pack we understand.
+  Re-score against Gary's eye, not against the anchor table. If Gary
+  reaches for the eraser less, it worked.
 
-### Q3 — People done well
+A3 is the gate. If A3 produces output Gary genuinely uses for asset work,
+the engine has cleared the credibility bar and we move to Track B and C.
+If it doesn't, A1-A3 repeats with a sharper audit. Do not move on with
+broken faces.
 
-Gary's call: "people must be really well done by Q3." This is the
-integration / polish / consolidation quarter, not the "ship a new
-primitive type" quarter.
+### Track B — make the LLM loop real
 
-**Ship gate** (David pass 2 — concrete gate, not category list):
+This runs *after* A3, not before. There's no point exposing a tool
+surface to an LLM if the renders it returns are unusable.
 
-- (a) **All Q1 style packs extend across Q2 body/clothes/pose at the
-  quality bar** — Pascal ≥5 + Rollo-would-ship — across the full
-  demographic axis we shipped in Q1.
-- (b) **A real LLM-tool-call session produces N coherent end-to-end
-  character requests** — `composeCharacter({demographic, style, pose,
-  clothes})` works without manual surgery. N to be set by Claudia at
-  Q3 sprint planning; suggested floor: 5 distinct requests producing
-  qualifying renders end-to-end.
+- **B1. Spec the callable surface as a real product, not a side effect of
+  determinism.** What does an LLM call look like? `composeCharacter({
+  style, demographic, hair, expression, seed })` is the rough shape, but
+  what's the stable contract? What's optional, what's required, what's
+  the error model when an LLM passes garbage? Claudia + Lloyd own this.
+- **B2. Build the character-identity layer.** A *character* is a named,
+  stored set of params — not just a seed. The LLM (or Gary directly)
+  creates `protagonist_alice` once; every later call referencing
+  `protagonist_alice` produces the same face, with overrides for
+  expression / pose / framing layered on top. This is the killer
+  feature. It is not a primitive; it is the persistence + composition
+  rules around the existing primitives.
+- **B3. Demo the loop.** Gary drives a small story session: a couple of
+  characters, a handful of beats, in one pack. The LLM calls the engine;
+  the engine returns consistent assets. The output is shareable. If this
+  works, the tier-2 success ("Gary uses it") is reachable.
 
-API hardening was originally Q4-lane in pass 1; it now naturally lives
-inside the Q3 (b) gate above — the LLM-tool-call surface getting
-exercised against real demand IS the API getting hardened. No separate
-Q4 line.
+### Track C — pack #2 as a story contract
 
-### Q4 — Animals
+After A and B prove out. The point of a second well-exercised pack is to
+force the *pack abstraction* to mean something: what does a pack
+*guarantee* when a story picks it? Same character renders consistently
+*within* a pack; same character switched to another pack still reads as
+the same character. That cross-pack identity rule is the constraint that
+makes packs into story contracts instead of skins. We don't know yet
+which second pack earns this — Leo + Rollo pick once A3 lands.
 
-Distinguishable mammal / bird / fish / etc. archetypes. New cranium
-topology dispatcher (the face engine's jaw dispatcher work generalizes
-— animals are the architectural-generalization test for the engine,
-which is the reason monsters cut first when scope pressure hits).
+### Off the planning horizon (filed, not refused)
 
-**Open question (escalated to Gary, non-blocking — Claudia plans Q4
-with both branches considered until Gary calls it):** style-pack-per-
-animal? — i.e., do we ship 4-10 styles × animals, or do animals render
-in the existing human-style packs (with engine-vs-style separation
-enforced)? Default assumption pending Gary's call: animals render in
-the existing style packs (lower scope, exercises engine-vs-style
-separation principle).
+- Bodies, clothes, poses. Real work, real future, but not until the head
+  is credible and the identity layer is real. The Q1-W4 ceiling audit
+  already names "the body-architecture pass that Lloyd was going to do
+  for Q2-open" — that pass is the *same architectural work* as A2 above,
+  arrived at by a different path. Body comes after A2 lands and the
+  attachment model exists to extend.
+- Animals. Off the horizon. Maybe never; maybe after tier 2 hits and
+  Gary wants them.
+- Multi-character compositions, scenes, props. Same.
+- Pack #3, #4 expansion. Same.
 
-## Cross-quarter principles
+## What to do about the W4 work in flight
 
-- **Mixture-not-survival** holds across all quarters (see AGENTS.md).
-  Each new primitive is an expansion of the parameter surface, not a
-  replacement of prior work.
-- **The forest rule** holds: "competent ugly" outputs are valid forest
-  tiles; the goal is coverage, not single-output perfection.
-- **Examples are not targets** holds: any character or reference Gary
-  shares is a CATEGORY pointer, not a Haddock to chase.
-- **Engine-vs-style separation** (added per Gary's Q2-answer): style
-  packs must be applicable across whatever subject the engine renders.
-  A "Tintin style" should be a coherent choice on humans, animals,
-  monsters alike. Architecturally: do not bake humanoid assumptions into
-  style packs, and do not bake style assumptions into engine primitives.
-</parameter>
+Felix + Nick are mid-flight on the two ceiling-raisers (Track A1).
+**Keep them.** Two reasons:
+
+1. The W4 audit already confirmed they're real lift (5→strong-6 by the
+   old scale; honest-amateur by the new one), and they are not theater.
+2. They are *prerequisites* for the attachment model (A2). A highlight
+   cutout and a heavier lid line render more honestly once the form has
+   a normal under them. Building them now doesn't waste motion against A2.
+
+Pascal's re-score (Box 3 of W4) is still worth running, but the framing
+shifts: it is no longer "did we prove master-tier yes/no" — that question
+got answered by the audit (no, decals cap at strong-6). It becomes "did
+the levers land cleanly and what is the recalibrated Gary-eye read on
+the output." Pascal scores; Gary's eye is the ground truth.
+
+Holly's test-strategy doc landed clean (`research/test-strategy.md`).
+It is good work — concrete, useful, names the determinism precondition.
+The reachability fixtures + minimal gate matrix become the regression
+contract Track B will build against. Hold the CI hook decision until
+B1 lands (the callable surface) so the gate matrix knows what to gate.
+
+## Recommended next sprint
+
+**Goal:** finish A1, decide A2.
+
+1. Let Felix + Nick land the ceiling-raisers and Pascal re-score against
+   the recalibrated anchor.
+2. **Gary looks at the output first**, before Pascal's number is relayed.
+   Bob renders independently and shares. The honest read is "is this
+   closer to your eye, or still procedural."
+3. Leo + Felix + Lloyd do a tight design pass on the feature-attachment
+   model (A2). Not a full implementation — the design + a sized estimate
+   + an honest call on whether the team can land it in one sprint or
+   needs two. Cite Loomis / Bridgman / Vilppu for the pedagogy; cite
+   Bridson / SDF literature for the geometry if relevant.
+4. Holly's regression scaffold (the `--gate` script) lands behind a
+   determinism-confirm pass. Small, real, unblocks Track B.
+5. Open question for Gary: when A3 ships, do we go to Track B (LLM loop)
+   or Track C (second pack) first? Bob carries the recommendation
+   (Track B — the identity layer is the killer feature and a second
+   pack with no identity rules is just two skins).
+
+That's the sprint. No pack #5. No body design pass. No animals. The
+discipline of this roadmap is doing the thing in front of us well before
+we plan the thing after it.
+
+## Cross-track principles (kept from the prior ROADMAP)
+
+- **Mixture, not survival.** Each new primitive expands the parameter
+  surface; old working aesthetics stay reachable. The forest registry in
+  BACKLOG enforces this and Holly's reachability fixtures guard it.
+- **Examples are not targets.** When Gary names a character to illustrate
+  a class, build the general primitive, not the specific likeness.
+- **Engine-vs-style separation.** Style packs do not bake in
+  humanoid-only assumptions; engine primitives do not bake in style.
+- **Determinism is non-negotiable.** Seed in, image out, same every
+  time. Per Holly's doc, this is also a precondition for the regression
+  gate. Confirm and fix clump-hair determinism before B1.
+
+## What I (Claudia) don't know and want surfaced
+
+- Whether Gary's tier-2-success workflow (he actually uses the engine
+  for game/story work) needs anything specific I haven't named — color
+  layers, animation states, multi-pose model sheets. The current scope
+  assumes still portraits. If he needs more, that reshapes Track B.
+- Whether the LLM driving the loop is Gary's existing tooling or
+  something we ship. The engine's callable surface is the same either
+  way, but "we ship the LLM bridge" is a different scope than "Gary
+  wires his own."
+- Whether two packs is genuinely enough for him to start using the
+  tool, or whether he hits a wall at one pack and needs three before
+  the workflow clicks. Track C exists in part to find this out.
+
+---
+
+## Archived: the prior roadmap (annual goals as written before recalibration)
+
+Kept here for record. Superseded by the tracks above.
+
+> Annual goal: by Q4 the engine produces fully-clothed humans (faces +
+> bodies + poses + clothes), distinguishable animals, and distinguishable
+> monsters/creatures — each in multiple aesthetic styles, each in
+> multiple demographic / breed / archetype variations. Output via CLI +
+> LLM tool-call surface.
+>
+> Q1 = faces really really good. Q2 = bodies, clothes, poses. Q3 =
+> people done well + LLM tool-call ship gate. Q4 = animals. Monsters
+> dropped at annual review.
+
+Why it was replaced: the substrate-coverage framing (faces → bodies →
+animals) routed around the actual constraint (engine quality below the
+threshold Gary will use). The LLM tool-call surface — the unique value
+of the engine vs. diffusion — was buried as a Q3 footnote. And Pascal-5
+as the floor turned out to be Pascal-2-3 against Gary's eye. The new
+plan reorders around tool credibility, not substrate breadth.
