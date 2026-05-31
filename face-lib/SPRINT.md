@@ -8,203 +8,122 @@ sections reset.
 
 ---
 
-## Active sprint — Q1-W4 (open) — LAST week of Q1
+## Active cycle — face credibility + character identity
 
-**Goal: PROVE master-tier. Push `timmFlat` from Pascal-5 (off-day-pro)
-toward Pascal 6-7 (confident-pro) and answer the one question that
-governs all of Q2-Q3: can the engine reach confident-pro on a face at
-all — yes or no, and why? The deliverable is EVIDENCE, not a guaranteed
-Pascal-7. In parallel, land Holly's first spawn (test-strategy doc,
-deferred since W1) so Q2 doesn't open the bodies/clothes/poses surface
-with no regression convention.**
+**Goal:** make the engine produce faces Gary doesn't reach for the
+eraser on, AND make characters persistent across renders. Held for
+the cycle after: the LLM-callable surface spec, the demo story.
+Build the substance now; expose it next.
 
-W3 closed CLEAN: Pascal Pass 3 scored the full 16-cell `timmFlat` grid
-at **16/16 ≥ Pascal-5** (strict close, not ship-with-gap), four-corner
-test PASSES, `tintin × 4` regression HOLDS. The three engine rows (Q2
-demographic-topology, Q1 cascade-merge manifest, Felix long-hair
-primitive) all landed + Lloyd-approved. timmFlat now ships at off-day-pro
-across full demographic depth. The next quality ceiling (Pascal 6-7) is
-a *separate axis* that wasn't W3's job — it is W4's.
+Per ROADMAP (recalibrated W4): Track A1+A2+A3 + Track B2 in one
+cycle. Drop Q1/W4 labels — they were units-conversion, not calendar.
 
-**The decision chain behind this goal (do not re-litigate):**
-- David's W4 directional review (`tasks/david-q1-w3close-directional-
-  review.md`, commit `634af04`): trajectory ON TRACK, met at the floor
-  (Pascal-5, not the Pascal-7 aspiration). W4 direction **(B) polish
-  timmFlat toward master-tier primary + (C) Holly hardening; (A) pack
-  #5 deferred to Q2-open, NOT cut.** He escalated the quality-bar
-  judgment to Gary.
-- **Gary's answer: "Prove master-tier."** Gary confirmed master-tier
-  IS the Q1 bar. This flips (B) from David's 60/40 lean to a
-  **must-have**. W4's primary job is to prove the engine CAN reach
-  Pascal 6-7 on timmFlat — not just that it makes off-day-pro packs.
+### Acceptance (four pieces)
 
-**A NEGATIVE RESULT IS A LEGITIMATE, VALUABLE W4 OUTCOME.** If the
-engine can't get past ~6 without an architectural change, that finding
-de-risks Q2/Q3 (the clothed-character ceiling will be no higher than
-the face ceiling — better to learn it now, on the one pack we've fully
-exercised, than in Q3 when it's expensive). W4 acceptance is framed as
-"we know whether the engine reaches confident-pro and why," NOT
-"timmFlat is Pascal-7 or W4 failed."
+- [ ] **1. Drawing fixes land.** Hair shadow cutout (`highlightCutout`
+  used inverted) + per-feature line weight multiplier. Additive, opt-in:
+  default/tintin/ligneClaire stay byte-identical, only timmFlat opts in.
+  The W4 audit (`research/timmflat-ceiling-audit.md`) said these are
+  real lift AND prerequisites for the attachment-model work below — not
+  throwaway. Felix's graphics-math interior; Nick wires pack data.
+  **Bob shows Gary the renders for the eye-check before declaring done.**
 
-### Acceptance (what closes Q1-W4)
+- [ ] **2. Feature-attachment model designed.** Eyes / brows / mouth
+  attached to a form that turns under them, not stickers on a balloon.
+  Lloyd designs the architectural seam + writes the load-bearing code
+  himself (no more design-only Lloyd). Felix designs the graphics-math
+  interior — orbital socket / brow ridge / mouth-on-mandible math.
+  Leo writes the pedagogy input from Loomis / Bridgman / Vilppu. Output
+  is a written design in `research/` PLUS a sized estimate (Felix's
+  call — he owns the input-scale sizing; remember the alpha-shape miss).
+  Not a full implementation yet — that's piece 3.
 
-Four boxes. Box 1 + Box 4 are the two HARD commitments (must-have);
-Box 2 is the secondary (must land at minimum the DOC); Box 3 is fill.
+- [ ] **3. Attachment model built on timmFlat.** Lloyd writes the
+  load-bearing core (the attachment plumbing in the cascade / render
+  path); Nick implements the broad surface (per-feature plug-in to the
+  new model); Felix implements the geometry interior. Mixture rule:
+  existing packs untouched. **Gary's eye is the gate.** If he stops
+  reaching for the eraser on timmFlat output, piece 3 is done. Pascal
+  scores in the new recalibrated voice (Haddock-mode, 10 = master, the
+  current output is ~2-3) but Gary's read is ground truth.
 
-- [ ] **(B) Master-tier audit + spec lands.** Leo + Rollo name what
-  "confident-pro timmFlat" actually needs to clear Pascal-5 → 6-7,
-  grounded in the BACKLOG ceiling-raisers
-  (`research/stylepack-timmFlat-spec.md` §3 + `pascal-w2-timmflat.md`
-  §Pass 3 ceiling note). Output: a short audit/spec in `research/`
-  naming the levers in priority order + their expected Pascal lift,
-  and an explicit honest read on whether the named levers can plausibly
-  reach 6-7 OR whether the ceiling is architectural (decals-on-sphere
-  integration debt — `BACKLOG.md` features-as-decals row). **Task:
-  `tasks/leo-rollo-timmflat-ceiling-audit.md`.**
+- [ ] **4. Character-identity layer.** A *character* is a named, stored
+  set of params (`protagonist_alice` etc) — not just a seed. Same name
+  = same face every render. Optional per-call overrides for expression
+  / framing / pose-when-poses-exist. Deterministic. Persisted to disk
+  in a simple readable format. Lloyd designs + writes the persistence
+  surface; Nick wires it into composeFace. No LLM API yet — that's
+  the next cycle. Just the substance.
 
-- [ ] **(B) Ceiling-raiser primitives land.** Implement the levers the
-  audit (Box 1) prioritizes — expected: `highlightCutout` primitive
-  (new, ~20 LOC, BACKLOG est. Pascal ~7→8) + per-feature line-weight
-  multiplier (touches the render/line-weight path, ~30 LOC, BACKLOG
-  est. villain register ~7→8). Felix owns the graphics-math interior
-  (highlightCutout is a new primitive; line-weight multiplier touches
-  the render path); Nick wires the pack-data (`timmFlat.declares` +
-  the new knob defaults); Leo confirms pedagogy. **Mixture rule:
-  additive only — `default`/`tintin`/`ligneClaire` stay byte-identical;
-  ONLY timmFlat opts in.** **Task:
-  `tasks/felix-nick-timmflat-ceiling-raisers.md`.** Final lever list
-  is set by Box 1; this task is scoped on completion of the audit (the
-  two named above are the strong candidates — confirm against the
-  audit before implementing).
+### Held for next cycle (not now)
 
-- [ ] **(B) Pascal re-scores the lift — the EVIDENCE.** Re-score the
-  16-cell timmFlat grid (+ the off-grid villain-register probes:
-  `adultFemPointed` / `elderMascPear` / a Joker-direction lid-weight
-  probe) against the AGENTS.md anchor table, absolute. **Acceptance:
-  a CLEAR yes/no on "did the engine reach Pascal-6+ on any cell, and
-  how many," with the why.** Both outcomes close the box: ≥6 on a
-  meaningful share = "ceiling reached, master-tier is on the engine's
-  surface"; capped at 5 = "current ceiling is 5, here is the named
-  root cause (likely the features-as-decals integration debt), filed
-  for Q2." Mixture-rule guard: re-confirm `tintin × 4` holds (the
-  line-weight multiplier touches a shared render path — verify it
-  doesn't drift non-opted packs). **Task:
-  `tasks/pascal-w4-master-tier-rescore.md`.**
+- Spec the LLM-callable surface as a real product (Track B1).
+- Skateboard demo story across a few beats (Track B3).
+- Pack #2 as a story contract (Track C).
+- Bodies / clothes / poses (Track post-A).
 
-- [ ] **(C) Holly's first spawn — test-strategy doc lands.** Deferred
-  since W1; MUST land before Q2 triples the primitive surface (torso /
-  limbs / clothing layer / pose). A DESIGN artifact, not test code:
-  "what does 'tests passed' mean for a parametric art engine" —
-  regression convention (byte-identical sweeps vs. visual-diff
-  thresholds), what the gallery must cover honestly, how the
-  forest-registry mixture rule gets a regression guard, and what
-  minimal test scaffolding Q2 should open against. Runs **parallel**
-  to the (B) lane (zero code overlap). **Task:
-  `tasks/holly-test-strategy-doc.md`.**
+### Cross-cutting
 
-### Fill (only if W4 has room after the four boxes; first to slip)
+- **Holly:** confirm determinism in the clump-hair code (her test-strategy
+  doc flagged suspected unseeded randomness — fix it before piece 4
+  leans on "same seed = same character"). Lands the `--gate` regression
+  script behind the determinism fix.
+- **Pascal:** recalibrated. New anchor (10 = Hergé/Toth/Timm; current
+  output ~2-3). Haddock-voice mandate per AGENTS.md. Stops being the
+  final word — Gary's eye is.
+- **Bob:** the rule from BOB.md — look at renders before relaying any
+  Pascal score. The team built a scoring machine that inflated; the
+  check against that is me, not Pascal.
 
-- **Thin regression-coverage pass** (Holly, after her doc) — a minimal
-  regression scaffold so Q2 opens against a clean board. **Slips to
-  Q2-open if (B) overruns** (David's call, Gary-confirmed: the (C)
-  minimum is the DOC; regression coverage can slip).
-- **BACKLOG triage pass** — clear W1-W3 deferral sediment so Q2 opens
-  clean. Slips to Q2-open if no room.
+### Team for this cycle
 
-### What is explicitly NOT in W4
+- **Lloyd** — designs attachment model AND writes the load-bearing
+  cascade/render code AND designs+writes identity-layer persistence.
+  Hands on. Pieces 2 + 3 + 4 core.
+- **Felix** — graphics-math interior of attachment model. Piece 2 +
+  piece 3 geometry. Honest input-scale sizing.
+- **Leo** — pedagogy input on attachment (Loomis / Bridgman / Vilppu).
+  Piece 2.
+- **Nick** — broad implementation: pack data wiring on piece 1, the
+  per-feature plug-in surface for piece 3, the composeFace wiring on
+  piece 4. Not load-bearing core (that's Lloyd's now).
+- **Holly** — determinism fix + regression scaffold. Cross-cutting.
+- **Pascal** — scores in the new voice. Reference signal, not gate.
+- **Gary** — the actual eye that closes piece 1 and piece 3.
+- **Bob** — spawn order; shows Gary renders; honest read first.
+- **Claudia** — opening this cycle in this file IS the planning;
+  no separate plan doc this round. Less ceremony.
 
-- **(A) Pack #5 — DEFERRED to Q2-open, NOT cut.** Per David
-  (Gary-confirmed): spec it **full-stack with body conventions** at
-  Q2-open rather than re-opening a face-only pack in Q2 (the ROADMAP
-  handoff rule: each pack carries its own body/clothes/pose
-  conventions). Filed in BACKLOG as "pack #5: spec at Q2-open,
-  full-stack." This is a mixture deferral, not a deletion.
-- **Lloyd's Q1-closeout body-architecture design pass** — ROADMAP
-  names it for the last Q1 sprint. Claudia's call per David's lean:
-  **rides Q2-open, not W4**, so W4 stays focused on proving the
-  ceiling. If Box 1 surfaces that the ceiling IS architectural (the
-  decals-on-sphere debt), that finding feeds directly into Lloyd's
-  Q2-open body-architecture pass — the right sequence.
-- **Orbital-socket recess primitive / brow-shape enum / philtralBow /
-  expressions resuscitation** — stay on BACKLOG unless Box 1's audit
-  names one as the load-bearing ceiling-raiser (in which case Claudia
-  re-scopes Box 2). Default expectation: highlightCutout + line-weight
-  multiplier are the two W4 promotions.
+### Spawn order
+
+**Wave 1 (in parallel — different files, different lanes):**
+- Felix + Nick — re-spawn the ceiling-raisers (piece 1). Prior spawn
+  was lost in session compression. `tasks/felix-nick-timmflat-ceiling-raisers.md`
+  still applies as the brief.
+- Lloyd + Felix + Leo — attachment-model design (piece 2). Single
+  joint spawn producing `research/attachment-model.md`.
+
+**Wave 2 (after both Wave 1 pieces land):**
+- Lloyd + Nick + Felix — attachment-model implementation on timmFlat
+  (piece 3). Lloyd writes the core, Nick the surface, Felix the geometry.
+
+**Wave 3 (after piece 3 + Holly's determinism fix):**
+- Lloyd + Nick — character-identity layer (piece 4).
+
+**Bob renders + shows Gary** between every wave. Gary's eye gates
+piece 1 and piece 3. Pascal scores but doesn't gate.
 
 ## In flight
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| — | — | — | W4 not yet spawned; Bob spawns per the Q1-W4 spawn order below. |
+| — | — | — | Cycle opened; Wave 1 spawning next. |
 
-## Done this sprint (W4)
+## Done this cycle
 
 (none yet)
 
-## Blocked / pending (W4)
 
-| Agent  | Task | Blocked on |
-| ------ | ---- | ---------- |
-| Felix + Nick | Ceiling-raiser primitives (Box 2) | Box 1 audit naming the lever list + priority |
-| Pascal | Master-tier re-score (Box 3) | Box 2 ceiling-raisers landing + re-render |
-| Holly  | Test-strategy doc (Box 4) | Nothing — runs parallel from W4-open (zero code overlap) |
-
-## Q1-W4 spawn order (for Bob)
-
-Two lanes run in parallel from W4-open; the (B) lane is serial within
-itself (audit → implement → score).
-
-**Wave 1 (parallel — two independent lanes, zero file overlap):**
-
-1. **(B-lane head) Leo + Rollo — `tasks/leo-rollo-timmflat-ceiling-
-   audit.md`.** Name what confident-pro timmFlat needs: the
-   ceiling-raisers in priority order, expected Pascal lift each, and
-   the honest call on whether the named levers reach 6-7 OR the ceiling
-   is architectural. This gates Box 2's lever list. Leo leads
-   (pedagogy of the Timm villain/hero register split + the lid-weight
-   canon); Rollo confirms the asset-side lift. **Short — an audit, not
-   a build.**
-
-2. **(C-lane, fully parallel) Holly — `tasks/holly-test-strategy-
-   doc.md`.** Holly's first spawn. Design artifact. Zero code overlap
-   with the (B) lane — can run start-to-finish alongside Wave 1+2+3.
-   Bob spawns at W4-open and lets it run.
-
-**Wave 2 (serial after Wave 1 audit lands):**
-
-3. **(B-lane) Felix + Nick — `tasks/felix-nick-timmflat-ceiling-
-   raisers.md`.** Implement the levers Box 1 prioritized. Felix owns
-   the graphics-math interior (new `highlightCutout` primitive; the
-   line-weight-multiplier render-path touch) + reviews Nick's
-   graphics-math; Nick wires the pack-data + knob defaults + the
-   `timmFlat.declares` additions; Leo confirms pedagogy on the
-   rendered probe. Lloyd reviews if the line-weight multiplier touches
-   an architectural seam (likely a small render-path knob, not a
-   cascade change — Lloyd confirms scope on review). **Mixture-rule
-   regression guard built in: non-timmFlat packs byte-identical.**
-
-**Wave 3 (serial after Wave 2 lands + re-render):**
-
-4. **(B-lane) Pascal — `tasks/pascal-w4-master-tier-rescore.md`.**
-   Re-score the 16-cell grid + villain-register probes, absolute. The
-   yes/no/why evidence is the W4 headline deliverable. Re-confirm
-   `tintin × 4` holds (shared render-path guard). Calibration audit
-   NOT re-litigated (closed Pass 1).
-
-**Conditional / not queued:**
-
-5. **Lloyd review** on the ceiling-raiser PR — Bob-triggered if Wave 2
-   touches an architectural seam (the line-weight multiplier render
-   path). Felix reviews the graphics-math interior in-lane.
-6. **Holly thin-regression pass** — only if W4 has room after the four
-   boxes; else slips to Q2-open (Gary-confirmed: the (C) minimum is
-   the doc).
-7. **Leo / Rollo pack #5 full-stack spec** — Q2-open, NOT W4.
-8. **Lloyd body-architecture design pass** — Q2-open per Claudia's
-   call (David's lean), unless Box 1 surfaces the ceiling is
-   architectural, in which case Box 1's finding is the input to it.
-
-## History
 
 ### Q1-W3 (closed — CLEAN-CLOSE, 16/16 strict per Pascal Pass 3)
 
