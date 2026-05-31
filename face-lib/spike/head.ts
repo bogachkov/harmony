@@ -231,27 +231,32 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   );
   head = smoothSubtract(head, min(aperture(-c.eyeSpacing), aperture(c.eyeSpacing)), 0.015);
 
-  // 4. Nose — root found on the brow line at center, base at the derived
-  //    nose-base landmark. Bridge + tip grow forward off the front surface.
+  // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
+  //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that
+  //    reads as "nose". Previous version used wide blends (0.05) that melted
+  //    the keel into a soft lump. Fix: a NARROW keel held with TIGHT blends so
+  //    the bridge/side-plane break survives as a contour line, tip as a clear
+  //    ball, alae as distinct nostril wings.
   const rootZ = c.frontZ(c.browY);
   const baseZ = c.frontZ(c.noseBaseY);
   const noseLen = c.browY - c.noseBaseY;
-  const bridge = ellipsoid(
+  // keel: tall and NARROW (a ridge, not a slab), projecting gently forward
+  const keel = ellipsoid(
     p,
-    [0, (c.browY + c.noseBaseY) / 2, (rootZ + baseZ) / 2 + rz * 0.04],
-    [rx * d.noseBridgeWidth, noseLen * 0.62, rz * 0.12],
+    [0, (c.browY + c.noseBaseY) / 2, (rootZ + baseZ) / 2 + rz * 0.05],
+    [rx * d.noseBridgeWidth * 0.7, noseLen * 0.60, rz * 0.13],
   );
   const tipR = rx * d.noseTipBulge;
-  const tipZ = baseZ + rz * d.noseProjection;    // project the tip forward
+  const tipZ = baseZ + rz * d.noseProjection;
   const tip = sphere(p, [0, c.noseBaseY + tipR * 0.4, tipZ], tipR);
-  // alae give the profile a nostril break instead of a single nub
   const alaR = rx * d.noseAlarWidth;
   const alaX = rx * (d.noseAlarWidth + 0.02);
   const alaL = sphere(p, [-alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
   const alaR2 = sphere(p, [ alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
-  let nose = smin(bridge, tip, 0.05);
-  nose = smin(nose, smin(alaL, alaR2, 0.03), 0.04);
-  head = smin(head, nose, 0.04);
+  // tight blends keep the plane breaks; alae a touch looser so they fuse to tip
+  let nose = smin(keel, tip, 0.03);
+  nose = smin(nose, smin(alaL, alaR2, 0.025), 0.03);
+  head = smin(head, nose, 0.03);
 
   // 5. Mouth — Loomis p.52: "lips wrap a cylinder; the corners turn back into
   //    the cheek." The root it rides is the curved front of the lower jaw.
