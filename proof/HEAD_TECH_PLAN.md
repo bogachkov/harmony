@@ -157,6 +157,10 @@ The **reference style** is the plainest possible such style, flagged as a stand-
 4. A second (non-reference) style to prove core/style separation holds.
 
 ## 6. Guardrails (against the two cycles' failures)
+- **Decision boundary:** feature-shape decisions inside a STYLE PACK are mine to
+  make freely — style is isolated and swappable, so a bad call is contained and
+  discarded, not structural. CORE is where I must not make solo shape/aesthetic
+  calls; keep it structure + anchors.
 - Core never decides feature shape. If I'm choosing what an eye/ear looks like in
   core, stop.
 - Never draw the construction as the final surface (the wraith). Bone guides;
