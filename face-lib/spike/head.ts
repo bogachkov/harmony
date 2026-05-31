@@ -217,9 +217,14 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //  boundary we agreed — the core was wrongly making the eye look, which is
   //  why it kept going amphibian. A shallow recess + no lid line; the style
   //  owns everything you'd call "the eye".
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.34, rz * 0.08];
-  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ + rz * 0.04], socketHalf);
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.12);
+  // Loomis: the orbit recesses BACKWARD into the skull, behind the brow ridge
+  //  — the eye is the most RECESSED thing. Carve center sits BEHIND the surface
+  //  (surfZ - depth) and bites deep, so the eye region genuinely sinks in. (The
+  //  prior version centered it in FRONT of the surface — that was the bug-eye
+  //  cause: a forward poke instead of a backward hollow.)
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.40, rz * 0.34];
+  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ - rz * 0.22], socketHalf);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.10);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that
