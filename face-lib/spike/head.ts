@@ -89,21 +89,25 @@ export const construct = (d: HeadDial): Construction => {
   const [rx, ry, rz] = d.craniumRadii;
   const craniumCenter: Vec3 = [0, 0, 0];
 
-  // The head runs from the top of the cranium ball down to the chin.
-  const headTop = ry;
-  const chinY = -d.jawDrop * ry;
+  // Loomis proportions, exact — no fudge multipliers.
+  //   Top-of-skull (= hairline here, hair sits above) down to chin is divided
+  //   into THREE EQUAL THIRDS: hairline→brow, brow→nose-base, nose-base→chin.
+  //   (Loomis, Drawing the Head and Hands, front-view division.)
+  const headTop = ry;                        // ball top = hairline
+  const chinY = -d.jawDrop * ry;             // chin a ball-fraction below center
   const headHeight = headTop - chinY;
+  const third = headHeight / 3;
 
-  // Loomis: the EYE LINE is the halfway point of the whole head height.
-  // This is THE derived landmark — not a tuned constant.
-  const eyeY = (headTop + chinY) / 2;
+  const browY = headTop - third;             // 1 third below hairline
+  const noseBaseY = headTop - 2 * third;     // 2 thirds
+  // chin = headTop - 3*third == chinY (by construction).
 
-  // Lower thirds: brow → nose-base → chin are (roughly) equal. Brow line sits
-  // one eye-height above the eye line; nose base one third down toward chin.
-  const lowerThird = (eyeY - chinY) / 3;
-  const browY = eyeY + lowerThird * 0.55;   // brow just above the eyes
-  const noseBaseY = eyeY - lowerThird;
-  const mouthY = noseBaseY - (noseBaseY - chinY) * 0.38;
+  // Eyes sit exactly halfway between brow and nose-base — which is also the
+  // vertical midline of the whole head (the two Loomis rules agree here).
+  const eyeY = (browY + noseBaseY) / 2;
+
+  // Mouth: one third of the way down from the nose base to the chin.
+  const mouthY = noseBaseY - third / 3;
 
   // "Five eyes wide": the face is five eye-widths; eyes occupy slots 2 and 4.
   // So eye centers sit at ±1 eye-width from center. Eye width = headWidth / 5.
