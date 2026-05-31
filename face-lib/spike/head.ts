@@ -198,43 +198,39 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   );
   head = smin(head, ridge, 0.05);
 
-  // 3b. Orbital hollow — a socket recessed INTO the skull beneath the ridge.
-  //     Carved, not added. Its opening faces forward-and-slightly-up (toward
-  //     the shelf), so the eye lives in shadow under the brow.
+  // 3b. The eye — REBUILT minimal + stable. The prior version unioned an
+  //     eyeball SPHERE into the head (min), so the sphere's silhouette inked
+  //     as a hard circle wherever it neared the surface — blank ovals head-on,
+  //     a bulging ball in 3/4 (the amphibian regression). It was also 5
+  //     fighting primitives that flipped look whenever anything nearby moved.
+  //
+  //     New rule: the eye is ONE shallow almond hollow carved into the skin,
+  //     with the eyeball a SEPARATE dome that only ever fills that hollow and
+  //     NEVER breaches the surrounding skin. Two soft shapes, no hard union
+  //     circle. The almond rim + the lid are the only lines that ink.
   const socketY = c.eyeY + c.eyeSpacing * 0.05;
-  const socket = (cx: number) => ellipsoid(
-    p, [cx, socketY, surfZ - rz * 0.04],
-    [c.eyeSpacing * 0.66, c.eyeSpacing * 0.50, rz * 0.22],
-  );
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.06);
 
-  // 3c. Eyeball — seated DEEP in the hollow (center pushed well back) so its
-  //     front pole sits behind the surrounding skin, never proud of it.
-  const ballR = c.eyeSpacing * 0.40;
-  const ballZ = surfZ - rz * 0.10 - ballR;
-  const ballCZ = ballZ + ballR * 0.85;
-  const ball = (cx: number) => sphere(p, [cx, socketY, ballCZ], ballR);
-  head = min(head, min(ball(-c.eyeSpacing), ball(c.eyeSpacing)));
+  // (i) almond hollow — wide in X, thin in Y, shallow in Z. Carved into skin.
+  const almond = (cx: number) => ellipsoid(
+    p, [cx, socketY, surfZ + rz * 0.02],
+    [c.eyeSpacing * 0.50, c.eyeSpacing * 0.26, rz * 0.10],
+  );
+  head = smoothSubtract(head, min(almond(-c.eyeSpacing), almond(c.eyeSpacing)), 0.03);
 
-  // 3d. Lids — Loomis: "the eye we see is the slit between two fleshy lids
-  //     over the ball; the upper lid is heavier." Built as ONE shape, not two
-  //     lid-blobs (two blobs ink two rims = a bowtie). Method: add a smooth
-  //     fleshy eye-mound covering the ball, then carve a SINGLE almond
-  //     aperture through it — one carve = one clean rim = one almond. The
-  //     almond is offset slightly up so more upper lid shows below the brow
-  //     (heavier upper lid). The ball already sits behind, filling the gap.
-  const moundZ = ballCZ + ballR * 0.45;
-  const mound = (cx: number) => ellipsoid(
-    p, [cx, socketY, moundZ],
-    [c.eyeSpacing * 0.56, ballR * 0.95, rz * 0.11],
+  // (ii) NO 3D eyeball. A unioned ball breaches the angled cheek surface in
+  //      3/4 view and inks a bulging circle (the amphibian regression, and it
+  //      defeated even a world-Z clip plane because the cheek is not axis-
+  //      aligned). In a simple line style the carved almond hollow itself IS
+  //      the eye — the recess reads as the eye. The iris/pupil are a later
+  //      surface-decal pass, not a breaching sphere. Stability over a ball.
+
+  // (iii) upper-lid line — a thin crease just under the brow, the single mark
+  //       that makes the eye read as a lidded eye not a hole. Carved shallow.
+  const lid = (cx: number) => ellipsoid(
+    p, [cx, socketY + c.eyeSpacing * 0.22, surfZ + rz * 0.03],
+    [c.eyeSpacing * 0.46, c.eyeSpacing * 0.07, rz * 0.08],
   );
-  head = smin(head, min(mound(-c.eyeSpacing), mound(c.eyeSpacing)), 0.03);
-  // almond aperture: wide in X, thin in Y, offset up so upper lid is heavier
-  const aperture = (cx: number) => ellipsoid(
-    p, [cx, socketY + ballR * 0.10, moundZ + rz * 0.05],
-    [c.eyeSpacing * 0.46, ballR * 0.40, rz * 0.12],
-  );
-  head = smoothSubtract(head, min(aperture(-c.eyeSpacing), aperture(c.eyeSpacing)), 0.015);
+  head = smoothSubtract(head, min(lid(-c.eyeSpacing), lid(c.eyeSpacing)), 0.015);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that
