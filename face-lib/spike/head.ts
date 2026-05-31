@@ -217,9 +217,9 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //  boundary we agreed — the core was wrongly making the eye look, which is
   //  why it kept going amphibian. A shallow recess + no lid line; the style
   //  owns everything you'd call "the eye".
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.34, rz * 0.12];
-  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ + rz * 0.02], socketHalf);
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.09);
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.34, rz * 0.08];
+  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ + rz * 0.04], socketHalf);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.12);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that
@@ -236,17 +236,19 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
     [0, (c.browY + c.noseBaseY) / 2, (rootZ + baseZ) / 2 + rz * 0.05],
     [rx * d.noseBridgeWidth * 0.7, noseLen * 0.60, rz * 0.13],
   );
+  // tip + alae form ONE bulb (the ball of the nose), not a stack of separate
+  // spheres. Keep them at the SAME Z and fuse tightly so the profile shows a
+  // single nose tip, not a lumpy cascade of bumps.
   const tipR = rx * d.noseTipBulge;
-  const tipZ = baseZ + rz * d.noseProjection;
-  const tip = sphere(p, [0, c.noseBaseY + tipR * 0.4, tipZ], tipR);
+  const bulbZ = baseZ + rz * d.noseProjection;
+  const tip = sphere(p, [0, c.noseBaseY + tipR * 0.3, bulbZ], tipR);
   const alaR = rx * d.noseAlarWidth;
   const alaX = rx * (d.noseAlarWidth + 0.02);
-  const alaL = sphere(p, [-alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
-  const alaR2 = sphere(p, [ alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
-  // tight blends keep the plane breaks; alae a touch looser so they fuse to tip
-  let nose = smin(keel, tip, 0.03);
-  nose = smin(nose, smin(alaL, alaR2, 0.025), 0.03);
-  head = smin(head, nose, 0.03);
+  const alaL = sphere(p, [-alaX, c.noseBaseY + alaR * 0.2, bulbZ - rz * 0.02], alaR);
+  const alaR2 = sphere(p, [ alaX, c.noseBaseY + alaR * 0.2, bulbZ - rz * 0.02], alaR);
+  const bulb = smin(tip, smin(alaL, alaR2, 0.04), 0.05);   // one nose-ball
+  let nose = smin(keel, bulb, 0.04);                       // keel flows into bulb
+  head = smin(head, nose, 0.04);                            // nose roots into face
 
   // 4b. Cheekbones (malar plane) — Bridgman: the cheekbone is a forward-
   //     pushing plane at the level of the LOWER eye socket, between the nose
