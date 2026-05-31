@@ -143,11 +143,18 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const c = construct(d);
   const [rx, ry, rz] = c.craniumRadii;
 
-  // 1. Cranium ball + occiput (Loomis: the skull bulges at the back-base;
-  //    without it the back reads as a flat vertical wall).
+  // 1. Cranium ball + occiput. Loomis/anatomy: the skull's greatest
+  //    front-to-back depth is ABOVE center (parietal/occipital), and the back
+  //    stays full high up — it is not a symmetric egg. The occiput is a TALL
+  //    ellipsoid set back and slightly high, blended so the upper-back keeps
+  //    its volume instead of collapsing inward toward the crown.
   let head = ellipsoid(p, c.craniumCenter, c.craniumRadii);
-  const occiput = sphere(p, [0, c.craniumCenter[1] - ry * 0.10, -rz * 0.50], rz * 0.62);
-  head = smin(head, occiput, 0.10);
+  const occiput = ellipsoid(
+    p,
+    [0, c.craniumCenter[1] + ry * 0.10, -rz * 0.40],
+    [rx * 0.92, ry * 0.78, rz * 0.70],
+  );
+  head = smin(head, occiput, 0.12);
 
   // 2. Jaw — a single tapered mass hung off the ball, chin found at the
   //    derived chinY and pushed forward by chinProjection. One ellipsoid for
@@ -162,16 +169,28 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   jaw = smin(jaw, gonialR, 0.16);
   head = smin(head, jaw, 0.20);
 
-  // 3. Eyes — FOUND on the construction. Socket carved at the eye line,
-  //    eyeSpacing out from center, sunk onto the front surface at that height.
-  const eyeZ = c.frontZ(c.eyeY) - rz * 0.05;     // recess into the form (shallower → rim inks)
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.70, c.eyeSpacing * 0.52, rz * 0.30];
-  const socketL = ellipsoid(p, [-c.eyeSpacing, c.eyeY, eyeZ], socketHalf);
-  const socketR = ellipsoid(p, [ c.eyeSpacing, c.eyeY, eyeZ], socketHalf);
-  head = smoothSubtract(head, min(socketL, socketR), 0.05);
+  // 3. Eyes — FOUND on the construction. The eyeball is a sphere that sits
+  //    INSIDE an orbital socket; the lids (skin) close over its front. Key
+  //    correctness rule: the ball's front pole must sit at or BEHIND the
+  //    socket opening, or it pops out like a golf ball on a tee (the bug).
+  //    So: carve a socket, then seat the ball one radius back from the
+  //    surface so only a sliver shows through the lid aperture.
+  const surfZ = c.frontZ(c.eyeY);
+  const ballR = c.eyeSpacing * 0.42;
+  // Shallow, softly-blended orbit. A deep/sharp socket inks its whole rim as
+  // a 360° oval loop in profile (wrong — a real profile shows only a small
+  // front almond). Keep the carve shallow and the blend wide so the rim
+  // stays under the crease-ink threshold; the eyeball + lid carry the read.
+  const socketDepth = rz * 0.16;
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.68, c.eyeSpacing * 0.52, socketDepth];
+  const socketZ = surfZ - socketDepth * 0.2;
+  const socketL = ellipsoid(p, [-c.eyeSpacing, c.eyeY, socketZ], socketHalf);
+  const socketR = ellipsoid(p, [ c.eyeSpacing, c.eyeY, socketZ], socketHalf);
+  head = smoothSubtract(head, min(socketL, socketR), 0.10);
 
-  const ballR = c.eyeSpacing * 0.40;
-  const ballZ = c.frontZ(c.eyeY) - ballR * 0.6;
+  // Ball center set so its front pole (centerZ + ballR) lands just behind the
+  // original skin surface — seated in the orbit, not proud of it.
+  const ballZ = surfZ - ballR + rz * 0.02;
   const eyeballL = sphere(p, [-c.eyeSpacing, c.eyeY, ballZ], ballR);
   const eyeballR = sphere(p, [ c.eyeSpacing, c.eyeY, ballZ], ballR);
   head = min(head, min(eyeballL, eyeballR));
