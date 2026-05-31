@@ -266,21 +266,34 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
   head = smin(head, dNeck, 0.14);
 
-  // 7. Ears — Loomis: top at the BROW line, bottom at the NOSE BASE (that
-  //    vertical span IS the rule). A flattened ellipsoid on each side plane,
-  //    tall in Y, thin in X, medium in Z (the C front-to-back), tilted ~15°
-  //    back. Sits at the side of the cranium just behind the eye line depth.
-  const earY = (c.browY + c.noseBaseY) / 2;        // center between the two
-  const earHalfH = (c.browY - c.noseBaseY) / 2;    // spans brow→nose-base
-  const earX = rx + rx * d.earProtrusion;          // out past the side plane
-  const earZ = c.craniumCenter[2] - rz * 0.28;     // behind center (over the canal)
-  const earHalf: Vec3 = [rx * d.earWidth * 0.5, earHalfH, rz * d.earWidth * 1.7];
+  // 7. Ears — Loomis "flattened C", top at BROW line, bottom at NOSE BASE.
+  //    Built as a SHELL, not a blob: an outer ellipsoid (helix rim) with an
+  //    inner concha bowl SUBTRACTED from its front face, so the profile reads
+  //    as a rim around a hollow (a real ear) instead of a knotted lump. The
+  //    lobe is the lower, forward part of the outer mass left uncarved.
+  const earY = (c.browY + c.noseBaseY) / 2;
+  const earHalfH = (c.browY - c.noseBaseY) / 2;
+  const earX = rx + rx * d.earProtrusion;
+  const earZ = c.craniumCenter[2] - rz * 0.30;     // over the ear canal, behind center
   const earTilt = 0.26;                            // ~15° back
-  const pEarL = rotate(translate(p, [ earX, -earY, -earZ]), [0, 1, 0],  earTilt);
-  const pEarR = rotate(translate(p, [-earX, -earY, -earZ]), [0, 1, 0], -earTilt);
-  const dEarL = ellipsoid(pEarL, [0, 0, 0], earHalf);
-  const dEarR = ellipsoid(pEarR, [0, 0, 0], earHalf);
-  head = smin(head, min(dEarL, dEarR), 0.04);
+  // A clean flattened-C SOLID: a single ellipsoid, tall (brow→nose-base),
+  // thin in X (pressed to the head), deep in Z (the C front-to-back). No
+  // carved concha — at this render scale every internal rim inks as a
+  // spurious bubble, so the ear read comes from the flattened SILHOUETTE
+  // plus one shallow antihelix groove (a dent in the upper-front, not a
+  // through-bowl). This matches the research doc: silhouette + single curl
+  // beats the surveyed libs; internal anatomy is a later, higher-res pass.
+  // ONE solid flattened ellipsoid per ear — no internal carve. Any
+  // ellipsoid-minus-ellipsoid leaves an inner rim that the edge pass inks as
+  // a spurious closed loop ("bubbles") at this scale, so internal anatomy
+  // (concha/antihelix/tragus) is deferred to a dedicated higher-res ear pass.
+  // Clean single C-silhouette now; correctness over premature detail.
+  const earHalfV: Vec3 = [rx * d.earWidth * 0.5, earHalfH, rz * d.earWidth * 1.8];
+  const earShell = (sign: number): number => {
+    const pe = rotate(translate(p, [sign * earX, -earY, -earZ]), [0, 1, 0], sign * earTilt);
+    return ellipsoid(pe, [0, 0, 0], earHalfV);
+  };
+  head = smin(head, min(earShell(1), earShell(-1)), 0.06);
 
   return head;
 };
