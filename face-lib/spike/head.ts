@@ -315,31 +315,28 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   head = smin(head, dNeck, 0.14);
 
   // 7. Ears — Loomis "flattened C", top at BROW line, bottom at NOSE BASE.
-  //    Built as a SHELL, not a blob: an outer ellipsoid (helix rim) with an
-  //    inner concha bowl SUBTRACTED from its front face, so the profile reads
-  //    as a rim around a hollow (a real ear) instead of a knotted lump. The
-  //    lobe is the lower, forward part of the outer mass left uncarved.
+  //    Outer ellipsoid (helix rim) with a SHALLOW, WIDE-BLEND concha dent in
+  //    the front face. Earlier sharp concha subtracts inked a hard inner
+  //    rim-loop (bubbles); now the interior-contour extractor (grazing-angle
+  //    line family) draws the soft bowl as a curve instead — so a gentle dish
+  //    reads as the concha without a spurious hard loop. The lower-front mass
+  //    left undented is the lobe.
   const earY = (c.browY + c.noseBaseY) / 2;
   const earHalfH = (c.browY - c.noseBaseY) / 2;
   const earX = rx + rx * d.earProtrusion;
   const earZ = c.craniumCenter[2] - rz * 0.30;     // over the ear canal, behind center
   const earTilt = 0.26;                            // ~15° back
-  // A clean flattened-C SOLID: a single ellipsoid, tall (brow→nose-base),
-  // thin in X (pressed to the head), deep in Z (the C front-to-back). No
-  // carved concha — at this render scale every internal rim inks as a
-  // spurious bubble, so the ear read comes from the flattened SILHOUETTE
-  // plus one shallow antihelix groove (a dent in the upper-front, not a
-  // through-bowl). This matches the research doc: silhouette + single curl
-  // beats the surveyed libs; internal anatomy is a later, higher-res pass.
-  // ONE solid flattened ellipsoid per ear — no internal carve. Any
-  // ellipsoid-minus-ellipsoid leaves an inner rim that the edge pass inks as
-  // a spurious closed loop ("bubbles") at this scale, so internal anatomy
-  // (concha/antihelix/tragus) is deferred to a dedicated higher-res ear pass.
-  // Clean single C-silhouette now; correctness over premature detail.
   const earHalfV: Vec3 = [rx * d.earWidth * 0.5, earHalfH, rz * d.earWidth * 1.8];
+  // concha: shallow bowl in the outer (away-from-head) face, upper-mid, NOT
+  // through the shell. Wide subtract blend so the dish is smooth (contour
+  // extractor draws it) rather than a hard rim (silhouette/crease draws it).
+  const conchaHalf: Vec3 = [rx * d.earWidth * 0.34, earHalfH * 0.50, rz * d.earWidth * 1.0];
+  const conchaOff: Vec3 = [rx * d.earWidth * 0.32, earHalfH * 0.12, 0];
   const earShell = (sign: number): number => {
     const pe = rotate(translate(p, [sign * earX, -earY, -earZ]), [0, 1, 0], sign * earTilt);
-    return ellipsoid(pe, [0, 0, 0], earHalfV);
+    const outer = ellipsoid(pe, [0, 0, 0], earHalfV);
+    const concha = ellipsoid(pe, conchaOff, conchaHalf);
+    return smoothSubtract(outer, concha, 0.06);    // wide blend → soft dish, no hard rim
   };
   head = smin(head, min(earShell(1), earShell(-1)), 0.06);
 
