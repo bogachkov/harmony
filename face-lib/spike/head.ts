@@ -207,8 +207,29 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //     front pole sits behind the surrounding skin, never proud of it.
   const ballR = c.eyeSpacing * 0.40;
   const ballZ = surfZ - rz * 0.10 - ballR;
-  const ball = (cx: number) => sphere(p, [cx, socketY, ballZ + ballR * 0.85], ballR);
+  const ballCZ = ballZ + ballR * 0.85;
+  const ball = (cx: number) => sphere(p, [cx, socketY, ballCZ], ballR);
   head = min(head, min(ball(-c.eyeSpacing), ball(c.eyeSpacing)));
+
+  // 3d. Lids — Loomis: "the eye we see is the slit between two fleshy lids
+  //     over the ball; the upper lid is heavier." Built as ONE shape, not two
+  //     lid-blobs (two blobs ink two rims = a bowtie). Method: add a smooth
+  //     fleshy eye-mound covering the ball, then carve a SINGLE almond
+  //     aperture through it — one carve = one clean rim = one almond. The
+  //     almond is offset slightly up so more upper lid shows below the brow
+  //     (heavier upper lid). The ball already sits behind, filling the gap.
+  const moundZ = ballCZ + ballR * 0.45;
+  const mound = (cx: number) => ellipsoid(
+    p, [cx, socketY, moundZ],
+    [c.eyeSpacing * 0.56, ballR * 0.95, rz * 0.11],
+  );
+  head = smin(head, min(mound(-c.eyeSpacing), mound(c.eyeSpacing)), 0.03);
+  // almond aperture: wide in X, thin in Y, offset up so upper lid is heavier
+  const aperture = (cx: number) => ellipsoid(
+    p, [cx, socketY + ballR * 0.10, moundZ + rz * 0.05],
+    [c.eyeSpacing * 0.46, ballR * 0.40, rz * 0.12],
+  );
+  head = smoothSubtract(head, min(aperture(-c.eyeSpacing), aperture(c.eyeSpacing)), 0.015);
 
   // 4. Nose — root found on the brow line at center, base at the derived
   //    nose-base landmark. Bridge + tip grow forward off the front surface.
