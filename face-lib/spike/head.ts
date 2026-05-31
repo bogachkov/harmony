@@ -30,6 +30,22 @@ export type HeadDial = {
   jawWidth: number;
   /** Chin forward projection, in cranium-half-depths. */
   chinProjection: number;
+
+  // ---- nose shape (Loomis keel/tip/alae). Sizes only — position is derived. ----
+  /** Tip ball radius, in cranium half-widths. Bigger = bulbous. */
+  noseTipBulge: number;
+  /** Ala (nostril wing) radius, in cranium half-widths. */
+  noseAlarWidth: number;
+  /** Tip forward projection, in cranium half-depths. Bigger = longer nose. */
+  noseProjection: number;
+  /** Bridge half-width, in cranium half-widths. Bigger = wider bridge. */
+  noseBridgeWidth: number;
+
+  // ---- mouth shape. Width/thickness only — position is derived. ----
+  /** Mouth width as a multiple of eye spacing. */
+  mouthWidth: number;
+  /** Lip-slit thickness, in cranium half-heights. */
+  mouthThickness: number;
 };
 
 export const DEFAULT_HEAD: HeadDial = {
@@ -37,6 +53,12 @@ export const DEFAULT_HEAD: HeadDial = {
   jawDrop: 1.15,        // chin sits ~1.15 cranium-half-heights below center
   jawWidth: 0.62,       // jaw clearly narrower than cranium
   chinProjection: 0.45,
+  noseTipBulge: 0.13,
+  noseAlarWidth: 0.09,
+  noseProjection: 0.14,
+  noseBridgeWidth: 0.10,
+  mouthWidth: 1.1,
+  mouthThickness: 0.018,
 };
 
 // ---- the construction: landmarks DERIVED from the cranium ----
@@ -139,15 +161,16 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const bridge = ellipsoid(
     p,
     [0, (c.browY + c.noseBaseY) / 2, (rootZ + baseZ) / 2 + rz * 0.04],
-    [rx * 0.10, noseLen * 0.62, rz * 0.12],
+    [rx * d.noseBridgeWidth, noseLen * 0.62, rz * 0.12],
   );
-  const tipR = rx * 0.13;
-  const tipZ = baseZ + rz * 0.14;                // project the tip clearly forward
+  const tipR = rx * d.noseTipBulge;
+  const tipZ = baseZ + rz * d.noseProjection;    // project the tip forward
   const tip = sphere(p, [0, c.noseBaseY + tipR * 0.4, tipZ], tipR);
   // alae give the profile a nostril break instead of a single nub
-  const alaR = rx * 0.09;
-  const alaL = sphere(p, [-rx * 0.11, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
-  const alaR2 = sphere(p, [ rx * 0.11, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
+  const alaR = rx * d.noseAlarWidth;
+  const alaX = rx * (d.noseAlarWidth + 0.02);
+  const alaL = sphere(p, [-alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
+  const alaR2 = sphere(p, [ alaX, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
   let nose = smin(bridge, tip, 0.05);
   nose = smin(nose, smin(alaL, alaR2, 0.03), 0.04);
   head = smin(head, nose, 0.04);
@@ -155,9 +178,9 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   // 5. Mouth — a slit FOUND at the derived mouth line, carved into the form
   //    so a real crease inks. Width derived from eye spacing (mouth ≈ inner
   //    eye-corner span). Curls back at the corners by sitting on the round jaw.
-  const mouthW = c.eyeSpacing * 1.1;
+  const mouthW = c.eyeSpacing * d.mouthWidth;
   const mouthZ = c.frontZ(c.mouthY) + rz * 0.02;
-  const mouthCut = ellipsoid(p, [0, c.mouthY, mouthZ], [mouthW * 0.5, ry * 0.018, rz * 0.10]);
+  const mouthCut = ellipsoid(p, [0, c.mouthY, mouthZ], [mouthW * 0.5, ry * d.mouthThickness, rz * 0.10]);
   head = smoothSubtract(head, mouthCut, 0.02);
 
   return head;
