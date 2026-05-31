@@ -62,8 +62,8 @@ function renderTile(yawDeg, pitchDeg) {
     const simp = dp(smoothClosed(raw, 3), 1.0);
     cv.stroke([...simp, simp[0]], { width: 3.2, color: [22, 22, 28], wobble: 0.55, seed: seed++, closed: true, taper: false });
   }
-  // construction curves, hidden-line tested against the same buffer
-  for (const c of curves())
+  // construction curves are scaffolding — the finished drawing drops them
+  for (const c of (process.env.SHOW_CONSTRUCTION ? curves() : []))
     for (const run of runsVisible(c.pts, z, W, H, cx, cy, scale, yaw, pitch))
       cv.stroke(run, { ...c.st, seed: seed++ });
 
