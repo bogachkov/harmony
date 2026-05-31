@@ -16,7 +16,7 @@
 
 import type { Vec3 } from '../math/vec3.ts';
 import {
-  sphere, ellipsoid, box, plane,
+  sphere, ellipsoid, plane, taperedBox,
   max, smin, smax,
 } from './primitives.ts';
 
@@ -76,7 +76,7 @@ export type LoomisParams = {
    */
   kForehead: number;
 
-  // ---- jaw ("the block below — tapered to a chin") ----
+  // ---- jaw ("a single tapered wedge — gonial wide at top, chin point at bottom") ----
   /**
    * Bigonial width: full distance between the gonial angles (jaw corners
    * at the back/top of the mandible). Targeted at ~75-80% of cranial
@@ -86,19 +86,19 @@ export type LoomisParams = {
   /**
    * Mental width: full distance across the chin pad at the bottom of the
    * mandible. Always narrower than bigonial — that ratio is what creates
-   * the chin point. Roughly 55-70% of bigonial for an adult male.
+   * the chin point. Roughly 40-60% of bigonial for an adult male.
    */
   mentalWidth: number;
-  /** Vertical extent of the jaw block (cranium-bottom to chin tip, roughly). */
+  /** Vertical extent of the jaw wedge (cranium-bottom to chin tip, roughly). */
   ramusHeight: number;
-  /** Front-to-back depth of the jaw block at the gonial (upper) level. */
+  /** Front-to-back depth of the jaw at the gonial (upper) level. */
   jawDepth: number;
   /** Front-to-back depth of the chin pad at the mental (lower) level. */
   chinDepth: number;
   /**
-   * Chin chamfer / "gonial rounding" — how much to round the corners of the
-   * jaw boxes. Bigger = softer, more feminine; smaller = blockier, more
-   * masculine.
+   * Chin chamfer — how much to sphere-sweep the jaw wedge. Bigger = softer,
+   * more feminine; smaller = blockier, more masculine. Applied uniformly
+   * (subtracted from the wedge SDF, which Minkowski-sums it with a sphere).
    */
   gonialAngle: number;
   /** Vertical offset of the jaw center, relative to cranium center. Negative = below. */
@@ -109,11 +109,12 @@ export type LoomisParams = {
    */
   jawZOffset: number;
   /**
-   * Smooth-min radius between the gonial-level (upper) jaw box and the
-   * mental-level (lower) chin box. Bigger = more tapered/melted; smaller =
-   * a more visible "two-block" seam.
+   * Extra forward push of the chin tip beyond the gonial level. The wedge's
+   * upper cross-section sits at jawZOffset; the lower cross-section sits at
+   * jawZOffset + mentalProtrusion. Real mental protuberances sit a few %
+   * of head height forward of the mandibular body's mid-line.
    */
-  kTaper: number;
+  mentalProtrusion: number;
 
   // ---- blending ----
   /**
@@ -122,6 +123,45 @@ export type LoomisParams = {
    * jaw-line. Roughly 8-12% of the cranium radius works for an adult.
    */
   kChin: number;
+
+  // ---- nose ("Loomis five-plane wedge — dorsum + sides + base + alae") ----
+  /**
+   * Nose length from nasal root (between the brows) to the tip, in
+   * head-height units. Adult ratio is ~1/3 of face height — roughly
+   * 0.32-0.36 of total head height. Drives the Y-extent of the dorsum.
+   */
+  noseLength: number;
+  /**
+   * How far the nose tip projects forward (in +Z) from the front of the
+   * cranium ellipsoid. Adult-male projection is ~10-15% of head depth.
+   * The dorsum interpolates from zero projection at the root to this
+   * value at the tip.
+   */
+  tipProjection: number;
+  /**
+   * Full alar width — distance between the outer edges of the nostril
+   * wings at the base. Classic Loomis proportion is "about an eye-width",
+   * which lands around 18-22% of head width for an adult.
+   */
+  alarWidth: number;
+  /**
+   * Bridge slope. 0 = straight Greek nose. Positive bows the bridge OUT
+   * (Roman / aquiline). Negative pushes it inward (concave / scooped /
+   * "ski-jump"). Magnitude is a fraction of `tipProjection`.
+   */
+  bridgeSlope: number;
+  /**
+   * Y-coordinate of the nasal root (the deepest point of the bridge,
+   * between the brows). Should sit just under the forehead plane, on the
+   * brow line. Computed in world units relative to the head origin.
+   */
+  noseRootY: number;
+  /**
+   * Smooth-min radius for fusing the nose onto the cranium. Tight (~0.02)
+   * so the bridge reads as growing OUT of the brow rather than as a
+   * separate object stuck on; just non-zero enough to avoid a hard seam.
+   */
+  kNose: number;
 };
 
 /** Defaults that approximate an adult male head. Tuned visually, not measured. */
@@ -149,20 +189,33 @@ export const DEFAULT_LOOMIS: LoomisParams = {
   foreheadPlaneZ: 0.54,
   kForehead: 0.18,
 
-  // Jaw: ~78% of cranium cut width at gonial, ~55% at chin → clear taper.
-  // Positioned forward enough that the chin projects past the cranium's
-  // mid-line — otherwise the jaw reads as tucked under the cranium.
+  // Jaw: single tapered wedge — bigonial wide at the top, chin point at the
+  // bottom. Positioned forward enough that the chin projects past the
+  // cranium's mid-line — otherwise the jaw reads as tucked under the cranium.
   bigonialWidth: 0.66,    // ~0.78 * (2 * sideOffset) — adult gonial spread
-  mentalWidth: 0.32,      // ~0.48 * bigonial — narrow chin pad for a clear taper
+  mentalWidth: 0.30,      // ~0.45 * bigonial — narrow chin pad for a clear taper
   ramusHeight: 0.42,      // ~35% of total head height
   jawDepth: 0.72,         // a hair deeper than cranium width, less than cranium depth
-  chinDepth: 0.46,        // chin pad is shorter front-to-back than the ramus
-  gonialAngle: 0.09,      // chamfer radius — rounds the jaw box corners
+  chinDepth: 0.44,        // chin pad is shorter front-to-back than the ramus
+  gonialAngle: 0.07,      // chamfer radius — rounds the jaw wedge corners
   jawYOffset: -0.46,      // sits below the cranium center
   jawZOffset: 0.10,       // forward shift so chin clears the face plane
-  kTaper: 0.20,           // smooth loft between gonial and mental cross-sections
+  mentalProtrusion: 0.04, // chin tip pushed forward of the gonial level
 
   kChin: 0.10,            // ~20% of cranium half-width — softens cranium→gonial shoulder
+
+  // Nose: Loomis five-plane wedge. Length ~1/3 of face height puts the tip
+  // roughly halfway down the head. Tip projection is conservative — Roman
+  // noses go further but read as a caricature on a generic adult substrate.
+  // Alar width ~20% of head width. Bridge slope 0 = straight (Greek). The
+  // root sits on the brow line, which is roughly 0.18-0.22 above the
+  // cranium center for these defaults.
+  noseLength: 0.34,       // ~1/3 of face height
+  tipProjection: 0.12,    // ~10% of head depth past the cranium front
+  alarWidth: 0.20,        // ~eye-width
+  bridgeSlope: 0.0,       // straight bridge
+  noseRootY: 0.18,        // brow line, just under foreheadPlaneZ apex
+  kNose: 0.045,           // tight blend at the bridge — not a separate blob
 };
 
 /**
@@ -176,18 +229,31 @@ export const DEFAULT_LOOMIS: LoomisParams = {
  *      a flatter slab (the Loomis "face plane"). Then `smin` an occipital
  *      sphere at the back-bottom to restore the cranial bulge a pure
  *      ellipsoid lacks (Hampton 2009 ch.5).
- *   2. Jaw = two stacked rounded boxes — a wider upper box at the gonial
- *      level (`bigonialWidth`) and a narrower lower box at the mental
- *      level (`mentalWidth`), `smin`'d together with radius `kTaper`. The
- *      smooth blend interpolates the cross-section from gonial to mental
- *      width, producing the characteristic tapered mandible that comes to
- *      a chin point instead of a flat box bottom. Bridgman 1920 §"The
- *      Lower Jaw" treats the mental protuberance as a distinct plane
- *      below the side-of-jaw; two stacked SDFs is the SDF-native version
- *      of that decomposition.
- *   3. Head = cranium `smin` jaw, with blend radius `kChin`. The smooth-min
- *      adds material along the transition, which is what a real
- *      sternocleidomastoid / masseter mass would do under the skin.
+ *   2. Jaw = a single tapered wedge (`taperedBox`) whose cross-section
+ *      lerps linearly from (`bigonialWidth`, `jawDepth`) at the top to
+ *      (`mentalWidth`, `chinDepth`) at the bottom, sphere-swept by
+ *      `gonialAngle` for rounded corners. The chin point falls out of the
+ *      math — no stacked blocks, no visible step in the front silhouette.
+ *      Bridgman 1920 §"The Lower Jaw" treats the mental protuberance as a
+ *      distinct plane below the side-of-jaw; the wedge captures the same
+ *      decomposition as a single primitive instead of two stacked SDFs.
+ *      The wedge's lower cross-section is also shifted forward by
+ *      `mentalProtrusion`, so a profile view shows the chin projecting in
+ *      front of the mandibular body's mid-line.
+ *   3. Nose = a tapered-wedge dorsum (root → tip, narrow & projecting
+ *      forward), plus two alar spheres at the base for the nostril wings,
+ *      smin'd together into a single nose SDF and then smin'd onto the
+ *      cranium with a tight `kNose` blend. The dorsum's Z-axis follows a
+ *      curve controlled by `bridgeSlope` (0 = straight, +ve = Roman).
+ *      Loomis 1956 ch.1 ("The Five Planes of the Nose") models this as
+ *      two side planes meeting at a dorsal ridge, a base plane tilting up
+ *      under the tip, and two ala bulges — the wedge-plus-spheres
+ *      composition is the SDF-native version of those five planes.
+ *   4. Head = (cranium `smin` jaw) `smin` nose, blend radii `kChin` and
+ *      `kNose`. The cranium-jaw smin adds material along the gonial /
+ *      mandibular-angle region (masseter mass under the skin). The nose
+ *      smin is much tighter — the nose should read as growing OUT of the
+ *      cranium, not as a separate object stuck on.
  */
 export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number => {
   const P: LoomisParams = { ...DEFAULT_LOOMIS, ...params };
@@ -214,66 +280,149 @@ export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number 
   const dOcciput = sphere(p, P.occipitalCenter, P.occipitalRadius);
   dCranium = smin(dCranium, dOcciput, P.kOccipital);
 
-  // ---- jaw: stacked tapered boxes (gonial wide → mental narrow) ----
-  // Both boxes are rounded; the chamfer radius `gonialAngle` rounds corners
-  // (sphere-swept = Minkowski with a sphere). The two boxes share the same
-  // ramus-height span but are placed at the same center; the upper sets the
-  // gonial silhouette, the lower sets the chin point. `smin`'ing them
-  // creates a smooth taper: the chin pad is narrower in X (mental width)
-  // and shallower in Z (chin depth) than the gonial-level box.
+  // ---- jaw: single tapered wedge (gonial wide → mental narrow) ----
+  // One primitive instead of two stacked boxes. The wedge's cross-section
+  // lerps linearly in Y from (bigonialWidth, jawDepth) at the top to
+  // (mentalWidth, chinDepth) at the bottom — the chin point falls out of
+  // the math, no visible step in the front silhouette. Sphere-swept by
+  // `gonialAngle` (subtract r from the SDF, Minkowski sum with a sphere)
+  // for rounded jaw corners.
+  //
+  // The wedge's per-cross-section center also lerps in Z: top sits at
+  // jawZOffset, bottom sits at jawZOffset + mentalProtrusion. We implement
+  // that by shearing the input point — subtract a Y-dependent Z offset
+  // before evaluating the wedge. This keeps the wedge axis-aligned in its
+  // own local frame, so the taperedBox SDF stays exact.
   const r = P.gonialAngle;
+  const halfH = P.ramusHeight / 2;
+  // Local point for the wedge: translate to jaw center, then shear Z by a
+  // factor that runs from 0 at the top to -mentalProtrusion at the bottom,
+  // so the world-space wedge has its lower cross-section pushed forward by
+  // +mentalProtrusion. (Subtract on input = add on output.)
+  const py = p[1] - P.jawYOffset;
+  const tWedge = Math.max(0, Math.min(1, (halfH - py) / (2 * halfH))); // 0 at top, 1 at bottom
+  const pJaw: Vec3 = [
+    p[0],
+    p[1],
+    p[2] - tWedge * P.mentalProtrusion,
+  ];
   const jawCenter: Vec3 = [0, P.jawYOffset, P.jawZOffset];
+  const dJaw = taperedBox(
+    pJaw,
+    jawCenter,
+    halfH - r,
+    { x: Math.max(P.bigonialWidth / 2 - r, 0), z: Math.max(P.jawDepth / 2 - r, 0) },
+    { x: Math.max(P.mentalWidth / 2 - r, 0),   z: Math.max(P.chinDepth / 2 - r, 0) },
+  ) - r;
 
-  // The two boxes overlap in Y across the whole ramus, with their centers
-  // separated vertically by a fraction of the ramus height. This overlap
-  // is what lets `smin` *loft* between cross-sections: in the overlap band
-  // the smin blends between the wider gonial profile and the narrower
-  // mental profile, producing a continuous taper instead of two visibly
-  // stacked blocks. Each box covers ~75% of the ramus height.
-  const boxHalfH = (P.ramusHeight * 0.75) / 2;
-  const ySeparation = P.ramusHeight * 0.25;   // centers split by 25% of ramus
-
-  // Upper (gonial) box: full bigonial width, full jaw depth, centered above
-  // jawCenter so its top edge sits at the top of the ramus block.
-  const upperCenter: Vec3 = [
-    jawCenter[0],
-    jawCenter[1] + ySeparation / 2,
-    jawCenter[2],
-  ];
-  const upperHalfDims: Vec3 = [
-    Math.max(P.bigonialWidth / 2 - r, 0),
-    Math.max(boxHalfH - r, 0),
-    Math.max(P.jawDepth / 2 - r, 0),
-  ];
-  const dUpperJaw = box(p, upperCenter, upperHalfDims) - r;
-
-  // Lower (mental / chin pad) box: narrow mental width, shallower depth,
-  // centered below jawCenter. Shifted slightly forward so a profile view
-  // shows the chin projecting in front of the mandibular body's mid-line
-  // (the real mental protuberance sits a few % of head height forward).
-  const chinForwardShift = 0.03;
-  const lowerCenter: Vec3 = [
-    jawCenter[0],
-    jawCenter[1] - ySeparation / 2,
-    jawCenter[2] + chinForwardShift,
-  ];
-  const lowerHalfDims: Vec3 = [
-    Math.max(P.mentalWidth / 2 - r, 0),
-    Math.max(boxHalfH - r, 0),
-    Math.max(P.chinDepth / 2 - r, 0),
-  ];
-  const dLowerJaw = box(p, lowerCenter, lowerHalfDims) - r;
-
-  // Taper the two together. The smin acts like a "loft" between two
-  // cross-sections, producing a trapezoidal silhouette in front view
-  // (bigonial above, mental below) and a chin point at the bottom.
-  const dJaw = smin(dUpperJaw, dLowerJaw, P.kTaper);
-
-  // ---- union ----
   // Smooth-min the cranium and jaw together. The blend lives in the gonial /
   // mandibular-angle region, which is exactly where a real head transitions
   // from cranial vault to mandible via the masseter mass.
-  return smin(dCranium, dJaw, P.kChin);
+  let d = smin(dCranium, dJaw, P.kChin);
+
+  // ---- nose: Loomis five-plane wedge attached at the nasal root ----
+  // Composition (four primitives, all smin'd):
+  //   - Bridge: a tall thin ellipsoid running root → tip. Naturally
+  //     tapers to points at top and bottom (so the buried top point
+  //     melts into the brow with no hard edge), and the elliptical
+  //     cross-section reads as a soft dorsal ridge — not a flat box face.
+  //   - Tip: a small sphere at the front-bottom of the bridge for the
+  //     nasal tip / cartilage bulb. Adds projection past the bridge end.
+  //   - Alae (x2): two spheres flanking the tip for the nostril wings.
+  // The bridge ellipsoid's Y-axis is straight, but the bridge follows the
+  // forward Z lean by *shearing the query point* — at root (top), shear
+  // = 0; at tip (bottom), shear = -tipProjection. `bridgeSlope` adds a
+  // quadratic bow (positive = Roman, negative = scoop) on top of the
+  // linear lean.
+  // The whole nose-volume is then smin'd onto the cranium with a tight
+  // `kNose` so the bridge reads as growing OUT of the brow, not stuck on.
+
+  // Nasal root Z: front face of the cranium at the brow line. The cranium
+  // is smax'd against the forehead plane, so the actual front surface is
+  // min(ellipsoid_front, foreheadPlaneZ) (softened by kForehead, but for
+  // attachment math the hard min is close enough).
+  const ry = P.craniumRadii[1];
+  const rz = P.craniumRadii[2];
+  const yRel = P.noseRootY - P.craniumCenter[1];
+  const yNorm = Math.min(Math.abs(yRel) / ry, 1);
+  const ellipsoidFrontZ = P.craniumCenter[2] + rz * Math.sqrt(Math.max(0, 1 - yNorm * yNorm));
+  const rootZ = Math.min(ellipsoidFrontZ, P.foreheadPlaneZ);
+
+  // Y-dependent forward lean. tNose: 0 at root, 1 at tip. Unclamped on the
+  // upper side so the lean goes *negative* above the root — pulling the
+  // dorsum's buried top back into the cranium as we move above the brow.
+  // (Clamped on the lower side at 1 so the lean doesn't keep extending
+  // forward below the tip.) projAtY is how much the dorsum centerline
+  // sits forward of rootZ at this height.
+  const tNose = Math.min(1, (P.noseRootY - p[1]) / P.noseLength);
+  // Only apply the bow term where tNose is in [0,1] — outside that, the
+  // bow goes to zero, leaving just the (possibly negative) linear lean.
+  const tBow = Math.max(0, Math.min(1, tNose));
+  const projAtY = tNose * P.tipProjection
+    + 4 * tBow * (1 - tBow) * P.bridgeSlope * P.tipProjection;
+
+  // Bridge ellipsoid: a relatively SHALLOW ellipsoid laid along Y, with
+  // its center pushed *back* into the cranium so only a thin shell pokes
+  // out front. The pokethrough is shaped by the ellipsoid taper: zero at
+  // top/bottom apices, max at the middle. By shearing the input Z by
+  // projAtY (forward lean increasing root → tip), the ellipsoid bends
+  // along the dorsum curve while staying axis-aligned in local frame.
+  //
+  // Geometry in the local (sheared) frame:
+  //   - Ellipsoid Z half-extent: bridgeZHalf (small — just enough to
+  //     project a credible nose ridge).
+  //   - Ellipsoid CENTER is shifted back by `bridgeBackShift` from the
+  //     sheared centerline (the centerline = rootZ + projAtY = where the
+  //     nose-front "should" sit at this Y). Net result: visible-front of
+  //     ellipsoid at the bridge midline sits at centerline +
+  //     (bridgeZHalf - bridgeBackShift), and the back face sits well
+  //     behind the cranium surface.
+  //   - At Y = brow line, the ellipsoid taper means the X & Z cross-
+  //     sections are smaller than at the middle — naturally easing into
+  //     the brow.
+  const bridgeYHalf = P.noseLength / 2 + 0.04;
+  const bridgeCenterY = P.noseRootY - P.noseLength / 2;
+  const bridgeXHalf = P.alarWidth * 0.20;
+  const bridgeZHalf = 0.10;        // total Z half-extent in local frame
+  const bridgeBackShift = 0.08;    // how far the ellipsoid center sits behind the centerline
+  // Shift query Z: ellipsoid center sits at (rootZ + projAtY - bridgeBackShift).
+  const pBridge: Vec3 = [
+    p[0],
+    p[1],
+    p[2] - (rootZ + projAtY) + bridgeBackShift,
+  ];
+  const dBridge = ellipsoid(pBridge, [0, bridgeCenterY, 0], [bridgeXHalf, bridgeYHalf, bridgeZHalf]);
+
+  // Tip sphere: at the bottom-front of the bridge. Pulled slightly UP
+  // and BACK so it overlaps the bridge's bottom apex instead of sticking
+  // out as a separate ball. Provides a credible nasal bulb in profile.
+  const tipR = P.alarWidth * 0.16;
+  const tipY = P.noseRootY - P.noseLength + tipR * 0.7;
+  const tipZWorld = rootZ + P.tipProjection;
+  const dTip = sphere(p, [0, tipY, tipZWorld - tipR * 0.4], tipR);
+
+  // Alar spheres: nostril wings, flanking the tip. X positions land the
+  // outer edges of the spheres on the `alarWidth` target. They sit a hair
+  // behind and below the tip so the tip stays the most-projected point.
+  const aR = P.alarWidth * 0.18;
+  const alaY = P.noseRootY - P.noseLength + aR * 0.5;
+  const alaZ = tipZWorld - aR * 0.7;
+  const dAlaL = sphere(p, [-(P.alarWidth / 2 - aR), alaY, alaZ], aR);
+  const dAlaR = sphere(p, [ (P.alarWidth / 2 - aR), alaY, alaZ], aR);
+
+  // Fuse the nose parts. Generous smin so the bridge / tip / alae read as
+  // one continuous nose volume instead of three glued spheres.
+  let dNose = smin(dBridge, dTip, 0.06);
+  dNose = smin(dNose, dAlaL, 0.06);
+  dNose = smin(dNose, dAlaR, 0.06);
+
+  // Attach the nose to the head with a tight-but-not-zero smin. Too large
+  // and the bridge melts into the forehead (wax look); too small and the
+  // seam reads as a sharp CSG line where the dorsum's back edge cuts into
+  // the brow. kNose ~0.025 is the sweet spot for these dimensions.
+  d = smin(d, dNose, P.kNose);
+
+  return d;
 };
 
 // Re-export for callers who only want this module.

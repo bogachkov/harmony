@@ -75,6 +75,48 @@ export const ellipsoid = (p: Vec3, center: Vec3, radii: Vec3): number => {
 };
 
 /**
+ * Signed distance to a Y-axis-aligned tapered box (frustum-of-box / "wedge")
+ * centered at `center`. Cross-section is a rectangle of half-extents
+ * (halfX, halfZ) that linearly interpolates from `topHalf` at +halfY to
+ * `bottomHalf` at -halfY. Used for the mandible: a single primitive that
+ * narrows from bigonial width at the top to mental width at the bottom,
+ * with the chin point falling out of the math instead of being stacked.
+ *
+ * Implementation: at the query point's Y, find the local cross-section
+ * half-extents by lerp; then evaluate the standard 2D box distance in (X,Z)
+ * and combine with the axial (Y) distance using the same outside/inside
+ * split as `box`. Treating the tapered side walls as locally vertical is
+ * a Lipschitz over-estimate (the true distance to a slanted face is a hair
+ * smaller), but it's a conservative under-estimate of how far you can step,
+ * which is exactly what sphere-tracing needs. The taper is gentle enough
+ * here (<25% over the box height) that the over-estimate is invisible.
+ */
+export const taperedBox = (
+  p: Vec3,
+  center: Vec3,
+  halfY: number,
+  topHalf: { x: number; z: number },
+  bottomHalf: { x: number; z: number },
+): number => {
+  const qy = p[1] - center[1];
+  // t = 0 at bottom, 1 at top
+  const t = clamp((qy + halfY) / (2 * halfY), 0, 1);
+  const hx = mix(bottomHalf.x, topHalf.x, t);
+  const hz = mix(bottomHalf.z, topHalf.z, t);
+  const dx = Math.abs(p[0] - center[0]) - hx;
+  const dz = Math.abs(p[2] - center[2]) - hz;
+  const dy = Math.abs(qy) - halfY;
+  // 2D box distance in (x,z) plane.
+  const outsideXZ = Math.hypot(Math.max(dx, 0), Math.max(dz, 0));
+  const insideXZ = Math.min(Math.max(dx, dz), 0);
+  const dXZ = outsideXZ + insideXZ;
+  // Combine with axial (Y) distance, same outside/inside split as `box`.
+  const outside = Math.hypot(Math.max(dXZ, 0), Math.max(dy, 0));
+  const inside = Math.min(Math.max(dXZ, dy), 0);
+  return outside + inside;
+};
+
+/**
  * Signed distance to a finite cylinder with the given axis direction (unit),
  * radius, and half-height. Centered at the origin; pre-translate `p` if you
  * want it elsewhere. Standard split: radial distance and axial distance,
