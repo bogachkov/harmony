@@ -1,9 +1,11 @@
 // Render every pack × {front, tq-left, profile} to /tmp/grid/<pack>-<view>.svg
+// Pass a 4th+ arg containing 'styled' to overlay the default style marks.
 import { mkdirSync, writeFileSync } from 'node:fs';
-import type { Vec3 } from '../src/math/vec3.ts';
+import type { Vec3, Vec2 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
 import { spikeHead, DEFAULT_HEAD } from './head.ts';
 import { PACKS } from './packs.ts';
+import { plainLineMarks, type Projector } from './style.ts';
 
 const IMG = 256, STEPS = 160, FAR = 6, EPS = 4e-4, NE = 15e-4, FOV = 36;
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
@@ -25,7 +27,24 @@ const nrm = (s: (p:Vec3)=>number, p: Vec3): Vec3 => {
   const e = NE;
   return normalize([s([p[0]+e,p[1],p[2]])-s([p[0]-e,p[1],p[2]]), s([p[0],p[1]+e,p[2]])-s([p[0],p[1]-e,p[2]]), s([p[0],p[1],p[2]+e])-s([p[0],p[1],p[2]-e])]);
 };
-const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number): string => {
+// Project a world point to screen px + occlusion test against the head SDF.
+const makeProjector = (C: ReturnType<typeof cam>, s: (p:Vec3)=>number): Projector => (w: Vec3) => {
+  const rel = sub(w, C.o);
+  const zc = dot(rel, C.f);                    // depth along view axis
+  const xc = dot(rel, C.r), yc = dot(rel, C.u);
+  const sx = (xc / (zc * C.th));               // NDC x (aspect 1)
+  const sy = (yc / (zc * C.th));               // NDC y
+  const px = (sx * 0.5 + 0.5) * IMG;
+  const py = (0.5 - sy * 0.5) * IMG;
+  // occlusion: trace from camera toward w; visible if first hit is ~at w.
+  const dir = normalize(rel);
+  const hitT = (() => { let t=0,p:Vec3=C.o; for(let i=0;i<STEPS;i++){p=[C.o[0]+dir[0]*t,C.o[1]+dir[1]*t,C.o[2]+dir[2]*t];const d=s(p);if(d<EPS)return t;t+=d;if(t>FAR)break;} return FAR; })();
+  const wDist = Math.hypot(rel[0],rel[1],rel[2]);
+  const visible = hitT >= wDist - 0.06;        // not occluded by nearer surface
+  return { s: [px, py] as Vec2, visible };
+};
+
+const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number, styled = false): string => {
   const C = cam(yaw); const s = (p: Vec3) => spikeHead(p, dial);
   const hit = new Uint8Array(IMG*IMG), nx = new Float32Array(IMG*IMG), ny = new Float32Array(IMG*IMG), nz = new Float32Array(IMG*IMG);
   const fr = new Float32Array(IMG*IMG); // facing ratio = |n . viewDir|, 0 at grazing
@@ -57,14 +76,20 @@ const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number): string => {
     const val = sil ? 1 : Math.max(cr>0.45?Math.min(1,cr):0, contour*0.9);
     if(val>0.15) parts.push(`<rect x="${x}" y="${y}" width="1.2" height="1.2" fill="#111" opacity="${val.toFixed(2)}"/>`);
   }
+  if (styled) {
+    const project = makeProjector(C, s);
+    for (const m of plainLineMarks(dial as typeof DEFAULT_HEAD, project)) parts.push(m);
+  }
   parts.push('</svg>'); return parts.join('');
 };
 
-const packs = process.argv.slice(2);
+const args = process.argv.slice(2);
+const styled = args.includes('--styled');
+const packs = args.filter(a => a !== '--styled');
 const names = packs.length ? packs : Object.keys(PACKS);
 mkdirSync('/tmp/grid', { recursive: true });
 for (const name of names) {
   const dial = PACKS[name] ?? {};
-  for (const [vn, yaw] of VIEWS) writeFileSync(`/tmp/grid/${name}-${vn}.svg`, render(dial, yaw));
+  for (const [vn, yaw] of VIEWS) writeFileSync(`/tmp/grid/${name}-${vn}.svg`, render(dial, yaw, styled));
   console.log('rendered', name);
 }
