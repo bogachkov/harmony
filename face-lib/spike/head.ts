@@ -15,8 +15,8 @@
 
 import type { Vec3 } from '../src/math/vec3.ts';
 import {
-  sphere, ellipsoid,
-  min, smin, smoothSubtract,
+  sphere, ellipsoid, cylinder,
+  min, smin, smoothSubtract, translate,
 } from '../src/sdf/primitives.ts';
 
 // ---- what an artist actually chooses up front ----
@@ -46,6 +46,12 @@ export type HeadDial = {
   mouthWidth: number;
   /** Lip-slit thickness, in cranium half-heights. */
   mouthThickness: number;
+
+  // ---- neck (Bridgman: cylinder + SCM V + trapezius). Position derived. ----
+  /** Neck cylinder radius, in cranium half-widths. */
+  neckWidth: number;
+  /** Visible neck length below the jaw, in cranium half-heights. */
+  neckLength: number;
 };
 
 export const DEFAULT_HEAD: HeadDial = {
@@ -59,6 +65,8 @@ export const DEFAULT_HEAD: HeadDial = {
   noseBridgeWidth: 0.10,
   mouthWidth: 1.1,
   mouthThickness: 0.018,
+  neckWidth: 0.62,
+  neckLength: 1.1,
 };
 
 // ---- the construction: landmarks DERIVED from the cranium ----
@@ -182,6 +190,22 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const mouthZ = c.frontZ(c.mouthY) + rz * 0.02;
   const mouthCut = ellipsoid(p, [0, c.mouthY, mouthZ], [mouthW * 0.5, ry * d.mouthThickness, rz * 0.10]);
   head = smoothSubtract(head, mouthCut, 0.02);
+
+  // 6. Neck — Bridgman cylinder the head sits ON. It rises from below the
+  //    frame up THROUGH the jaw line; the wide smin onto the mandible makes
+  //    the jaw flow into the neck instead of tapering to a floating point
+  //    (the fix for the "fishman chin"). Tilted slightly forward so the
+  //    throat sits under the chin, not behind it. SCM/trapezius detail and
+  //    the front V are deferred — this is the load-bearing cylinder only.
+  const neckR = rx * d.neckWidth;
+  const neckTopY = c.chinY + ry * 0.30;          // overlaps up into the jaw
+  const neckBotY = c.chinY - d.neckLength * ry;
+  const neckCenterY = (neckTopY + neckBotY) / 2;
+  const neckHalf = (neckTopY - neckBotY) / 2;
+  const neckTilt = rz * 0.12;                     // throat forward of nape
+  const pNeck = translate(p, [0, -neckCenterY, -(-neckTilt)]);
+  const dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
+  head = smin(head, dNeck, 0.16);
 
   return head;
 };

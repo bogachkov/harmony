@@ -35,8 +35,8 @@ const VIEWS: View[] = [
   { name: 'profile',   yaw: -Math.PI / 2,  pitch: 0 },
 ];
 
-const CAM_RADIUS = 3.6 * Math.max(...DEFAULT_HEAD.craniumRadii);
-const CAM_TARGET: Vec3 = [0, -0.15, 0];
+const CAM_RADIUS = 4.4 * Math.max(...DEFAULT_HEAD.craniumRadii);
+const CAM_TARGET: Vec3 = [0, -0.45, 0];
 
 type SDF = (p: Vec3) => number;
 
