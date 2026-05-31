@@ -46,11 +46,13 @@ const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number): string => {
     // edge). Detect by: this pixel is near grazing AND is a local min vs its
     // x/y neighbours (so we get a thin line, not a shaded band).
     let contour = 0;
-    if (fr[i]! < 0.32) {
+    const GRAZE = 0.18;   // tighter: only strong convex rolls ink, not soft
+                          // concave socket rims (those inked a full eye loop in 3/4)
+    if (fr[i]! < GRAZE) {
       const fl=fr[at(x-1,y)]!, frr=fr[at(x+1,y)]!, fu=fr[at(x,y-1)]!, fd=fr[at(x,y+1)]!;
       const isMin = (hit[at(x-1,y)]&&hit[at(x+1,y)]&&fr[i]!<=fl&&fr[i]!<=frr)
                  || (hit[at(x,y-1)]&&hit[at(x,y+1)]&&fr[i]!<=fu&&fr[i]!<=fd);
-      if (isMin) contour = 1 - fr[i]!/0.32;
+      if (isMin) contour = 1 - fr[i]!/GRAZE;
     }
     const val = sil ? 1 : Math.max(cr>0.45?Math.min(1,cr):0, contour*0.9);
     if(val>0.15) parts.push(`<rect x="${x}" y="${y}" width="1.2" height="1.2" fill="#111" opacity="${val.toFixed(2)}"/>`);

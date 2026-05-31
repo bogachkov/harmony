@@ -210,19 +210,24 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //     circle. The almond rim + the lid are the only lines that ink.
   const socketY = c.eyeY + c.eyeSpacing * 0.05;
 
-  // (i) almond hollow — wide in X, thin in Y, shallow in Z. Carved into skin.
-  const almond = (cx: number) => ellipsoid(
-    p, [cx, socketY, surfZ + rz * 0.02],
-    [c.eyeSpacing * 0.50, c.eyeSpacing * 0.26, rz * 0.10],
-  );
-  head = smoothSubtract(head, min(almond(-c.eyeSpacing), almond(c.eyeSpacing)), 0.03);
+  // (i) Orbital socket — a REAL recessed volume (per the architecture: the
+  //     core must hold a true 3D socket so features attach correctly from any
+  //     angle; this is bone, not a painted-on mark). Wide subtract blend so
+  //     the recess is a smooth bowl whose FRONT opening reads, not a hard 360°
+  //     rim that inks as a floating loop in 3/4. The almond shape (wide X,
+  //     thin Y) gives the eye its slant; depth gives the under-brow shadow.
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.52, c.eyeSpacing * 0.30, rz * 0.16];
+  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ - rz * 0.02], socketHalf);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.07);
 
-  // (ii) NO 3D eyeball. A unioned ball breaches the angled cheek surface in
-  //      3/4 view and inks a bulging circle (the amphibian regression, and it
-  //      defeated even a world-Z clip plane because the cheek is not axis-
-  //      aligned). In a simple line style the carved almond hollow itself IS
-  //      the eye — the recess reads as the eye. The iris/pupil are a later
-  //      surface-decal pass, not a breaching sphere. Stability over a ball.
+  // (ii) Eyeball — a real sphere seated DEEP in the socket. Seated so its
+  //      front pole sits well behind the surrounding skin so it cannot breach
+  //      the (angled) cheek in 3/4. It exists as 3D so a style can later find
+  //      the iris position from any angle; here it only fills the hollow.
+  const ballR = c.eyeSpacing * 0.44;
+  const ballCZ = surfZ - rz * 0.20;                  // deep — front pole behind skin
+  const eyeball = (cx: number) => sphere(p, [cx, socketY, ballCZ], ballR);
+  head = smin(head, min(eyeball(-c.eyeSpacing), eyeball(c.eyeSpacing)), 0.04);
 
   // (iii) upper-lid line — a thin crease just under the brow, the single mark
   //       that makes the eye read as a lidded eye not a hole. Carved shallow.
