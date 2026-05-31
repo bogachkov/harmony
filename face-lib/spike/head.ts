@@ -222,9 +222,14 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //  (surfZ - depth) and bites deep, so the eye region genuinely sinks in. (The
   //  prior version centered it in FRONT of the surface — that was the bug-eye
   //  cause: a forward poke instead of a backward hollow.)
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.40, rz * 0.34];
-  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ - rz * 0.22], socketHalf);
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.10);
+  // front pole of the carve = center + halfDepth must sit BEHIND surfZ so the
+  // recess actually bites the skin. halfDepth 0.20, center surfZ-0.24 → front
+  // pole at surfZ-0.04 (bites in 0.04, then hollows back 0.44 deep).
+  const socketDepthHalf = rz * 0.20;
+  const socketCZ = surfZ - rz * 0.04 - socketDepthHalf;
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.40, socketDepthHalf];
+  const socket = (cx: number) => ellipsoid(p, [cx, socketY, socketCZ], socketHalf);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.05);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that
@@ -261,7 +266,7 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //     forward bump on each side, wide and soft (a plane, not a knob), set
   //     just below the eye and out toward the cheek. Wide smin so it adds a
   //     plane break, not a lump.
-  const malarY = socketY - ballR * 0.9;            // lower-eye-socket level
+  const malarY = socketY - c.eyeSpacing * 0.45;    // lower-eye-socket level
   const malarZ = c.frontZ(malarY) + rz * d.malarProjection;
   const malarX = c.eyeSpacing * 1.35;              // out toward the cheek
   const malar = (cx: number) => ellipsoid(

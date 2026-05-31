@@ -45,13 +45,18 @@ export const plainLineMarks = (dial: Partial<HeadDial>, project: Projector): str
   const eye = (center: Vec3, half: number) => {
     const c = project(center);
     if (!c.visible) return;
-    // almond: two arcs; pupil: a dot. Sized from eyeSpacing, in screen px.
-    const rx = half * 0.55, ry = half * 0.30;
+    // Lidded eye, not a wide open ring (that = bug-eyes). Heavy upper-lid arc
+    // curving over the eye, a lighter lower arc, small pupil tucked UNDER the
+    // upper lid. Narrower than before.
+    const rx = half * 0.48, ry = half * 0.22;
     const [cx, cy] = c.s;
-    // almond as an ellipse outline
-    out.push(`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${ink}" stroke-width="1.6"/>`);
-    // pupil dot
-    out.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(ry*0.45).toFixed(1)}" fill="${ink}"/>`);
+    const x0 = cx - rx, x1 = cx + rx;
+    // upper lid: arc bowing down over the eye (heavier)
+    out.push(`<path d="M${x0.toFixed(1)} ${cy.toFixed(1)} Q${cx.toFixed(1)} ${(cy-ry*1.4).toFixed(1)} ${x1.toFixed(1)} ${cy.toFixed(1)}" fill="none" stroke="${ink}" stroke-width="2.2"/>`);
+    // lower lid: shallow arc bowing up (lighter)
+    out.push(`<path d="M${x0.toFixed(1)} ${cy.toFixed(1)} Q${cx.toFixed(1)} ${(cy+ry*0.8).toFixed(1)} ${x1.toFixed(1)} ${cy.toFixed(1)}" fill="none" stroke="${ink}" stroke-width="1.2"/>`);
+    // pupil: small, tucked just under the upper lid
+    out.push(`<circle cx="${cx.toFixed(1)}" cy="${(cy-ry*0.15).toFixed(1)}" r="${(ry*0.42).toFixed(1)}" fill="${ink}"/>`);
   };
 
   // eyes — pass a px scale derived from projected eye separation
