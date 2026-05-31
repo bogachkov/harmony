@@ -19,23 +19,28 @@ export const JAW_LEVELS = [
 ];
 
 // neck: a forward-set tapered cylinder so the silhouette doesn't pinch to a tip.
+// Filled cross-sections (no hollow tube) and run off the bottom of the frame so
+// there is no ragged base edge for the tracer to fray on.
 export function neckPoints() {
   const levels = [
     { y: -1.45, r: 0.40, zc: -0.14 },
-    { y: -2.10, r: 0.44, zc: -0.07 },
-    { y: -2.90, r: 0.50, zc: 0.00 },
+    { y: -2.20, r: 0.45, zc: -0.06 },
+    { y: -3.60, r: 0.52, zc: 0.02 },
   ];
   const lerp = (a, b, t) => a + (b - a) * t;
   const pts = [];
-  const steps = 120;
+  const steps = 170;
   for (let s = 0; s <= steps; s++) {
     const u = (s / steps) * (levels.length - 1);
     const k = Math.min(levels.length - 2, Math.floor(u)), f = u - k;
     const L = levels[k], N = levels[k + 1];
     const y = lerp(L.y, N.y, f), r = lerp(L.r, N.r, f), zc = lerp(L.zc, N.zc, f);
-    for (let a = 0; a < 72; a++) {
-      const t = (a / 72) * 2 * Math.PI;
-      pts.push([r * Math.cos(t), y, zc + r * Math.sin(t)]);
+    for (let ri = 1; ri <= 10; ri++) {            // filled disc -> solid coverage
+      const rr = (ri / 10) * r, m = Math.max(8, ri * 6);
+      for (let a = 0; a < m; a++) {
+        const t = (a / m) * 2 * Math.PI;
+        pts.push([rr * Math.cos(t), y, zc + rr * Math.sin(t)]);
+      }
     }
   }
   return pts;
@@ -167,6 +172,29 @@ export function largestComponent(z, W, H) {
   const mask = new Uint8Array(W * H);
   if (best !== null) for (let i = 0; i < W * H; i++) if (label[i] === best) mask[i] = 1;
   return mask;
+}
+
+// Moore-neighbour boundary trace (clockwise). Follows concavities (jaw-neck
+// notch, under-chin) that the per-row scan could only step across.
+export function traceMoore(mask, W, H) {
+  const at = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !!mask[y * W + x];
+  let start = null;
+  for (let y = 0; y < H && !start; y++)
+    for (let x = 0; x < W; x++) if (at(x, y)) { start = [x, y]; break; }
+  if (!start) return null;
+  const dirs = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+  const contour = [];
+  let p = start, back = 4, steps = 0, max = W * H * 8; // entered from the West
+  do {
+    contour.push({ x: p[0] + 0.5, y: p[1] + 0.5 });
+    let found = false;
+    for (let k = 0; k < 8; k++) {
+      const d = (back + 1 + k) % 8, nx = p[0] + dirs[d][0], ny = p[1] + dirs[d][1];
+      if (at(nx, ny)) { back = (d + 4) % 8; p = [nx, ny]; found = true; break; }
+    }
+    if (!found) break;
+  } while (!(p[0] === start[0] && p[1] === start[1]) && ++steps < max);
+  return contour.length > 2 ? contour : null;
 }
 
 // Outline via per-row extremes: robust for a row-convex silhouette (no ears yet).

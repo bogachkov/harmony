@@ -2,7 +2,7 @@
 // coverage; construction curves are hidden-line tested against the same buffer.
 import fs from "node:fs";
 import { Canvas, rotateYawPitch, project, deg } from "./core.mjs";
-import { craniumPoints, jawPoints, neckPoints, buildZ, outlineScan, largestComponent, jawSection, smoothClosed, dp, R } from "./solid.mjs";
+import { craniumPoints, jawPoints, neckPoints, buildZ, traceMoore, largestComponent, jawSection, smoothClosed, dp, R } from "./solid.mjs";
 
 // the inked construction marks (curves only; the outline comes from the z-buffer)
 function curves() {
@@ -57,7 +57,7 @@ function renderTile(yawDeg, pitchDeg) {
   let seed = 11 + Math.round(yawDeg * 3 + pitchDeg * 5);
 
   // merged head outline from the union coverage
-  const raw = outlineScan(largestComponent(z, W, H), W, H);
+  const raw = traceMoore(largestComponent(z, W, H), W, H);
   if (raw) {
     const simp = dp(smoothClosed(raw, 3), 1.0);
     cv.stroke([...simp, simp[0]], { width: 3.2, color: [22, 22, 28], wobble: 0.55, seed: seed++, closed: true, taper: false });
