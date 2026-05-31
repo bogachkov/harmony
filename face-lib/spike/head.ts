@@ -52,6 +52,12 @@ export type HeadDial = {
   neckWidth: number;
   /** Visible neck length below the jaw, in cranium half-heights. */
   neckLength: number;
+
+  // ---- ears (Loomis: flattened C, brow-line to nose-base). Position derived. ----
+  /** Ear protrusion from the side plane, in cranium half-widths. */
+  earProtrusion: number;
+  /** Ear thickness (front-to-back is the C span; this is the bulge depth). */
+  earWidth: number;
 };
 
 export const DEFAULT_HEAD: HeadDial = {
@@ -67,6 +73,8 @@ export const DEFAULT_HEAD: HeadDial = {
   mouthThickness: 0.018,
   neckWidth: 0.50,
   neckLength: 1.1,
+  earProtrusion: 0.10,
+  earWidth: 0.16,
 };
 
 // ---- the construction: landmarks DERIVED from the cranium ----
@@ -217,6 +225,22 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const pNeck = rotate(translate(p, [0, -neckCenterY, -neckZ]), [1, 0, 0], -neckLean);
   const dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
   head = smin(head, dNeck, 0.14);
+
+  // 7. Ears — Loomis: top at the BROW line, bottom at the NOSE BASE (that
+  //    vertical span IS the rule). A flattened ellipsoid on each side plane,
+  //    tall in Y, thin in X, medium in Z (the C front-to-back), tilted ~15°
+  //    back. Sits at the side of the cranium just behind the eye line depth.
+  const earY = (c.browY + c.noseBaseY) / 2;        // center between the two
+  const earHalfH = (c.browY - c.noseBaseY) / 2;    // spans brow→nose-base
+  const earX = rx + rx * d.earProtrusion;          // out past the side plane
+  const earZ = c.craniumCenter[2] - rz * 0.28;     // behind center (over the canal)
+  const earHalf: Vec3 = [rx * d.earWidth * 0.5, earHalfH, rz * d.earWidth * 1.7];
+  const earTilt = 0.26;                            // ~15° back
+  const pEarL = rotate(translate(p, [ earX, -earY, -earZ]), [0, 1, 0],  earTilt);
+  const pEarR = rotate(translate(p, [-earX, -earY, -earZ]), [0, 1, 0], -earTilt);
+  const dEarL = ellipsoid(pEarL, [0, 0, 0], earHalf);
+  const dEarR = ellipsoid(pEarR, [0, 0, 0], earHalf);
+  head = smin(head, min(dEarL, dEarR), 0.04);
 
   return head;
 };
