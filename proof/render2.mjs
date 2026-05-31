@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import { Canvas, rotateYawPitch, project, deg } from "./core.mjs";
 import { craniumPoints, jawPoints, neckPoints, buildZ, traceMoore, largestComponent, jawSection, smoothClosed, dp, R } from "./solid.mjs";
+import { checkTile } from "./check.mjs";
 
 // the inked construction marks (curves only; the outline comes from the z-buffer)
 function curves() {
@@ -57,9 +58,13 @@ function renderTile(yawDeg, pitchDeg) {
   let seed = 11 + Math.round(yawDeg * 3 + pitchDeg * 5);
 
   // merged head outline from the union coverage
-  const raw = traceMoore(largestComponent(z, W, H), W, H);
+  const main = largestComponent(z, W, H);
+  let total = 0, mainCount = 0;
+  for (let i = 0; i < W * H; i++) { if (z[i] > -Infinity) total++; if (main[i]) mainCount++; }
+  const raw = traceMoore(main, W, H);
+  let simp = [];
   if (raw) {
-    const simp = dp(smoothClosed(raw, 3), 1.0);
+    simp = dp(smoothClosed(raw, 3), 1.0);
     cv.stroke([...simp, simp[0]], { width: 3.2, color: [22, 22, 28], wobble: 0.55, seed: seed++, closed: true, taper: false });
   }
   // construction curves are scaffolding — the finished drawing drops them
@@ -67,18 +72,23 @@ function renderTile(yawDeg, pitchDeg) {
     for (const run of runsVisible(c.pts, z, W, H, cx, cy, scale, yaw, pitch))
       cv.stroke(run, { ...c.st, seed: seed++ });
 
-  return cv;
+  const diag = { mask: main, main, W, H, total, mainCount, outline: raw, simp };
+  return { cv, diag };
 }
 
 const angles = [
-  { yaw: 0, pitch: 7 }, { yaw: 33, pitch: 7 },
-  { yaw: 78, pitch: 4 }, { yaw: 30, pitch: -24 },
+  { yaw: 0, pitch: 7, label: "front" }, { yaw: 33, pitch: 7, label: "3/4" },
+  { yaw: 78, pitch: 4, label: "profile" }, { yaw: 30, pitch: -24, label: "tilt-up" },
 ];
 const gut = 12, TW = 360, TH = 560;
 const sheet = new Canvas(2 * TW + 3 * gut, 2 * TH + 3 * gut, [245, 244, 240]);
+const defects = [];
 angles.forEach((a, i) => {
-  const tile = renderTile(a.yaw, a.pitch);
-  sheet.blit(tile, gut + (i % 2) * (TW + gut), gut + ((i / 2) | 0) * (TH + gut));
+  const { cv, diag } = renderTile(a.yaw, a.pitch);
+  sheet.blit(cv, gut + (i % 2) * (TW + gut), gut + ((i / 2) | 0) * (TH + gut));
+  defects.push(...checkTile({ label: a.label, yawDeg: a.yaw, ...diag }));
 });
 fs.writeFileSync("proof/out/loomis_v2_contact.png", sheet.toPNG());
 console.log("wrote proof/out/loomis_v2_contact.png");
+console.log("REVIEW: " + (defects.length ? "\n - " + defects.join("\n - ") : "clean (all automated checks pass)"));
+if (defects.some((s) => /no usable outline/.test(s))) process.exit(1);
