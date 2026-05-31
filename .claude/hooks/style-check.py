@@ -10,7 +10,7 @@ import re
 import sys
 
 
-# Banned clichés / flattery / mock-validation from CLAUDE.md (plus the common
+# Banned cliches / flattery / mock-validation from CLAUDE.md (plus the common
 # tells the rules are aimed at). Matched case-insensitively, apostrophe-agnostic.
 BANNED = [
     r"you ?'? ?re absolutely right",
@@ -24,9 +24,11 @@ BANNED = [
     r"i ?'? ?m sorry to hear",
 ]
 
-# Length ceiling. CLAUDE.md asks for 2-6 sentences but explicitly allows longer
-# when clearly warranted, so only block egregious overruns to avoid false hits.
+# Length ceilings. CLAUDE.md asks for 2-6 sentences but allows longer when
+# clearly warranted, so only block egregious overruns. Bullets count now — a
+# wall of list items is still a wall. The word cap is a formatting-proof backstop.
 SENTENCE_HARD_MAX = 9
+WORD_HARD_MAX = 180
 
 
 def last_assistant_text(transcript_path):
@@ -62,16 +64,26 @@ def strip_code(text):
 
 
 def count_sentences(prose):
-    # Only count real prose lines: skip headers, list items, table rows, blanks.
+    # Count prose AND list/quote lines (bullets are still content); skip only
+    # blank lines and bare headers. Strip leading list/quote markers first so
+    # the markers themselves don't swallow the sentence.
     sentences = 0
     for raw in prose.splitlines():
         line = raw.strip()
         if not line:
             continue
-        if re.match(r"^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\|)", line):
+        if re.match(r"^#{1,6}\s", line):  # bare markdown header
             continue
-        sentences += len(re.findall(r"[.!?](?:\s|$)", line))
+        line = re.sub(r"^([-*+]\s+|\d+[.)]\s+|>\s*)", "", line)
+        if not line:
+            continue
+        found = len(re.findall(r"[.!?](?:\s|$)", line))
+        sentences += found if found else 1  # an unterminated line is still ~a sentence
     return sentences
+
+
+def count_words(prose):
+    return len(re.findall(r"\b[\w'-]+\b", prose))
 
 
 def main():
@@ -103,8 +115,13 @@ def main():
     n = count_sentences(prose)
     if n > SENTENCE_HARD_MAX:
         violations.append(
-            "response runs ~%d sentences; CLAUDE.md asks for 2-6 (longer only "
-            "when clearly warranted)" % n
+            "runs ~%d sentences (bullets included); CLAUDE.md asks for 2-6, "
+            "longer only when clearly warranted" % n
+        )
+    w = count_words(prose)
+    if w > WORD_HARD_MAX:
+        violations.append(
+            "runs ~%d words; that is a wall regardless of formatting, tighten it" % w
         )
 
     if not violations:
@@ -113,8 +130,8 @@ def main():
     reason = (
         "Your reply violates the project CLAUDE.md response-style rules:\n- "
         + "\n- ".join(violations)
-        + "\nRewrite the reply: plain speech, no flattery/cliches/mock-validation, "
-        "2-6 sentences unless a detailed answer is clearly needed."
+        + "\nRewrite: plain speech, no flattery/cliches/mock-validation, short. "
+        "Bullets are not an exemption from brevity."
     )
     print(json.dumps({"decision": "block", "reason": reason}))
 
