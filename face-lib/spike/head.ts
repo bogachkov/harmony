@@ -232,12 +232,20 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   nose = smin(nose, smin(alaL, alaR2, 0.03), 0.04);
   head = smin(head, nose, 0.04);
 
-  // 5. Mouth — a slit FOUND at the derived mouth line, carved into the form
-  //    so a real crease inks. Width derived from eye spacing (mouth ≈ inner
-  //    eye-corner span). Curls back at the corners by sitting on the round jaw.
+  // 5. Mouth — Loomis p.52: "lips wrap a cylinder; the corners turn back into
+  //    the cheek." The root it rides is the curved front of the lower jaw.
+  //    So the slit is NOT a flat cut at one Z — it is BENT around that curve:
+  //    at the center the cut sits at the face front, and toward the corners
+  //    it pulls BACK in Z (following the jaw cylinder). Implemented by
+  //    pre-bending the sample point's Z as a function of x before evaluating
+  //    the slit, so the carved groove arcs back at the corners even head-on.
   const mouthW = c.eyeSpacing * d.mouthWidth;
+  const mouthHalf = mouthW * 0.5;
   const mouthZ = c.frontZ(c.mouthY) + rz * 0.02;
-  const mouthCut = ellipsoid(p, [0, c.mouthY, mouthZ], [mouthW * 0.5, ry * d.mouthThickness, rz * 0.10]);
+  const cornerPull = rz * 0.16;                    // how far corners wrap back
+  const xn = Math.min(Math.abs(p[0]) / mouthHalf, 1.4);
+  const pBent: Vec3 = [p[0], p[1], p[2] + xn * xn * cornerPull];
+  const mouthCut = ellipsoid(pBent, [0, c.mouthY, mouthZ], [mouthHalf, ry * d.mouthThickness, rz * 0.10]);
   head = smoothSubtract(head, mouthCut, 0.02);
 
   // 6. Neck — Bridgman cylinder the head sits ON. It rises from below the
