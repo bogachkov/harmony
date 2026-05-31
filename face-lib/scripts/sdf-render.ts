@@ -62,8 +62,9 @@ const VIEWS: View[] = [
 
 // The camera orbits the head at this radius (head sits at origin). Picked
 // to give comfortable headroom around the full cranium+jaw silhouette at
-// the FOV chosen above.
-const CAM_RADIUS = 4.2 * DEFAULT_LOOMIS.radius;
+// the FOV chosen above. Scaled off the largest cranium semi-axis (depth,
+// post-ellipsoid) so the deeper head still fits with the same headroom.
+const CAM_RADIUS = 3.5 * Math.max(...DEFAULT_LOOMIS.craniumRadii);
 // Aim a hair below the cranium center so the jaw isn't pushed off-frame —
 // the head's centroid sits between the cranium ball and the jaw block.
 const CAM_TARGET: Vec3 = [0, -0.15, 0];
