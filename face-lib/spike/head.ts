@@ -175,46 +175,30 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //    socket opening, or it pops out like a golf ball on a tee (the bug).
   //    So: carve a socket, then seat the ball one radius back from the
   //    surface so only a sliver shows through the lid aperture.
+  // Minimal eye that reads as ONE almond, not a stack of rims. Earlier I had
+  // socket-carve + eyeball + upper-lid + lower-lid = four overlapping
+  // primitives, each inking its own loop ("bubbles"). Instead: a single
+  // lid-puff ellipsoid (the soft fleshy eye mound) added onto the face, then
+  // ONE thin almond slit carved across it. The slit is the only eye line; the
+  // eyeball is a shallow dome filling the slit so the iris can sit later.
   const surfZ = c.frontZ(c.eyeY);
-  const ballR = c.eyeSpacing * 0.42;
-  // Shallow, softly-blended orbit. A deep/sharp socket inks its whole rim as
-  // a 360° oval loop in profile (wrong — a real profile shows only a small
-  // front almond). Keep the carve shallow and the blend wide so the rim
-  // stays under the crease-ink threshold; the eyeball + lid carry the read.
-  const socketDepth = rz * 0.16;
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.68, c.eyeSpacing * 0.52, socketDepth];
-  const socketZ = surfZ - socketDepth * 0.2;
-  const socketL = ellipsoid(p, [-c.eyeSpacing, c.eyeY, socketZ], socketHalf);
-  const socketR = ellipsoid(p, [ c.eyeSpacing, c.eyeY, socketZ], socketHalf);
-  head = smoothSubtract(head, min(socketL, socketR), 0.10);
-
-  // Ball center set so its front pole (centerZ + ballR) lands just behind the
-  // original skin surface — seated in the orbit, not proud of it.
-  const ballZ = surfZ - ballR + rz * 0.02;
-  const eyeballL = sphere(p, [-c.eyeSpacing, c.eyeY, ballZ], ballR);
-  const eyeballR = sphere(p, [ c.eyeSpacing, c.eyeY, ballZ], ballR);
-  head = min(head, min(eyeballL, eyeballR));
-
-  // Lids — skin that re-covers the orbit, leaving only an almond aperture
-  // (Faigin: the eye we see is the slit between two fleshy lids over the
-  // ball). Without them the lidless socket rim inks as a full oval in
-  // profile. Two flattened ellipsoids — upper lid heavier and dropped from
-  // above, lower lid thin from below — added back onto the head so the ball
-  // only shows through the gap between them.
-  const lidZ = surfZ - rz * 0.02;
-  const upperLid = (cx: number) => ellipsoid(
-    p, [cx, c.eyeY + c.eyeSpacing * 0.30, lidZ],
-    [c.eyeSpacing * 0.62, c.eyeSpacing * 0.34, rz * 0.14],
-  );
-  const lowerLid = (cx: number) => ellipsoid(
-    p, [cx, c.eyeY - c.eyeSpacing * 0.34, lidZ],
-    [c.eyeSpacing * 0.58, c.eyeSpacing * 0.26, rz * 0.13],
-  );
-  const lids = min(
-    min(upperLid(-c.eyeSpacing), upperLid(c.eyeSpacing)),
-    min(lowerLid(-c.eyeSpacing), lowerLid(c.eyeSpacing)),
-  );
-  head = smin(head, lids, 0.03);
+  const lidZ = surfZ - rz * 0.01;
+  const eye = (cx: number): { puff: number; slit: number; ball: number } => {
+    const puff = ellipsoid(p, [cx, c.eyeY, lidZ],
+      [c.eyeSpacing * 0.66, c.eyeSpacing * 0.48, rz * 0.12]);
+    // almond slit: wide in X, very thin in Y, shallow in Z — the eye opening
+    const slit = ellipsoid(p, [cx, c.eyeY, lidZ + rz * 0.06],
+      [c.eyeSpacing * 0.54, c.eyeSpacing * 0.16, rz * 0.10]);
+    const ball = sphere(p, [cx, c.eyeY, surfZ - c.eyeSpacing * 0.30], c.eyeSpacing * 0.34);
+    return { puff, slit, ball };
+  };
+  const eL = eye(-c.eyeSpacing), eR = eye(c.eyeSpacing);
+  // add the fleshy puffs onto the face
+  head = smin(head, min(eL.puff, eR.puff), 0.04);
+  // carve the almond openings
+  head = smoothSubtract(head, min(eL.slit, eR.slit), 0.02);
+  // seat the eyeball domes so they fill the openings without popping out
+  head = min(head, min(eL.ball, eR.ball));
 
   // 4. Nose — root found on the brow line at center, base at the derived
   //    nose-base landmark. Bridge + tip grow forward off the front surface.
