@@ -154,7 +154,7 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
     [0, c.craniumCenter[1] + ry * 0.10, -rz * 0.40],
     [rx * 0.92, ry * 0.78, rz * 0.70],
   );
-  head = smin(head, occiput, 0.12);
+  head = smin(head, occiput, 0.30);   // wide blend — no visible seam loop
 
   // 2. Jaw — a single tapered mass hung off the ball, chin found at the
   //    derived chinY and pushed forward by chinProjection. One ellipsoid for
@@ -194,6 +194,27 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const eyeballL = sphere(p, [-c.eyeSpacing, c.eyeY, ballZ], ballR);
   const eyeballR = sphere(p, [ c.eyeSpacing, c.eyeY, ballZ], ballR);
   head = min(head, min(eyeballL, eyeballR));
+
+  // Lids — skin that re-covers the orbit, leaving only an almond aperture
+  // (Faigin: the eye we see is the slit between two fleshy lids over the
+  // ball). Without them the lidless socket rim inks as a full oval in
+  // profile. Two flattened ellipsoids — upper lid heavier and dropped from
+  // above, lower lid thin from below — added back onto the head so the ball
+  // only shows through the gap between them.
+  const lidZ = surfZ - rz * 0.02;
+  const upperLid = (cx: number) => ellipsoid(
+    p, [cx, c.eyeY + c.eyeSpacing * 0.30, lidZ],
+    [c.eyeSpacing * 0.62, c.eyeSpacing * 0.34, rz * 0.14],
+  );
+  const lowerLid = (cx: number) => ellipsoid(
+    p, [cx, c.eyeY - c.eyeSpacing * 0.34, lidZ],
+    [c.eyeSpacing * 0.58, c.eyeSpacing * 0.26, rz * 0.13],
+  );
+  const lids = min(
+    min(upperLid(-c.eyeSpacing), upperLid(c.eyeSpacing)),
+    min(lowerLid(-c.eyeSpacing), lowerLid(c.eyeSpacing)),
+  );
+  head = smin(head, lids, 0.03);
 
   // 4. Nose — root found on the brow line at center, base at the derived
   //    nose-base landmark. Bridge + tip grow forward off the front surface.
