@@ -16,7 +16,7 @@
 import type { Vec3 } from '../src/math/vec3.ts';
 import {
   sphere, ellipsoid, cylinder,
-  min, smin, smoothSubtract, translate,
+  min, smin, smoothSubtract, translate, rotate,
 } from '../src/sdf/primitives.ts';
 
 // ---- what an artist actually chooses up front ----
@@ -65,7 +65,7 @@ export const DEFAULT_HEAD: HeadDial = {
   noseBridgeWidth: 0.10,
   mouthWidth: 1.1,
   mouthThickness: 0.018,
-  neckWidth: 0.62,
+  neckWidth: 0.50,
   neckLength: 1.1,
 };
 
@@ -131,8 +131,11 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const c = construct(d);
   const [rx, ry, rz] = c.craniumRadii;
 
-  // 1. Cranium ball.
+  // 1. Cranium ball + occiput (Loomis: the skull bulges at the back-base;
+  //    without it the back reads as a flat vertical wall).
   let head = ellipsoid(p, c.craniumCenter, c.craniumRadii);
+  const occiput = sphere(p, [0, c.craniumCenter[1] - ry * 0.10, -rz * 0.50], rz * 0.62);
+  head = smin(head, occiput, 0.10);
 
   // 2. Jaw — a single tapered mass hung off the ball, chin found at the
   //    derived chinY and pushed forward by chinProjection. One ellipsoid for
@@ -197,15 +200,19 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //    (the fix for the "fishman chin"). Tilted slightly forward so the
   //    throat sits under the chin, not behind it. SCM/trapezius detail and
   //    the front V are deferred — this is the load-bearing cylinder only.
+  // Narrower than before (was a gourd), set BACK from the chin and tilted so
+  // it enters the skull from behind (Bridgman: the neck column leans forward
+  // from the nape, the head balances on top — it does not hang off the chin).
   const neckR = rx * d.neckWidth;
-  const neckTopY = c.chinY + ry * 0.30;          // overlaps up into the jaw
+  const neckTopY = c.chinY + ry * 0.20;
   const neckBotY = c.chinY - d.neckLength * ry;
   const neckCenterY = (neckTopY + neckBotY) / 2;
   const neckHalf = (neckTopY - neckBotY) / 2;
-  const neckTilt = rz * 0.12;                     // throat forward of nape
-  const pNeck = translate(p, [0, -neckCenterY, -(-neckTilt)]);
+  const neckZ = -rz * 0.30;                        // column sits well back, under the occiput
+  const neckLean = 0.10;                           // radians forward from vertical
+  const pNeck = rotate(translate(p, [0, -neckCenterY, -neckZ]), [1, 0, 0], -neckLean);
   const dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
-  head = smin(head, dNeck, 0.16);
+  head = smin(head, dNeck, 0.14);
 
   return head;
 };
