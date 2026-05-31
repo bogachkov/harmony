@@ -53,6 +53,10 @@ export type HeadDial = {
   /** Visible neck length below the jaw, in cranium half-heights. */
   neckLength: number;
 
+  // ---- brow ridge (Loomis supraorbital shelf). Forward projection only. ----
+  /** Brow-ridge forward projection past the brow-line surface, in half-depths. */
+  browRidge: number;
+
   // ---- ears (Loomis: flattened C, brow-line to nose-base). Position derived. ----
   /** Ear protrusion from the side plane, in cranium half-widths. */
   earProtrusion: number;
@@ -69,6 +73,7 @@ export const DEFAULT_HEAD: HeadDial = {
   noseAlarWidth: 0.09,
   noseProjection: 0.14,
   noseBridgeWidth: 0.10,
+  browRidge: 0.06,
   mouthWidth: 1.1,
   mouthThickness: 0.018,
   neckWidth: 0.50,
@@ -169,36 +174,41 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   jaw = smin(jaw, gonialR, 0.16);
   head = smin(head, jaw, 0.20);
 
-  // 3. Eyes — FOUND on the construction. The eyeball is a sphere that sits
-  //    INSIDE an orbital socket; the lids (skin) close over its front. Key
-  //    correctness rule: the ball's front pole must sit at or BEHIND the
-  //    socket opening, or it pops out like a golf ball on a tee (the bug).
-  //    So: carve a socket, then seat the ball one radius back from the
-  //    surface so only a sliver shows through the lid aperture.
-  // Minimal eye that reads as ONE almond, not a stack of rims. Earlier I had
-  // socket-carve + eyeball + upper-lid + lower-lid = four overlapping
-  // primitives, each inking its own loop ("bubbles"). Instead: a single
-  // lid-puff ellipsoid (the soft fleshy eye mound) added onto the face, then
-  // ONE thin almond slit carved across it. The slit is the only eye line; the
-  // eyeball is a shallow dome filling the slit so the iris can sit later.
+  // 3. Brow ridge + eye-in-hollow — Loomis p.46: "the eye sits in a hollow;
+  //    the brow ridge is a shelf that casts a shadow on the upper lid."
+  //    Construction ORDER matters: build the bony shelf, THEN recess the eye
+  //    under it. The previous version skipped the ridge and made the eye an
+  //    additive lid-puff — so the eyeball was the most FORWARD thing on the
+  //    face (the frog/amphibian read). Correct: the ridge projects forward
+  //    over a hollow; the eye is the most RECESSED thing, in shadow under it.
   const surfZ = c.frontZ(c.eyeY);
-  const lidZ = surfZ - rz * 0.01;
-  const eye = (cx: number): { puff: number; slit: number; ball: number } => {
-    const puff = ellipsoid(p, [cx, c.eyeY, lidZ],
-      [c.eyeSpacing * 0.66, c.eyeSpacing * 0.48, rz * 0.12]);
-    // almond slit: wide in X, very thin in Y, shallow in Z — the eye opening
-    const slit = ellipsoid(p, [cx, c.eyeY, lidZ + rz * 0.06],
-      [c.eyeSpacing * 0.54, c.eyeSpacing * 0.16, rz * 0.10]);
-    const ball = sphere(p, [cx, c.eyeY, surfZ - c.eyeSpacing * 0.30], c.eyeSpacing * 0.34);
-    return { puff, slit, ball };
-  };
-  const eL = eye(-c.eyeSpacing), eR = eye(c.eyeSpacing);
-  // add the fleshy puffs onto the face
-  head = smin(head, min(eL.puff, eR.puff), 0.04);
-  // carve the almond openings
-  head = smoothSubtract(head, min(eL.slit, eR.slit), 0.02);
-  // seat the eyeball domes so they fill the openings without popping out
-  head = min(head, min(eL.ball, eR.ball));
+
+  // 3a. Brow ridge — a bar across the brow line projecting forward + down,
+  //     a real supraorbital shelf the eye tucks beneath. Bridgman: the
+  //     supraorbital margin projects forward of the orbit.
+  const browRidgeZ = c.frontZ(c.browY) + rz * d.browRidge;
+  const ridge = ellipsoid(
+    p, [0, c.browY - c.eyeSpacing * 0.10, browRidgeZ],
+    [rx * 0.62, c.eyeSpacing * 0.34, rz * 0.14],
+  );
+  head = smin(head, ridge, 0.05);
+
+  // 3b. Orbital hollow — a socket recessed INTO the skull beneath the ridge.
+  //     Carved, not added. Its opening faces forward-and-slightly-up (toward
+  //     the shelf), so the eye lives in shadow under the brow.
+  const socketY = c.eyeY + c.eyeSpacing * 0.05;
+  const socket = (cx: number) => ellipsoid(
+    p, [cx, socketY, surfZ - rz * 0.04],
+    [c.eyeSpacing * 0.66, c.eyeSpacing * 0.50, rz * 0.22],
+  );
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.06);
+
+  // 3c. Eyeball — seated DEEP in the hollow (center pushed well back) so its
+  //     front pole sits behind the surrounding skin, never proud of it.
+  const ballR = c.eyeSpacing * 0.40;
+  const ballZ = surfZ - rz * 0.10 - ballR;
+  const ball = (cx: number) => sphere(p, [cx, socketY, ballZ + ballR * 0.85], ballR);
+  head = min(head, min(ball(-c.eyeSpacing), ball(c.eyeSpacing)));
 
   // 4. Nose — root found on the brow line at center, base at the derived
   //    nose-base landmark. Bridge + tip grow forward off the front surface.
