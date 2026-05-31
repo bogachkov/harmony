@@ -117,7 +117,7 @@ piece 1 and piece 3. Pascal scores but doesn't gate.
 
 | Agent | Task | Status | Notes |
 | ----- | ---- | ------ | ----- |
-| — | — | — | Cycle opened; Wave 1 spawning next. |
+| Felix + Nick | Piece 1 — L1 cutout + L2 line-weight | **Code landed, awaiting Gary eye-check** | `tasks/felix-nick-timmflat-ceiling-raisers.md`. 816-cell mixture-rule sweep byte-identical on default / tintin / ligneClaire. timmFlat 16-cell grid re-rendered at `/tmp/timmflat-w4/`. Felix sizing note in handoff: ~100 LOC for the cutout vs ~20 LOC audit estimate, honestly surfaced. Holly's determinism flag: RNG is seeded (deterministic) but the seed is hardcoded to 1 rather than reading `style.jitterSeed` — separate Holly work, NOT a piece-1 bug. |
 
 ## Done this cycle
 

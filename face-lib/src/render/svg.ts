@@ -110,10 +110,14 @@ export const renderSvg = (curves: Projected[], p: FaceParams): string => {
     // Silhouette gets a slightly heavier stroke than interior features — standard comic-art
     // figure-ground separation. Interior features keep the base weight.
     const isSilhouette = c.role === 'silhouette';
-    const weightMul = isSilhouette ? 1.35 : 1;
+    const silhouetteBoost = isSilhouette ? 1.35 : 1;
+    // Per-feature multiplier (audit L2). Baked onto curves by the scaffold
+    // builders from p.style.featureWeights. Defaults to 1.0 — undefined on
+    // every non-opted pack so the stroke width is byte-identical.
+    const featureMul = c.weightMul ?? 1;
     const sw = isConstruction
       ? p.style.constructionWeight
-      : Math.max(0.5, p.style.lineWeight * weightMul + swVar);
+      : Math.max(0.5, p.style.lineWeight * silhouetteBoost * featureMul + swVar);
     // Ink size is anchored to the same line weight, but scaled per InkProfile.size so
     // hair partings (size ~1.4×) read as confident comic ink rather than scaffold weight.
     let inkPath = '';

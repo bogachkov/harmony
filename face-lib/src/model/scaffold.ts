@@ -43,6 +43,14 @@ export type Curve = {
   // strokes on top. Convention: 'front' | 'left' | 'right' | 'nape'. Per
   // Lloyd pass 1 §2 stage E.
   hullGroup?: string;
+  // Per-feature line-weight multiplier (audit L2, params.ts
+  // style.featureWeights). Baked at curve creation time by each feature
+  // builder; the renderer multiplies it into the stroke width. Default
+  // undefined → treated as 1.0 → byte-identical to pre-knob. Composes
+  // multiplicatively with the renderer's silhouette boost + the jitter
+  // additive. NO effect on feature-ink curves (those are rendered as fill
+  // polygons via perfect-freehand, not stroked).
+  weightMul?: number;
 };
 
 export type Scaffold = {
@@ -340,9 +348,21 @@ const jawCurve = (s: JawSpec, samples: number): Vec3[] => {
 
 // ---- features ----
 
+// Per-feature line-weight multipliers (audit L2). Each builder reads these
+// optional knobs and stamps `weightMul` onto the curves the multiplier
+// targets — the upper-lid stroke for `upper`, etc. Default undefined →
+// scaffold passes undefined → curves carry no weightMul → renderer treats
+// as 1.0 → byte-identical to pre-knob. Pack opt-in: timmFlat sets
+// upper: 2.5 (audit canon).
+export type EyeWeights = {
+  upper?: number;       // upper-lid contour stroke + the lidLine companion
+  lower?: number;       // lower-lid contour stroke + under-eye tick
+};
+
 const buildEyeDots = (
   anchor: Vec3, dotR: number, openness: number, surfaceZ: number,
   lidLine: number, lashes: number, underlineHint: number, isLeft: boolean,
+  weights?: EyeWeights,
 ): Curve[] => {
   // Tintin-style eye plus three independent within-style modifiers (lidLine, lashes,
   // underlineHint) so eyes can vary across characters without leaving the dot aesthetic.
@@ -372,7 +392,7 @@ const buildEyeDots = (
       const y = lidY + lidArc * Math.sin(Math.PI * t);
       lid.push([x, y, surfaceZ + 0.010]);
     }
-    curves.push({ kind: 'feature', closed: false, points: lid });
+    curves.push({ kind: 'feature', closed: false, points: lid, weightMul: weights?.upper });
   }
 
   // 3. Eyelash hint — 2-3 short outward-angled ticks at the outer corner.
@@ -412,7 +432,7 @@ const buildEyeDots = (
       const y = ulY + r * 0.08 * Math.sin(Math.PI * t);
       ul.push([x, y, surfaceZ + 0.010]);
     }
-    curves.push({ kind: 'feature', closed: false, points: ul });
+    curves.push({ kind: 'feature', closed: false, points: ul, weightMul: weights?.lower });
   }
 
   return curves;
@@ -421,6 +441,7 @@ const buildEyeDots = (
 const buildEye = (
   anchor: Vec3, halfWidth: number, openness: number, tilt: number, surfaceZ: number,
   lidLine: number = 0, lashes: number = 0, underlineHint: number = 0, isLeft: boolean = true,
+  weights?: EyeWeights,
 ): Curve[] => {
   // Almond eye + three independent within-style modifiers (lidLine, lashes,
   // underlineHint) plumbed through from p.eyes — mirrors buildEyeDots so the
@@ -447,8 +468,8 @@ const buildEye = (
     lower.push([dnX, dnY, surfaceZ + 0.003]);
   }
   const curves: Curve[] = [
-    { kind: 'feature', closed: false, points: upper },
-    { kind: 'feature', closed: false, points: lower },
+    { kind: 'feature', closed: false, points: upper, weightMul: weights?.upper },
+    { kind: 'feature', closed: false, points: lower, weightMul: weights?.lower },
   ];
   if (openness > 0.25) {
     // Just a pupil dot (filled small circle) — no separate iris ring. Avoids the "double-eye" stare.
@@ -472,11 +493,12 @@ const buildEye = (
     ]);
     if (lidLine > 0.4) {
       // Filled brick: closed poly from upper curve up to the offset curve.
+      // weightMul is moot — closed fill, no stroke pass — but stamp for consistency.
       const brick: Vec3[] = [...upper, ...lidTop.slice().reverse()];
-      curves.push({ kind: 'feature', closed: true, points: brick, fill: '#1a1410' });
+      curves.push({ kind: 'feature', closed: true, points: brick, fill: '#1a1410', weightMul: weights?.upper });
     } else {
       // Thicken-via-parallel: just the companion stroke.
-      curves.push({ kind: 'feature', closed: false, points: lidTop });
+      curves.push({ kind: 'feature', closed: false, points: lidTop, weightMul: weights?.upper });
     }
   }
 
@@ -518,7 +540,7 @@ const buildEye = (
       const y = ulY + r * 0.08 * Math.sin(Math.PI * t);
       ul.push([x, y, surfaceZ + 0.010]);
     }
-    curves.push({ kind: 'feature', closed: false, points: ul });
+    curves.push({ kind: 'feature', closed: false, points: ul, weightMul: weights?.lower });
   }
 
   return curves;
@@ -1094,6 +1116,96 @@ const buildHair = (
       role: 'hair-top', fill: fillColor, noStroke: true,
     });
 
+    // INVERTED HIGHLIGHT CUTOUT — audit L1 (research/timmflat-ceiling-audit.md).
+    // A dark cel-shadow polygon over the side of the hair facing away from
+    // the implicit 3/4-front-left light. Drawn AFTER the cap fill so it
+    // paints on top of the base hair color; inscribed strictly inside the
+    // cap polygon so no clipping is needed (painter's order does the work).
+    //
+    // Geometry (Felix design pass):
+    //   - topSil walks right-temple→apex→left-temple over indices [0, N].
+    //   - hairline walks left→right.
+    //   - For side='right': polygon = topSil[0..tDiv*N] + interior dividing
+    //     line + hairline[hDiv*N..end]. tDiv = coverage (fraction of topSil
+    //     to take from the right). hDiv = 1 - coverage (right fraction of
+    //     hairline). Closure (hairline end → topSil[0]) is the same as the
+    //     cap polygon's closure (right-temple).
+    //   - For side='left': mirror — polygon = topSil[(1-tDiv)*N..end] +
+    //     interior dividing line + hairline[0..hDiv*N].
+    //
+    // The interior dividing line is a short straight chord from the chosen
+    // topSil point down to the chosen hairline point. Drawn parametrically
+    // (no RNG) so it's deterministic. ~4 samples are enough — the cap
+    // polygon doesn't need a smooth diagonal here, just a clean boundary.
+    //
+    // Predicate (Felix-lane truth table — walked against the 13-hairstyle
+    // catalog and the timmFlat 16-cell grid):
+    //   fires when: recipe.highlightCutout is set AND drawCap is true.
+    //   reachable today by: timmFlat with `recipe.highlightCutout: {side:'right'}`
+    //     on every cell that draws a cap (cells 1, 3, 4, 8, 9, 10, 12, 13,
+    //     14, 15, 16 — short + medium + flat-long).
+    //   does NOT fire for: any pack that doesn't set recipe.highlightCutout
+    //     (default/tintin/ligneClaire untouched); volume-mode hair (hull
+    //     handles the shape, no cap polygon to cut from).
+    // Mixture rule: default/tintin/ligneClaire × every hairstyle byte-identical.
+    if (recipe.highlightCutout) {
+      const cutoutSide = recipe.highlightCutout.side;
+      const coverage = Math.max(0.05, Math.min(0.95, recipe.highlightCutout.coverage ?? 0.40));
+      const darkenAmt = Math.max(0, Math.min(1, recipe.highlightCutout.darken ?? 0.32));
+      const cutColor = darken(fillColor, darkenAmt);
+      const tN = topSil.length - 1;          // last index of topSil
+      const hN = hairline.length - 1;        // last index of hairline
+      // Number of dividing-line samples (parametric, no RNG). 4 is enough.
+      const divSamples = 4;
+      let cutPoly: Vec3[];
+      if (cutoutSide === 'right') {
+        // Right cutout: topSil[0..tEnd] + dividing line + hairline[hStart..end].
+        const tEnd = Math.max(1, Math.round(tN * coverage));
+        const hStart = Math.max(0, Math.min(hN - 1, Math.round(hN * (1 - coverage))));
+        const topEnd = topSil[tEnd] as Vec3;
+        const hairStart = hairline[hStart] as Vec3;
+        const topSegment = topSil.slice(0, tEnd + 1);
+        const divLine: Vec3[] = [];
+        for (let i = 1; i < divSamples; i++) {
+          const t = i / divSamples;
+          divLine.push([
+            topEnd[0] + (hairStart[0] - topEnd[0]) * t,
+            topEnd[1] + (hairStart[1] - topEnd[1]) * t,
+            topEnd[2] + (hairStart[2] - topEnd[2]) * t,
+          ]);
+        }
+        const hairSegment = hairline.slice(hStart);
+        cutPoly = [...topSegment, ...divLine, ...hairSegment];
+      } else {
+        // Left cutout (mirror): topSil[tStart..end] + dividing line +
+        // hairline[0..hEnd].
+        const tStart = Math.max(0, Math.min(tN - 1, Math.round(tN * (1 - coverage))));
+        const hEnd = Math.max(1, Math.round(hN * coverage));
+        const topStart = topSil[tStart] as Vec3;
+        const hairEnd = hairline[hEnd] as Vec3;
+        // Order matters for the closed polygon: walk topSil[tStart..end]
+        // (apex-area → left temple), then DOWN the hairline left-end (closure
+        // is implicit), so the dividing line goes from hairline[hEnd] up to
+        // topStart. Equivalently: hairline[0..hEnd] + dividing + topSil[tStart..end].
+        const hairSegment = hairline.slice(0, hEnd + 1);
+        const divLine: Vec3[] = [];
+        for (let i = 1; i < divSamples; i++) {
+          const t = i / divSamples;
+          divLine.push([
+            hairEnd[0] + (topStart[0] - hairEnd[0]) * t,
+            hairEnd[1] + (topStart[1] - hairEnd[1]) * t,
+            hairEnd[2] + (topStart[2] - hairEnd[2]) * t,
+          ]);
+        }
+        const topSegment = topSil.slice(tStart);
+        cutPoly = [...hairSegment, ...divLine, ...topSegment];
+      }
+      curves.push({
+        kind: 'feature', closed: true, points: cutPoly,
+        role: 'hair-top', fill: cutColor, noStroke: true,
+      });
+    }
+
     if (suppressHairCapTone) {
       // Flat-fill pack: cap polygon only — no shadow band, no highlight band.
       // The single uniform fill IS the Timm canon (research/stylepack-
@@ -1289,6 +1401,85 @@ const buildHair = (
       kind: 'feature', closed: true, points: curtain,
       role: 'hair-top', fill: fillColor, noStroke: true,
     });
+
+    // INVERTED HIGHLIGHT CUTOUT (curtain variant) — audit L1.
+    // For long-flat curtain hair the cutout polygon is inscribed inside the
+    // curtain mass: topSil[0..tDiv] + dividing line down to rightSide +
+    // rightSide[sDiv..end] back up to the right temple. Same pedagogy as
+    // the cap-mode cutout above: covers the side opposite the implicit
+    // 3/4-front-left light source.
+    //
+    // Geometry (Felix design pass for curtain mode):
+    //   - topSil walks right-temple→apex→left-temple, indices [0, tN].
+    //   - rightSide (already reversed at build time) walks bottom-right→
+    //     right-temple, indices [0, sN]. rightSide[sN] meets topSil[0].
+    //   - For side='right' (the timmFlat default): cover the right curtain.
+    //     tEnd = coverage * tN (apex-ward fraction of topSil to take).
+    //     sStart = (1 - coverage) * sN (lower-side fraction of rightSide,
+    //     i.e. drop ~coverage of the curtain height). At coverage=0.40 the
+    //     cutout reaches ~40% over the apex and drops to ~40% down the
+    //     curtain — visually a triangle-ish wedge covering the right
+    //     temple, right curtain top, and the upper-right of the side fall.
+    //   - For side='left': mirror via leftSide instead of rightSide.
+    if (recipe.highlightCutout) {
+      const cutoutSide = recipe.highlightCutout.side;
+      const coverage = Math.max(0.05, Math.min(0.95, recipe.highlightCutout.coverage ?? 0.40));
+      const darkenAmt = Math.max(0, Math.min(1, recipe.highlightCutout.darken ?? 0.32));
+      const cutColor = darken(fillColor, darkenAmt);
+      const tN = topSil.length - 1;
+      const sN = rightSide.length - 1;            // rightSide and leftSide are same length
+      const divSamples = 4;
+      let cutPoly: Vec3[];
+      if (cutoutSide === 'right') {
+        const tEnd = Math.max(1, Math.round(tN * coverage));
+        // sStart picks a point along rightSide. rightSide goes
+        // bottom-right→right-temple; sStart=sN*(1-coverage) is the BOTTOM
+        // (lower) sub-segment — we then walk UP from sStart to sN back to
+        // the temple. coverage controls vertical fall.
+        const sStart = Math.max(0, Math.min(sN - 1, Math.round(sN * (1 - coverage))));
+        const topEnd = topSil[tEnd] as Vec3;
+        const sideStart = rightSide[sStart] as Vec3;
+        const topSegment = topSil.slice(0, tEnd + 1);
+        const divLine: Vec3[] = [];
+        for (let i = 1; i < divSamples; i++) {
+          const t = i / divSamples;
+          divLine.push([
+            topEnd[0] + (sideStart[0] - topEnd[0]) * t,
+            topEnd[1] + (sideStart[1] - topEnd[1]) * t,
+            topEnd[2] + (sideStart[2] - topEnd[2]) * t,
+          ]);
+        }
+        const sideSegment = rightSide.slice(sStart);
+        cutPoly = [...topSegment, ...divLine, ...sideSegment];
+      } else {
+        // Left mirror: walk leftSide from start back up; topSil from
+        // (1-coverage)*tN to end is the LEFT side.
+        const tStart = Math.max(0, Math.min(tN - 1, Math.round(tN * (1 - coverage))));
+        // leftSide goes left-temple→bottom-left; sEnd=sN*coverage is the
+        // LOWER bound we drop to before swinging back up.
+        const sEnd = Math.max(1, Math.round(sN * coverage));
+        const topStart = topSil[tStart] as Vec3;
+        const sideEnd = leftSide[sEnd] as Vec3;
+        const topSegment = topSil.slice(tStart);
+        // After topSegment we hit leftSide[0] (left temple). Walk leftSide
+        // down to sEnd, then dividing line UP back to topStart.
+        const sideSegment = leftSide.slice(0, sEnd + 1);
+        const divLine: Vec3[] = [];
+        for (let i = 1; i < divSamples; i++) {
+          const t = i / divSamples;
+          divLine.push([
+            sideEnd[0] + (topStart[0] - sideEnd[0]) * t,
+            sideEnd[1] + (topStart[1] - sideEnd[1]) * t,
+            sideEnd[2] + (topStart[2] - sideEnd[2]) * t,
+          ]);
+        }
+        cutPoly = [...topSegment, ...sideSegment, ...divLine];
+      }
+      curves.push({
+        kind: 'feature', closed: true, points: cutPoly,
+        role: 'hair-top', fill: cutColor, noStroke: true,
+      });
+    }
     // Outline for the curtain — the visible silhouette boundary (top dome
     // arc + the two side curtains). The face silhouette painted later in
     // painter's order covers the central forehead/cheek region in stroke
@@ -2464,9 +2655,13 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   silhouettePoints.push(...jaw.slice(1));
   silhouettePoints.push(...sideR.slice(0, -1).reverse());
 
+  // Face contour multiplier composes with the renderer's existing 1.35
+  // silhouette boost (audit L2 mixture-rule preservation). Default
+  // undefined → no extra multiplier, byte-identical.
   const silhouette: Curve = {
     kind: 'feature', closed: true, points: silhouettePoints,
     role: 'silhouette', fill: p.style.skinFill,
+    weightMul: p.style.featureWeights?.faceContour,
   };
 
   // ---- construction guides
@@ -2494,7 +2689,27 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   // ---- features
   const features: Curve[] = [];
 
+  // Per-feature weight stamper (audit L2). After a builder emits its curves,
+  // call stampWeight(features, prevLength, mul) to tag every newly-emitted
+  // curve with weightMul = mul. The renderer multiplies this into the stroke
+  // width. Default (mul === undefined) is a no-op — no stamp, byte-identical.
+  // Only the BROW / MOUTH / HAIR / FACE_CONTOUR strokes route through this
+  // post-emit stamping; EYE multipliers route through the eyeWeights arg
+  // directly into buildEye / buildEyeDots so the upper-lid stroke can carry
+  // a different multiplier from the lower-lid + lashes.
+  const fw = p.style.featureWeights;
+  const stampWeight = (arr: Curve[], from: number, mul: number | undefined): void => {
+    if (mul === undefined) return;
+    for (let i = from; i < arr.length; i++) {
+      const c = arr[i] as Curve;
+      // Don't clobber a more-specific weightMul already baked by the builder
+      // (currently only the eye-builders do this).
+      if (c.weightMul === undefined) c.weightMul = mul;
+    }
+  };
+
   // Hair (drawn first so other features can overlap it slightly via Z-order — painter actually sorts later)
+  const hairStart = features.length;
   features.push(...buildHair(
     rx, ry, rz, sx, browY, totalH,
     p.hair.style, p.hair.frontShape, p.hair.forehead, p.hair.volume, p.style.hairFill,
@@ -2502,6 +2717,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     p.hair.recipe,
     p.hair.recipe.verticalLift ?? 0,
   ));
+  stampWeight(features, hairStart, fw?.hair);
 
   // Hat (sits on top of head; opt-in via p.hat.style)
   features.push(...buildHat(rx, ry, sx, totalH, p.hat.style, p.hat.color, p.hat.bandColor, p.hat.emblem, p.hat.emblemColor, p.hat.size, p.hat.tilt));
@@ -2533,24 +2749,29 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const halfEye = (p.eyes.size * diameter) / 2;
   const eyeAnchorX = (p.eyes.spacing * diameter) / 2;
   const eyeSurfaceZ = frontZ(eyeAnchorX, eyeY);
+  // Eye-builder weights (audit L2). Built from the same fw object declared
+  // up top so per-feature multipliers compose cleanly.
+  const eyeWeights: EyeWeights | undefined = (fw?.eyeUpperLid !== undefined || fw?.eyeLower !== undefined)
+    ? { upper: fw?.eyeUpperLid, lower: fw?.eyeLower }
+    : undefined;
   if (p.eyes.style === 'dots') {
     const dotR = p.eyes.dotSize * diameter;
     features.push(...buildEyeDots(
       [-eyeAnchorX, eyeY, eyeSurfaceZ], dotR, p.eyes.openness, eyeSurfaceZ,
-      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true, eyeWeights,
     ));
     features.push(...buildEyeDots(
       [eyeAnchorX, eyeY, eyeSurfaceZ], dotR, p.eyes.openness, eyeSurfaceZ,
-      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false, eyeWeights,
     ));
   } else {
     features.push(...buildEye(
       [-eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, p.eyes.tilt, eyeSurfaceZ,
-      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, true, eyeWeights,
     ));
     features.push(...buildEye(
       [eyeAnchorX, eyeY, eyeSurfaceZ], halfEye, p.eyes.openness, -p.eyes.tilt, eyeSurfaceZ,
-      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false,
+      p.eyes.lidLine, p.eyes.lashes, p.eyes.underlineHint, false, eyeWeights,
     ));
   }
 
@@ -2560,6 +2781,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
   const browInnerX = Math.max(0, p.brows.spacing * diameter * (1 - p.brows.unibrow));
   const innerLiftY = p.brows.innerLift * totalH;
   const outerLiftY = p.brows.outerLift * totalH;
+  const browStart = features.length;
   features.push(...buildBrow(
     [-browInnerX, browY + innerLiftY, frontZ(-browInnerX, browY)],
     browLen, 0, outerLiftY - innerLiftY, p.brows.arch, p.brows.fullness, frontZ(-browInnerX, browY), true,
@@ -2570,6 +2792,7 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
     browLen, 0, outerLiftY - innerLiftY, p.brows.arch, p.brows.fullness, frontZ(browInnerX, browY), false,
     p.brows.style,
   ));
+  stampWeight(features, browStart, fw?.brow);
 
   // Nose (bridge top sits just below brow line)
   const bridgeTop: Vec3 = [0, browY - totalH * 0.02, frontZ(0, browY)];
@@ -2597,11 +2820,13 @@ export const buildScaffold = (p: FaceParams): Scaffold => {
 
   // Mouth
   const mouthCenter: Vec3 = [0, mouthY, frontZ(0, mouthY)];
+  const mouthStart = features.length;
   features.push(...buildMouth(
     mouthCenter, p.mouth.width * diameter, p.mouth.openness, p.mouth.cornerLift * totalH,
     p.mouth.upperCurve, p.mouth.lipFullness, p.mouth.cornerMarks,
     p.mouth.labiomentalShow, frontZ(0, mouthY),
   ));
+  stampWeight(features, mouthStart, fw?.mouth);
 
   // Neck — anchor on the under-jaw between the chin pad and the cheek; widens slightly at the base.
   if (p.neck.visible) {

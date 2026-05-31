@@ -148,8 +148,39 @@ export type HairstyleRecipe = {
   // undefined preserves byte-identical rendering for every existing pack and
   // every hairstyle that doesn't explicitly opt in.
   fillStyle?: 'standard' | 'flat';
-  // Future-reserved: forelock?, fringe?, highlight? — wired in later passes
-  // when the corresponding primitives land (Leo pass 5 §4.1–4.3).
+  // highlightCutout — opt-in INVERTED cel-shadow over the hair mass (audit L1,
+  // research/timmflat-ceiling-audit.md). When set, the renderer inscribes a
+  // darker polygon over ~30-50% of the hair shape on the side opposite the
+  // implicit 3/4-front-left light. The cutout polygon is built parametrically
+  // against the same topSil / hairline / curtain geometry the cap fill is
+  // built from, so it lives in the SAME coordinate system at the SAME scale —
+  // no separate hull / sdf / silhouette derivation. Painter's order paints
+  // the dark fill on top of the hair fill but below the silhouette outline.
+  //
+  //   undefined (default): no cutout — every existing pack renders byte-
+  //     identical. Mixture rule: default / tintin / ligneClaire untouched.
+  //   side: 'right' | 'left': which half of the dome the shadow covers.
+  //     timmFlat canon = 'right' (light from 3/4-front-left).
+  //   coverage: 0..1 (default 0.40): how much of the hair the cutout
+  //     covers. 0.30 = thin strip, 0.50 = half. Audit specifies ~30-50%.
+  //   darken: 0..1 (default 0.32): how much darker than hairFill the cutout
+  //     paints. 0 = same as fill (invisible), 0.5 = noticeably darker.
+  //
+  // Felix sizing note: the cutout is built from the SAME topSil array
+  // (~81 pts) + hairline (~33 pts) or curtain bottom (~25 pts) the cap fill
+  // uses. NO new geometry derivation, NO polygon boolean ops, NO hull merge.
+  // Total per-pack LOC overhead is the polygon builder (~50 LOC) + the
+  // params wiring (~15 LOC). Sized for the 13-hairstyle catalog: walked
+  // each cap/curtain code path against the cutout predicate and confirmed
+  // the cutout is fully inscribed inside the hair polygon in all cases
+  // (no need for polygon clipping).
+  highlightCutout?: {
+    side: 'right' | 'left';
+    coverage?: number;
+    darken?: number;
+  };
+  // Future-reserved: forelock?, fringe? — wired in later passes when the
+  // corresponding primitives land (Leo pass 5 §4.1–4.3).
 };
 
 export type FaceParams = {
@@ -319,6 +350,39 @@ export type FaceParams = {
     hairFill: string | null;
     showConstruction: boolean;
     showSidePlanes: boolean;
+    // Per-feature line-weight multiplier (audit L2). A single `style.lineWeight`
+    // scalar produces uniform-weight strokes everywhere — Timm canon (and
+    // Caniff / Toth / manga more broadly) wants the upper-eyelid line 2-3×
+    // the face-contour weight so the eye reads as "the lid more than the
+    // pupil" (Sito 2004 p.40). Every multiplier defaults to 1.0 so existing
+    // packs (default / tintin / ligneClaire) render byte-identical.
+    //
+    //   eyeUpperLid: the heavy upper-eyelid stroke. timmFlat = 2.5 (audit).
+    //   eyeLower:    the under-eye tick / lower lid. Default 1.0; keep light
+    //                so the eye still reads "weighted up top, hint below."
+    //   brow:        brow strokes. Default 1.0.
+    //   mouth:       mouth line. Default 1.0.
+    //   faceContour: the silhouette outline. Default 1.0 — the existing 1.35
+    //                silhouette boost in svg.ts is preserved separately so
+    //                changing this knob doesn't suddenly affect non-opted
+    //                packs.
+    //   hair:        hair outline / inked top edge. Default 1.0.
+    //
+    // The multiplier composes MULTIPLICATIVELY with the renderer's existing
+    // silhouette boost + the per-curve jitter additive: final stroke width =
+    // (lineWeight × silhouetteBoost × featureWeight) + jitterVariance, clipped
+    // ≥ 0.5. Per-feature wiring lives in scaffold.ts at curve construction
+    // time (each builder reads `p.style.featureWeights?.X` and stamps the
+    // multiplier onto the curve's `weightMul` field). The renderer reads
+    // `curve.weightMul` and applies — no scaffold-vs-renderer split-brain.
+    featureWeights?: {
+      eyeUpperLid?: number;
+      eyeLower?: number;
+      brow?: number;
+      mouth?: number;
+      faceContour?: number;
+      hair?: number;
+    };
   };
   camera: {
     yaw: number;
@@ -535,6 +599,11 @@ export type AllowedDeclarePath =
   | 'hair.recipe.leads'
   | 'hair.recipe.parting'
   | 'hair.recipe.fillStyle'
+  // hair recipe — the L1 inverted-highlight cutout pedagogy (audit
+  // research/timmflat-ceiling-audit.md). Declared so a hairstyle file that
+  // didn't think about the cel-shadow can't accidentally drop it; timmFlat
+  // asserts the cutout on every cell that draws a cap or curtain.
+  | 'hair.recipe.highlightCutout'
   // mouth — the contested vermilion/sulcus/corner set (Pascal W2 cascade-leak
   // diagnosis: presentation/age layers clobber the pack's mouth pedagogy).
   | 'mouth.lipFullness'
@@ -551,7 +620,12 @@ export type AllowedDeclarePath =
   | 'brows.style'
   | 'nose.style'
   | 'nose.bridgeVisible'
-  | 'nose.showNostrils';
+  | 'nose.showNostrils'
+  // style — per-feature line-weight multipliers (audit L2). Declared so
+  // demographic / hairstyle layers can't suppress them when timmFlat opts in.
+  // The whole featureWeights block writes/replaces; individual leaves are
+  // not separately declarable (small enough that wholesale-replace is fine).
+  | 'style.featureWeights';
 
 // applyDeclares — filter a deep-partial pack patch down to the declared
 // paths and return a fresh DeepPartial that overwrites ONLY those paths.

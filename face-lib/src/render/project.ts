@@ -20,6 +20,9 @@ export type Projected = {
   capsules?: Capsule2D[];
   // Hull-merge group key (mirrors Curve.hullGroup). svg.ts groups by this.
   hullGroup?: Curve['hullGroup'];
+  // Per-feature line-weight multiplier (audit L2). Forwarded verbatim from
+  // the source curve; the SVG renderer multiplies it into the stroke width.
+  weightMul?: Curve['weightMul'];
 };
 
 // Orthographic projection. Rotate around camera yaw (Y) and pitch (X), then drop Z.
@@ -40,6 +43,7 @@ export const projectCurve = (curve: Curve, p: FaceParams): Projected => {
     fill: curve.fill,
     noStroke: curve.noStroke,
     ink: curve.ink,
+    weightMul: curve.weightMul,
   };
   // VOLUME path: build the 2D capsule chain from the 3D centreline +
   // radiusProfile. One capsule per consecutive pair of centreline points;

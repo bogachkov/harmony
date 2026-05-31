@@ -154,6 +154,9 @@ export const styles = {
       'hair.recipe.leads',
       'hair.recipe.parting',
       'hair.recipe.fillStyle',
+      // L1 (W4 audit): inverted hair-shadow cutout — declared so hairstyle
+      // files can't drop the cel-shadow on the cap / curtain.
+      'hair.recipe.highlightCutout',
       // Mouth — the four-knob vermilion / sulcus / corner / curve set that
       // presentation:'feminine' (lipFullness 0.35) and presentation:'masculine'
       // (labiomentalShow 0.22) reach in and overwrite.
@@ -175,6 +178,10 @@ export const styles = {
       'nose.style',
       'nose.bridgeVisible',
       'nose.showNostrils',
+      // L2 (W4 audit): per-feature line-weight multipliers. Declared so the
+      // upper-lid 2.5× boost survives demographic / hairstyle / expression
+      // layers that might shadow style.featureWeights down the cascade.
+      'style.featureWeights',
     ],
     style: {
       lineWeight: 3.0,          // medium-heavy contour, animation-clean (heavier than tintin's 2.4)
@@ -184,6 +191,15 @@ export const styles = {
       hairFill: '#1a1a1a',      // very dark default — overrideable per render
       background: '#e8e4d8',    // Rollo: warm-neutral plate, NOT pure white
       showConstruction: false,
+      // L2 (W4 audit, research/timmflat-ceiling-audit.md): per-feature
+      // line-weight multipliers. Timm canon — the upper-eyelid line is the
+      // construction-confidence tell. 2.5× over the base lineWeight pushes
+      // the lid stroke from ~3.0px to ~7.5px before silhouette boosts; the
+      // eye reads as the lid, not the pupil (Sito 2004 p.40). Other
+      // features stay 1.0 to keep the rest of the canon clean.
+      featureWeights: {
+        eyeUpperLid: 2.5,
+      },
     },
     eyes: {
       style: 'almond',          // explicitly almond, NOT dots
@@ -233,6 +249,14 @@ export const styles = {
         // hairstyle / expression cascade layer pushing back to 'standard'.
         // See model/params.ts HairstyleRecipe.fillStyle doc.
         fillStyle: 'flat',
+        // L1 (W4 audit, research/timmflat-ceiling-audit.md): inverted
+        // cel-shadow over the right ~40% of the hair mass. Light is
+        // implicit 3/4-front-left → shadow falls on the right side. Reads
+        // as published-flat (Timm canon) rather than TV-flat. Built
+        // parametrically against the same topSil / hairline / curtain
+        // geometry the cap fill uses; inscribed strictly inside the hair
+        // polygon so painter's order does the clipping.
+        highlightCutout: { side: 'right', coverage: 0.40, darken: 0.32 },
       },
     },
   } satisfies Pack,
