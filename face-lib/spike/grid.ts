@@ -36,11 +36,14 @@ const makeProjector = (C: ReturnType<typeof cam>, s: (p:Vec3)=>number): Projecto
   const sy = (yc / (zc * C.th));               // NDC y
   const px = (sx * 0.5 + 0.5) * IMG;
   const py = (0.5 - sy * 0.5) * IMG;
-  // occlusion: trace from camera toward w; visible if first hit is ~at w.
-  const dir = normalize(rel);
-  const hitT = (() => { let t=0,p:Vec3=C.o; for(let i=0;i<STEPS;i++){p=[C.o[0]+dir[0]*t,C.o[1]+dir[1]*t,C.o[2]+dir[2]*t];const d=s(p);if(d<EPS)return t;t+=d;if(t>FAR)break;} return FAR; })();
-  const wDist = Math.hypot(rel[0],rel[1],rel[2]);
-  const visible = hitT >= wDist - 0.06;        // not occluded by nearer surface
+  // Visibility = is this anchor on the camera-facing side of the head?
+  // (A strict depth-trace fails because feature anchors sit slightly INSIDE
+  // the inflated surface — brow ridge / mound push the skin forward of the
+  // bare-cranium anchor. We don't want occlusion against bumps; we want
+  // "front-facing". Use the surface normal at the anchor: outward dir from the
+  // head center to the anchor; visible if it faces the camera.)
+  const outward = normalize(w);                // head centered near origin
+  const visible = dot(outward, sub(C.o, w)) > 0; // anchor's face toward camera
   return { s: [px, py] as Vec2, visible };
 };
 
@@ -78,7 +81,7 @@ const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number, styled = false)
   }
   if (styled) {
     const project = makeProjector(C, s);
-    for (const m of plainLineMarks(dial as typeof DEFAULT_HEAD, project)) parts.push(m);
+    for (const m of plainLineMarks(dial, project)) parts.push(m);
   }
   parts.push('</svg>'); return parts.join('');
 };

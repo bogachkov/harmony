@@ -210,32 +210,16 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //     circle. The almond rim + the lid are the only lines that ink.
   const socketY = c.eyeY + c.eyeSpacing * 0.05;
 
-  // (i) Orbital socket — a REAL recessed volume (per the architecture: the
-  //     core must hold a true 3D socket so features attach correctly from any
-  //     angle; this is bone, not a painted-on mark). Wide subtract blend so
-  //     the recess is a smooth bowl whose FRONT opening reads, not a hard 360°
-  //     rim that inks as a floating loop in 3/4. The almond shape (wide X,
-  //     thin Y) gives the eye its slant; depth gives the under-brow shadow.
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.52, c.eyeSpacing * 0.30, rz * 0.16];
-  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ - rz * 0.02], socketHalf);
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.07);
-
-  // (ii) Eyeball — a real sphere seated DEEP in the socket. Seated so its
-  //      front pole sits well behind the surrounding skin so it cannot breach
-  //      the (angled) cheek in 3/4. It exists as 3D so a style can later find
-  //      the iris position from any angle; here it only fills the hollow.
-  const ballR = c.eyeSpacing * 0.44;
-  const ballCZ = surfZ - rz * 0.20;                  // deep — front pole behind skin
-  const eyeball = (cx: number) => sphere(p, [cx, socketY, ballCZ], ballR);
-  head = smin(head, min(eyeball(-c.eyeSpacing), eyeball(c.eyeSpacing)), 0.04);
-
-  // (iii) upper-lid line — a thin crease just under the brow, the single mark
-  //       that makes the eye read as a lidded eye not a hole. Carved shallow.
-  const lid = (cx: number) => ellipsoid(
-    p, [cx, socketY + c.eyeSpacing * 0.22, surfZ + rz * 0.03],
-    [c.eyeSpacing * 0.46, c.eyeSpacing * 0.07, rz * 0.08],
-  );
-  head = smoothSubtract(head, min(lid(-c.eyeSpacing), lid(c.eyeSpacing)), 0.015);
+  // The core builds ONLY the orbital structure (bone) — a gentle recessed
+  //  socket so the eye region reads as a hollow under the brow from any angle.
+  //  It does NOT draw the eye's look (almond, lid line, pupil): those are
+  //  MARKS the style draws into the socket anchor. This is the core/style
+  //  boundary we agreed — the core was wrongly making the eye look, which is
+  //  why it kept going amphibian. A shallow recess + no lid line; the style
+  //  owns everything you'd call "the eye".
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.34, rz * 0.12];
+  const socket = (cx: number) => ellipsoid(p, [cx, socketY, surfZ + rz * 0.02], socketHalf);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.09);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that

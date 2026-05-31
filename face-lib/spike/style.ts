@@ -12,12 +12,13 @@
 // can be sanity-checked as the goal requires.
 
 import type { Vec3, Vec2 } from '../src/math/vec3.ts';
-import { construct, type HeadDial } from './head.ts';
+import { construct, DEFAULT_HEAD, type HeadDial } from './head.ts';
 
 export type Anchor = { pos: Vec3 };
 
 /** 3D feature anchors a style draws into, derived from the construction. */
-export const anchors = (d: HeadDial) => {
+export const anchors = (dial: Partial<HeadDial>) => {
+  const d: HeadDial = { ...DEFAULT_HEAD, ...dial };
   const c = construct(d);
   const surf = (y: number, x: number): Vec3 => [x, y, c.frontZ(y) ]; // on the front form
   return {
@@ -36,8 +37,8 @@ export const anchors = (d: HeadDial) => {
 export type Projector = (w: Vec3) => { s: Vec2; visible: boolean };
 
 /** plainLine: minimal marks. Returns SVG path/element strings (no <svg> wrapper). */
-export const plainLineMarks = (d: HeadDial, project: Projector): string[] => {
-  const a = anchors(d);
+export const plainLineMarks = (dial: Partial<HeadDial>, project: Projector): string[] => {
+  const a = anchors(dial);
   const out: string[] = [];
   const ink = '#111';
 
