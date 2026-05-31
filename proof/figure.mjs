@@ -41,8 +41,12 @@ export const FIGURE = [
 
   { name: "neck", parent: "chest", offset: [0, 0.65, 0], bone: true,
     limits: { x:[-60,45], y:[-80,80], z:[-45,45] } },   // cervical
-  { name: "head", parent: "neck", offset: [0, 0.25, 0], bone: true, headR: 0.42,
+  // cranium = the ball; rides the neck. form: the construction skull lives here.
+  { name: "cranium", parent: "neck", offset: [0, 0.25, 0], bone: true, form: "cranium",
     limits: { x:[-20,20], y:[-20,20], z:[-15,15] } },
+  // jaw = a hinge child of the cranium; opens on X only. form: the jaw block.
+  { name: "jaw", parent: "cranium", offset: [0, -0.1, 0.05], bone: false, form: "jaw",
+    limits: { x:[0,32], y:[0,0], z:[0,0] } },           // 0=closed, up to ~32deg open
 
   // arms off the chest. shoulder offsets sit at the corners of the chest tri.
   { name: "shoulderL", parent: "chest", offset: [0.62, 0.42, 0], bone: true, len: 1.05,
