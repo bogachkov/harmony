@@ -17,7 +17,7 @@
 import type { Vec3 } from '../math/vec3.ts';
 import {
   sphere, ellipsoid, plane, taperedBox,
-  max, smin, smax,
+  min, max, smin, smax, smoothSubtract,
 } from './primitives.ts';
 
 export type LoomisParams = {
@@ -162,6 +162,75 @@ export type LoomisParams = {
    * separate object stuck on; just non-zero enough to avoid a hard seam.
    */
   kNose: number;
+
+  // ---- eyes ("a sphere in a cavity, with a lid wrapping over the top") ----
+  /**
+   * Y-coordinate of the eye-line — the horizontal centerline that passes
+   * through both eyeball centers. Sits below the brow line (`noseRootY`).
+   * Loomis: the eye-line is the vertical halfway point of the head; here
+   * the cranium extends from y ≈ -0.50 to +0.52, so y ≈ 0.05-0.10 is
+   * roughly mid-cranium and lands the eyes about one socket-height below
+   * the brow ridge.
+   */
+  eyeLineY: number;
+  /**
+   * Half-spacing between eye centers: each eye sits at x = ±eyeSpacing.
+   * Classic adult ratio: pupils are about one eye-width apart (so eye
+   * centers ~1.5 eye-widths from midline). With alarWidth ~0.20 = one
+   * eye-width, eye centers land near x = ±0.13.
+   */
+  eyeSpacing: number;
+  /**
+   * Eyeball sphere radius. Real eyeballs are ~24 mm across on a ~225 mm
+   * head height — about 0.10 of head height. In our units (head ~1.05
+   * tall) that's ~0.05.
+   */
+  eyeballRadius: number;
+  /**
+   * How far the eyeball center sits BEHIND the cranium's front face at
+   * the eye-line. Positive value = recessed. With this set near
+   * `eyeballRadius` the forward apex of the eyeball lands right at the
+   * (un-socketed) front of the cranium, so once the socket is cut the
+   * eyeball nests credibly inside the cavity.
+   */
+  eyeForwardOffset: number;
+
+  /**
+   * Socket recess: a smooth-subtracted ellipsoid carved into the front
+   * of the cranium, centered slightly inside the front face at each
+   * eye-line position. `socketWidth` / `socketHeight` are the X / Y
+   * full extents of the cavity opening; `socketDepth` is the full Z
+   * extent (front-to-back of the carving sphere).
+   */
+  socketWidth: number;
+  socketHeight: number;
+  socketDepth: number;
+  /**
+   * How far INTO the cranium the socket-ellipsoid's center sits relative
+   * to the cranium's front face at the eye-line. Bigger = deeper cavity.
+   * Roughly half of `socketDepth` puts the carving sphere centered on
+   * the front face so the cut goes halfway in.
+   */
+  socketInset: number;
+  /** Smooth-subtract radius for the socket carving. */
+  kSocket: number;
+
+  /**
+   * Upper lid: a flattened ellipsoid wrapping over the top-front of the
+   * eyeball. `lidWeight` scales the overall lid mass (X/Y/Z radii);
+   * `lidDrop` is how far down (in -Y) the lid's center is offset from
+   * the eyeball center — bigger drop = lid covers more of the iris.
+   */
+  lidWeight: number;
+  lidDrop: number;
+  /**
+   * How far forward (in +Z) the lid's center sits relative to the
+   * eyeball center. Slightly positive so the lid bulges out in front
+   * of the sphere apex — a fleshy hood, not a flat disk.
+   */
+  lidForward: number;
+  /** Smooth-min radius for fusing each upper lid into the cranium. */
+  kLid: number;
 };
 
 /** Defaults that approximate an adult male head. Tuned visually, not measured. */
@@ -192,8 +261,10 @@ export const DEFAULT_LOOMIS: LoomisParams = {
   // Jaw: single tapered wedge — bigonial wide at the top, chin point at the
   // bottom. Positioned forward enough that the chin projects past the
   // cranium's mid-line — otherwise the jaw reads as tucked under the cranium.
+  // Mental width was 0.30 (~45% of bigonial) which read as a wedge tip; bumped
+  // to ~64% so the chin reads as a real pad with a visible (but not flat) taper.
   bigonialWidth: 0.66,    // ~0.78 * (2 * sideOffset) — adult gonial spread
-  mentalWidth: 0.30,      // ~0.45 * bigonial — narrow chin pad for a clear taper
+  mentalWidth: 0.42,      // ~64% of bigonial — defined chin pad, not a wedge tip
   ramusHeight: 0.42,      // ~35% of total head height
   jawDepth: 0.72,         // a hair deeper than cranium width, less than cranium depth
   chinDepth: 0.44,        // chin pad is shorter front-to-back than the ramus
@@ -210,12 +281,46 @@ export const DEFAULT_LOOMIS: LoomisParams = {
   // Alar width ~20% of head width. Bridge slope 0 = straight (Greek). The
   // root sits on the brow line, which is roughly 0.18-0.22 above the
   // cranium center for these defaults.
-  noseLength: 0.34,       // ~1/3 of face height
-  tipProjection: 0.12,    // ~10% of head depth past the cranium front
+  // Length & projection bumped from 0.34 / 0.12 — at those values the nose
+  // read as a button. 0.40 / 0.16 sits in the adult-male range without
+  // running away into caricature.
+  noseLength: 0.40,       // ~38% of face height — adult-male dorsum length
+  tipProjection: 0.16,    // ~13% of head depth past the cranium front
   alarWidth: 0.20,        // ~eye-width
   bridgeSlope: 0.0,       // straight bridge
   noseRootY: 0.18,        // brow line, just under foreheadPlaneZ apex
   kNose: 0.045,           // tight blend at the bridge — not a separate blob
+
+  // Eyes. The eye-line sits below the brow at y ≈ 0.05, which is roughly
+  // one socket-height down from noseRootY = 0.18. Spacing puts pupils about
+  // one eye-width apart (~0.13 from midline given alarWidth=0.20).
+  //
+  // The eyeball radius (0.05) is ~10% of head-width / head-height, matching
+  // the real-world ratio (~24 mm eye on ~225 mm head).
+  //
+  // Socket dimensions sized just wider than the eyeball so the carving cuts
+  // a credible cavity without exposing the eyeball's full equator. Depth is
+  // greater than width so the cut is deepest at the centerline and shallows
+  // at the corners — same logic as the real orbital rim.
+  //
+  // Lid is a flattened ellipsoid centered slightly above and forward of the
+  // eyeball, drooping down (lidDrop) to cover the top portion of the sphere
+  // and protruding forward (lidForward) to read as a fleshy hood in profile.
+  eyeLineY: 0.05,
+  eyeSpacing: 0.13,
+  eyeballRadius: 0.05,
+  eyeForwardOffset: 0.04, // eyeball center sits ~0.04 behind front face of cranium
+
+  socketWidth: 0.16,      // X-extent of orbital opening
+  socketHeight: 0.12,     // Y-extent — taller-than-wide eye-shape
+  socketDepth: 0.14,      // Z-extent of the carving sphere
+  socketInset: 0.05,      // how far in from front face the carving sphere sits
+  kSocket: 0.04,          // smooth-subtract — soft orbital rim, no hard CSG line
+
+  lidWeight: 0.07,        // overall lid mass scaling — moderate fleshy hood
+  lidDrop: 0.018,         // lid center sits 0.018 below eyeball center
+  lidForward: 0.012,      // lid center pushed forward of eyeball center — fleshy bulge
+  kLid: 0.03,             // tight smin — lid reads as continuous with cranium
 };
 
 /**
@@ -249,11 +354,26 @@ export const DEFAULT_LOOMIS: LoomisParams = {
  *      two side planes meeting at a dorsal ridge, a base plane tilting up
  *      under the tip, and two ala bulges — the wedge-plus-spheres
  *      composition is the SDF-native version of those five planes.
- *   4. Head = (cranium `smin` jaw) `smin` nose, blend radii `kChin` and
- *      `kNose`. The cranium-jaw smin adds material along the gonial /
- *      mandibular-angle region (masseter mass under the skin). The nose
- *      smin is much tighter — the nose should read as growing OUT of the
- *      cranium, not as a separate object stuck on.
+ *   4. Eye sockets = two ellipsoids smooth-SUBTRACTED from the cranium
+ *      (carved before the nose is added so the bridge doesn't tangle with
+ *      the orbital cut). Each socket centered slightly inside the front
+ *      face of the cranium at (±eyeSpacing, eyeLineY).
+ *   5. Eyeballs = two spheres positioned inside the sockets so the
+ *      forward edge nests near the orbital opening. Unioned with HARD
+ *      min — the eyeball is a separate surface visible through the
+ *      cavity, not part of the skin shell.
+ *   6. Upper lids = two flattened ellipsoids smin'd onto the cranium,
+ *      centered above-and-forward of each eyeball so the lid bulges out
+ *      in front of the sphere apex (Loomis' "fleshy hood"), covering the
+ *      top portion of the eyeball.
+ *   7. Head = (((cranium−sockets) `smin` jaw) `smin` nose) `smin` lids,
+ *      then min'd with the eyeballs. Blend radii kChin, kNose, kLid.
+ *      The cranium-jaw smin adds material along the gonial / mandibular-
+ *      angle region. The nose smin is much tighter — the nose should
+ *      read as growing OUT of the cranium, not as a separate object
+ *      stuck on. The lid smin is tight too (lid is flesh continuous
+ *      with cranium); the eyeball union is hard (eyeball is a discrete
+ *      object inside the orbit, not skin).
  */
 export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number => {
   const P: LoomisParams = { ...DEFAULT_LOOMIS, ...params };
@@ -279,6 +399,41 @@ export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number 
   // cranium, smin'd in. Hampton 2009 ch.5.
   const dOcciput = sphere(p, P.occipitalCenter, P.occipitalRadius);
   dCranium = smin(dCranium, dOcciput, P.kOccipital);
+
+  // ---- eye sockets: smooth-subtract two ellipsoids from the cranium ----
+  // Composition order matters. The sockets MUST be carved before the nose
+  // is smin'd in, otherwise the nose wedge near the bridge could intersect
+  // the socket ellipsoid and the subtract operation eats the nose. We also
+  // want the socket cut to live on the *cranium* surface so the orbital
+  // rim reads as a recess in bone, not as a separate dent in some other
+  // primitive.
+  //
+  // Each socket is an ellipsoid centered slightly inside the cranium front
+  // face at (±eyeSpacing, eyeLineY, frontZ - socketInset). The ellipsoid's
+  // X/Y/Z half-extents come straight from socketWidth/Height/Depth halved.
+  // smoothSubtract(cranium, socket, kSocket) carves a soft-rimmed cavity.
+  //
+  // Front-Z of the cranium at the eye-line, accounting for both the
+  // ellipsoid taper and the forehead-plane clip. Same construction as the
+  // nose's rootZ calculation but evaluated at eyeLineY.
+  const ryE = P.craniumRadii[1];
+  const rzE = P.craniumRadii[2];
+  const yRelE = P.eyeLineY - P.craniumCenter[1];
+  const yNormE = Math.min(Math.abs(yRelE) / ryE, 1);
+  const ellipsoidFrontZAtEye =
+    P.craniumCenter[2] + rzE * Math.sqrt(Math.max(0, 1 - yNormE * yNormE));
+  const eyeFrontZ = Math.min(ellipsoidFrontZAtEye, P.foreheadPlaneZ);
+
+  const socketHalf: Vec3 = [P.socketWidth / 2, P.socketHeight / 2, P.socketDepth / 2];
+  const socketZ = eyeFrontZ - P.socketInset;
+  const dSocketL = ellipsoid(p, [-P.eyeSpacing, P.eyeLineY, socketZ], socketHalf);
+  const dSocketR = ellipsoid(p, [ P.eyeSpacing, P.eyeLineY, socketZ], socketHalf);
+  // Fuse the two socket SDFs first (hard union — they're disjoint, and
+  // unioning them lets us do one smoothSubtract instead of two sequential
+  // ones, avoiding compounded blend artifacts at the bridge area where the
+  // two sockets' soft rims overlap).
+  const dSockets = min(dSocketL, dSocketR);
+  dCranium = smoothSubtract(dCranium, dSockets, P.kSocket);
 
   // ---- jaw: single tapered wedge (gonial wide → mental narrow) ----
   // One primitive instead of two stacked boxes. The wedge's cross-section
@@ -421,6 +576,49 @@ export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number 
   // seam reads as a sharp CSG line where the dorsum's back edge cuts into
   // the brow. kNose ~0.025 is the sweet spot for these dimensions.
   d = smin(d, dNose, P.kNose);
+
+  // ---- upper lids: flattened ellipsoid hoods over the eyeballs ----
+  // The lid is a fleshy shell wrapping the top-front of each eyeball,
+  // smin'd onto the cranium so it reads as continuous skin rather than a
+  // glued-on disk. It must be added AFTER the nose so the nose-lid join
+  // near the bridge doesn't interfere with the dorsum's tight kNose smin.
+  //
+  // Geometry per lid: a flattened ellipsoid (wider in X, thinner in Y &
+  // Z) centered slightly above-and-forward of the eyeball center. The
+  // ellipsoid's wide X-extent lets it span the socket from inner-corner
+  // to outer-corner. lidDrop pulls it down so the lid covers the top
+  // portion of the eyeball; lidForward pushes its center past the
+  // eyeball center so the lid bulges in front of the sphere apex.
+  //
+  // Eyeball center Z: behind the cranium's (now-socketed) front face by
+  // eyeForwardOffset. We use the un-socketed front-Z as the reference so
+  // the eyeball position is independent of how deep the socket is cut.
+  const eyeballZ = eyeFrontZ - P.eyeForwardOffset;
+  // Lid center: sits just above the eyeball's top apex, pulled down by
+  // `lidDrop` so the lid's lower edge hangs across the eyeball above the
+  // iris line. Increasing lidDrop = more lid coverage (sleepier eye).
+  const lidY = P.eyeLineY + P.eyeballRadius - P.lidDrop;
+  const lidZ = eyeballZ + P.lidForward;
+  const lidHalf: Vec3 = [
+    P.lidWeight * 1.6,  // wider than tall — almond-shaped lid
+    P.lidWeight * 0.55, // shallow Y — lid is a thin shell, not a brow ridge
+    P.lidWeight * 0.85,
+  ];
+  const dLidL = ellipsoid(p, [-P.eyeSpacing, lidY, lidZ], lidHalf);
+  const dLidR = ellipsoid(p, [ P.eyeSpacing, lidY, lidZ], lidHalf);
+  const dLids = min(dLidL, dLidR);
+  d = smin(d, dLids, P.kLid);
+
+  // ---- eyeballs: two spheres unioned hard with the head ----
+  // The eyeballs are SEPARATE surfaces visible through the socket cavity.
+  // Hard min (not smin) so the eyeball reads as a discrete shape sitting
+  // inside the orbit — smin would melt eyeball into skin and produce the
+  // classic wax-look. The render's central-difference normal will pick up
+  // the spherical curvature cleanly.
+  const dEyeL = sphere(p, [-P.eyeSpacing, P.eyeLineY, eyeballZ], P.eyeballRadius);
+  const dEyeR = sphere(p, [ P.eyeSpacing, P.eyeLineY, eyeballZ], P.eyeballRadius);
+  const dEyes = min(dEyeL, dEyeR);
+  d = min(d, dEyes);
 
   return d;
 };
