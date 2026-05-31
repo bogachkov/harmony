@@ -34,6 +34,14 @@ const minimalHead = (p: Vec3): number => {
   const sock = (cx: number) => ellipsoid(p, [cx, socketY, cz], [c.eyeSpacing*0.56, c.eyeSpacing*0.40, dh]);
   h = smoothSubtract(h, min(sock(-c.eyeSpacing), sock(c.eyeSpacing)), 0.05);
 
+  // eyeball — a SPHERE seated in the orbit (the thing that was missing; an
+  // empty pit isn't an eye, a ball in the socket is). Sized to fill the orbit,
+  // front pole tucked just inside the rim so it reads as recessed under lids.
+  const er = c.eyeSpacing * 0.42;
+  const ecz = surfZ - er * 0.55;                  // center back so it sits in the socket
+  const eball = (cx: number) => sphere(p, [cx, socketY, ecz], er);
+  h = min(h, min(eball(-c.eyeSpacing), eball(c.eyeSpacing)));
+
   // nose — keel + tip
   const rootZ = c.frontZ(c.browY), baseZ = c.frontZ(c.noseBaseY);
   const noseLen = c.browY - c.noseBaseY;
