@@ -47,6 +47,10 @@ export type HeadDial = {
   /** Lip-slit thickness, in cranium half-heights. */
   mouthThickness: number;
 
+  // ---- cheekbone (malar plane). Forward push only — position derived. ----
+  /** Cheekbone forward projection, in cranium half-depths. 0 = flat face. */
+  malarProjection: number;
+
   // ---- neck (Bridgman: cylinder + SCM V + trapezius). Position derived. ----
   /** Neck cylinder radius, in cranium half-widths. */
   neckWidth: number;
@@ -76,6 +80,7 @@ export const DEFAULT_HEAD: HeadDial = {
   browRidge: 0.06,
   mouthWidth: 1.1,
   mouthThickness: 0.018,
+  malarProjection: 0.10,
   neckWidth: 0.50,
   neckLength: 1.1,
   earProtrusion: 0.10,
@@ -257,6 +262,21 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   let nose = smin(keel, tip, 0.03);
   nose = smin(nose, smin(alaL, alaR2, 0.025), 0.03);
   head = smin(head, nose, 0.03);
+
+  // 4b. Cheekbones (malar plane) — Bridgman: the cheekbone is a forward-
+  //     pushing plane at the level of the LOWER eye socket, between the nose
+  //     and the ear. Without it the midface is a smooth balloon. A gentle
+  //     forward bump on each side, wide and soft (a plane, not a knob), set
+  //     just below the eye and out toward the cheek. Wide smin so it adds a
+  //     plane break, not a lump.
+  const malarY = socketY - ballR * 0.9;            // lower-eye-socket level
+  const malarZ = c.frontZ(malarY) + rz * d.malarProjection;
+  const malarX = c.eyeSpacing * 1.35;              // out toward the cheek
+  const malar = (cx: number) => ellipsoid(
+    p, [cx, malarY, malarZ],
+    [rx * 0.30, ry * 0.22, rz * 0.20],
+  );
+  head = smin(head, min(malar(-malarX), malar(malarX)), 0.14);
 
   // 5. Mouth — Loomis p.52: "lips wrap a cylinder; the corners turn back into
   //    the cheek." The root it rides is the curved front of the lower jaw.
