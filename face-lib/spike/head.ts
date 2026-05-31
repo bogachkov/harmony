@@ -119,8 +119,8 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
 
   // 3. Eyes — FOUND on the construction. Socket carved at the eye line,
   //    eyeSpacing out from center, sunk onto the front surface at that height.
-  const eyeZ = c.frontZ(c.eyeY) - rz * 0.10;     // recess into the form
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.62, c.eyeSpacing * 0.45, rz * 0.22];
+  const eyeZ = c.frontZ(c.eyeY) - rz * 0.05;     // recess into the form (shallower → rim inks)
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.70, c.eyeSpacing * 0.52, rz * 0.30];
   const socketL = ellipsoid(p, [-c.eyeSpacing, c.eyeY, eyeZ], socketHalf);
   const socketR = ellipsoid(p, [ c.eyeSpacing, c.eyeY, eyeZ], socketHalf);
   head = smoothSubtract(head, min(socketL, socketR), 0.05);
@@ -141,10 +141,24 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
     [0, (c.browY + c.noseBaseY) / 2, (rootZ + baseZ) / 2 + rz * 0.04],
     [rx * 0.10, noseLen * 0.62, rz * 0.12],
   );
-  const tipR = rx * 0.12;
-  const tip = sphere(p, [0, c.noseBaseY + tipR * 0.4, baseZ + tipR * 0.3], tipR);
-  const nose = smin(bridge, tip, 0.05);
-  head = smin(head, nose, 0.045);
+  const tipR = rx * 0.13;
+  const tipZ = baseZ + rz * 0.14;                // project the tip clearly forward
+  const tip = sphere(p, [0, c.noseBaseY + tipR * 0.4, tipZ], tipR);
+  // alae give the profile a nostril break instead of a single nub
+  const alaR = rx * 0.09;
+  const alaL = sphere(p, [-rx * 0.11, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
+  const alaR2 = sphere(p, [ rx * 0.11, c.noseBaseY + alaR * 0.3, baseZ + rz * 0.04], alaR);
+  let nose = smin(bridge, tip, 0.05);
+  nose = smin(nose, smin(alaL, alaR2, 0.03), 0.04);
+  head = smin(head, nose, 0.04);
+
+  // 5. Mouth — a slit FOUND at the derived mouth line, carved into the form
+  //    so a real crease inks. Width derived from eye spacing (mouth ≈ inner
+  //    eye-corner span). Curls back at the corners by sitting on the round jaw.
+  const mouthW = c.eyeSpacing * 1.1;
+  const mouthZ = c.frontZ(c.mouthY) + rz * 0.02;
+  const mouthCut = ellipsoid(p, [0, c.mouthY, mouthZ], [mouthW * 0.5, ry * 0.018, rz * 0.10]);
+  head = smoothSubtract(head, mouthCut, 0.02);
 
   return head;
 };
