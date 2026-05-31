@@ -4,9 +4,13 @@
 // against the previous substrate (commits 7b2169c…361c715, audits c36ab04 /
 // ea88416):
 //
-//   1. Temple flat is a BOUNDED smax against the cranium, not an infinite
-//      plane intersection. Outside the temple's Y/Z window the clip has no
-//      effect, so the rest of the cranium silhouette stays full-volume.
+//   1. Temple flat is a smax against a bounded "press" ellipsoid (large,
+//      partially overlapping the side of the head), not an infinite plane
+//      intersection. Outside the press's reach the bite has no effect, so
+//      the rest of the cranium silhouette stays full-volume; inside the
+//      press the bite curvature is gentle (large press = low curvature),
+//      so the carved region reads as nearly flat — not a dimple, not a
+//      disc, no halo ring around it.
 //   2. Jaw is a smin chain of ellipsoids along a mandibular arc (gonial →
 //      body → chin → body → gonial), not a tapered box. The arc carries
 //      the chin forward of the gonial corners and the front face curves
@@ -31,8 +35,8 @@
 
 import type { Vec3 } from '../math/vec3.ts';
 import {
-  sphere, ellipsoid,
-  min, max, smin, smax, smoothSubtract,
+  sphere, ellipsoid, plane,
+  min, smin, smax, smoothSubtract,
 } from './primitives.ts';
 
 export type LoomisParams = {
@@ -44,22 +48,19 @@ export type LoomisParams = {
 
   // ---- temple flat (bounded) ----
   /**
-   * X-offset of each temple flat plane. The flat sits at x = ±templeOffset.
-   * Smaller offset = flatter side. Loomis' classic is ~7/8 of head half-width.
+   * Center X of the temple "press" ellipsoid. The press sits at
+   * (±templePressX, templeY, templeZ) with radii templePressRadii. The
+   * fraction of the press that overlaps the cranium creates the flat —
+   * a large press with low local curvature reads as a flat patch, not a
+   * spherical dimple.
    */
-  templeOffset: number;
-  /** Y-center of the temple flat window (in world Y). */
+  templePressX: number;
   templeY: number;
-  /** Z-center of the temple flat window. */
   templeZ: number;
-  /** Y normalization for the temple falloff (1 unit of falloff = halfH away). */
-  templeHalfH: number;
-  /** Z normalization for the temple falloff (1 unit of falloff = halfD away). */
-  templeHalfD: number;
-  /** Falloff scale — how steeply the clip dies off with normalized Y/Z distance.
-   *  Larger = more tightly bounded temple flat. */
-  templeFalloff: number;
-  /** Smooth-max k for the temple clip. */
+  /** Half-axes of the press ellipsoid. Large in Y/Z keeps the bite shallow
+   *  in those directions; X mostly determines how deep the bite goes. */
+  templePressRadii: Vec3;
+  /** Smooth-max k for fusing the press bite into the cranium. */
   kTemple: number;
 
   // ---- occipital bulge ----
@@ -140,24 +141,26 @@ export const DEFAULT_LOOMIS: LoomisParams = {
   craniumRadii: [0.50, 0.525, 0.60],
   craniumCenter: [0, 0, -0.05],
 
-  // Temple flat: bounded clip. The window is centered roughly at the
-  // sphenoid (above the cheekbone, behind the eye). Half-height ~0.18 of
-  // head height; half-depth ~0.18 of head depth. Outside that window the
-  // clip has no effect, so the cranium silhouette stays curved at the
-  // crown, occiput, and below the cheekbone.
-  templeOffset: 0.44,    // 88% of half-width — temple visibly flat in 3/4 view
-  templeY: 0.08,         // sits above eye-line — temple is above the zygomatic
-  templeZ: 0.05,         // slightly forward of cranium center
-  templeHalfH: 0.18,     // Y normalization for falloff
-  templeHalfD: 0.22,     // Z normalization for falloff
-  templeFalloff: 0.18,   // quadratic falloff — flat dissolves into ellipsoid
-  kTemple: 0.05,         // soft blend at the flat's perimeter
+  // Temple flat. Press ellipsoid centered well outside the cranium (at
+  // x=±0.83); its near surface at x≈±0.43 sits a hair inside the natural
+  // cranium surface (~±0.49 at this Y/Z), so the smax bite carves a
+  // shallow depression. Bite curvature follows the press, and because
+  // the press is large compared to the bite depth (~0.05) the carved
+  // region reads as nearly flat — Loomis' "ball with flat sides" without
+  // an infinite slicing plane. Press Y/Z radii sized so the bite spans
+  // roughly the temple/sphenoid area (above the cheekbone, behind the
+  // eye); outside that region the press SDF is positive and -press is
+  // negative, so smax falls back to the unmodified ellipsoid.
+  templePressX: 0.83,
+  templeY: 0.10,
+  templeZ: 0.03,
+  templePressRadii: [0.40, 0.30, 0.35],
+  kTemple: 0.06,         // soft brow-temple corner
 
-  // Occipital bulge. Center pushed BACK further than the ellipsoid surface
-  // (ellipsoid back at z = -0.05 - 0.60 = -0.65; sphere center at -0.62 with
-  // r=0.20 → forward surface at -0.42, well inside the ellipsoid; back
-  // surface at -0.82, well past the ellipsoid). Generous kOccipital so the
-  // smin adds a visible bulge that protrudes past the ellipsoid silhouette.
+  // Occipital bulge. Cranium ellipsoid back surface sits at z ≈ -0.65;
+  // occipital sphere at center z=-0.55 with r=0.22 has its back surface
+  // at z=-0.77, so smin adds visible material 0.12 past the ellipsoid
+  // silhouette. kOccipital wide so the bulge fuses without a hard rim.
   occipitalRadius: 0.22,
   occipitalCenter: [0, -0.05, -0.55],
   kOccipital: 0.18,
@@ -211,54 +214,6 @@ export const DEFAULT_LOOMIS: LoomisParams = {
 };
 
 /**
- * Bounded-region temple clip.
- *
- * Returns a "clip distance" that equals the plane distance `(±x - offset)`
- * at the temple's anchor point, and falls off smoothly with Y/Z distance
- * from there. When combined with the cranium via `smax(ellipsoid, clip, k)`,
- * this carves a temple flat that is strongest at the anchor and dissolves
- * back into the full ellipsoid surface as you move away — fixing both the
- * "infinite plane slicing the whole hemisphere" failure (truth audit,
- * c36ab04) AND avoiding the rectangular-window decal artifact a hard-edged
- * box falloff would produce.
- *
- * Construction: signed plane distance minus a quadratic radial falloff in
- * (Y, Z), normalized so that one "halfH" (or one "halfD") of axis offset
- * contributes `falloffScale`. The falloff is C¹ everywhere, so the temple
- * flat reads as a soft elliptical depression of the cranium surface, not
- * a stamped panel.
- *
- * Not strictly Lipschitz-1 (the quadratic term means the gradient
- * magnitude can exceed 1 far from the anchor), but the deviation is a
- * conservative UNDER-estimate of distance (subtracting positive falloff
- * shrinks the SDF), which is the safe direction for sphere tracing.
- */
-const templeClip = (
-  p: Vec3,
-  sign: 1 | -1,                       // +1 for right (+X) side, -1 for left (-X)
-  offset: number,
-  centerY: number, centerZ: number,
-  halfH: number, halfD: number,
-  falloffScale: number,
-): number => {
-  const planeDist = sign * p[0] - offset;
-  const ny = (p[1] - centerY) / halfH;
-  const nz = (p[2] - centerZ) / halfD;
-  // Plateau-then-quadratic falloff: 0 inside the unit ellipse in (Y, Z),
-  // grows as (r-1)² outside. This gives a genuine planar flat at the
-  // temple anchor (not a dimple) and a smooth C¹ rolloff back into the
-  // ellipsoid surface beyond the plateau.
-  const r = Math.hypot(ny, nz);
-  const over = Math.max(0, r - 1);
-  const falloff = falloffScale * over * over;
-  return planeDist - falloff;
-};
-
-/** Plane SDF, inlined here so head.ts owns its substrate composition. */
-const planeSDF = (p: Vec3, normal: Vec3, distance: number): number =>
-  p[0] * normal[0] + p[1] * normal[1] + p[2] * normal[2] - distance;
-
-/**
  * Loomis head SDF.
  *
  * Construction order:
@@ -285,18 +240,27 @@ export const loomisHead = (p: Vec3, params: Partial<LoomisParams> = {}): number 
   // ---- 1. Cranium ----
   const dEllipsoid = ellipsoid(p, P.craniumCenter, P.craniumRadii);
 
-  // Bounded temple flats — see templeClip() comment.
-  const dTempleR = templeClip(
-    p, +1, P.templeOffset, P.templeY, P.templeZ, P.templeHalfH, P.templeHalfD, P.templeFalloff,
+  // Temple flats: two big "press" ellipsoids centered well outside the
+  // cranium, partially overlapping the temple region. Where the press
+  // overlaps the cranium surface, the smax bite carves a shallow
+  // depression that follows the press's surface curvature. Because the
+  // press radii are large compared to the bite depth, the surface inside
+  // the bite reads as nearly flat (low local curvature) — Loomis' "ball
+  // with flat sides" without resorting to an infinite plane that slices
+  // the whole hemisphere (the failure mode truth caught in c36ab04).
+  // Negating the press SDF turns it into a "this point is outside the
+  // bite region" function for smax purposes.
+  const dPressR = ellipsoid(
+    p, [ P.templePressX, P.templeY, P.templeZ], P.templePressRadii,
   );
-  const dTempleL = templeClip(
-    p, -1, P.templeOffset, P.templeY, P.templeZ, P.templeHalfH, P.templeHalfD, P.templeFalloff,
+  const dPressL = ellipsoid(
+    p, [-P.templePressX, P.templeY, P.templeZ], P.templePressRadii,
   );
-  let dCranium = smax(dEllipsoid, dTempleR, P.kTemple);
-  dCranium = smax(dCranium, dTempleL, P.kTemple);
+  let dCranium = smax(dEllipsoid, -dPressR, P.kTemple);
+  dCranium = smax(dCranium, -dPressL, P.kTemple);
 
   // Forehead plane.
-  const dForehead = planeSDF(p, [0, 0, 1], P.foreheadPlaneZ);
+  const dForehead = plane(p, [0, 0, 1], P.foreheadPlaneZ);
   dCranium = smax(dCranium, dForehead, P.kForehead);
 
   // Occipital bulge — additive, wide smin so it actually protrudes past
