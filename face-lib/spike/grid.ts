@@ -28,17 +28,32 @@ const nrm = (s: (p:Vec3)=>number, p: Vec3): Vec3 => {
 const render = (dial: Partial<typeof DEFAULT_HEAD>, yaw: number): string => {
   const C = cam(yaw); const s = (p: Vec3) => spikeHead(p, dial);
   const hit = new Uint8Array(IMG*IMG), nx = new Float32Array(IMG*IMG), ny = new Float32Array(IMG*IMG), nz = new Float32Array(IMG*IMG);
+  const fr = new Float32Array(IMG*IMG); // facing ratio = |n . viewDir|, 0 at grazing
   for (let y=0;y<IMG;y++){ const v=1-(2*(y+.5))/IMG; for(let x=0;x<IMG;x++){ const u=(2*(x+.5))/IMG-1;
     const rd = normalize([C.r[0]*u*C.th+C.u[0]*v*C.th+C.f[0], C.r[1]*u*C.th+C.u[1]*v*C.th+C.f[1], C.r[2]*u*C.th+C.u[2]*v*C.th+C.f[2]] as Vec3);
-    const h = trace(s, C.o, rd); const i=y*IMG+x; if(h.hit){ hit[i]=1; const n=nrm(s,h.p); nx[i]=n[0]; ny[i]=n[1]; nz[i]=n[2]; } } }
+    const h = trace(s, C.o, rd); const i=y*IMG+x; if(h.hit){ hit[i]=1; const n=nrm(s,h.p); nx[i]=n[0]; ny[i]=n[1]; nz[i]=n[2];
+      fr[i] = Math.abs(n[0]*rd[0]+n[1]*rd[1]+n[2]*rd[2]); } }
+  }
   const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${IMG}" height="${IMG}"><rect width="${IMG}" height="${IMG}" fill="#fff"/>`];
   const at = (x:number,y:number)=>y*IMG+x;
   for (let y=1;y<IMG-1;y++) for (let x=1;x<IMG-1;x++){ const i=at(x,y); if(!hit[i])continue;
     let sil=false, cr=0; for(const j of[at(x-1,y),at(x+1,y),at(x,y-1),at(x,y+1)]) if(!hit[j])sil=true;
     const ni:Vec3=[nx[i]!,ny[i]!,nz[i]!];
     for(const j of[at(x+1,y),at(x,y+1)]){ if(!hit[j])continue; cr=Math.max(cr, Math.acos(Math.max(-1,Math.min(1,dot(ni,[nx[j]!,ny[j]!,nz[j]!]))))); }
-    const val = sil?1:(cr>0.55?Math.min(1,cr):0);
-    if(val>0) parts.push(`<rect x="${x}" y="${y}" width="1.2" height="1.2" fill="#111" opacity="${val.toFixed(2)}"/>`);
+    // (3) interior contour: a LOCAL MINIMUM of the facing ratio along a curved
+    // surface marks where the form rolls away from view — the line an artist
+    // draws on a smooth surface (lid fold, brow roll, cheek turn, eyeball
+    // edge). Detect by: this pixel is near grazing AND is a local min vs its
+    // x/y neighbours (so we get a thin line, not a shaded band).
+    let contour = 0;
+    if (fr[i]! < 0.32) {
+      const fl=fr[at(x-1,y)]!, frr=fr[at(x+1,y)]!, fu=fr[at(x,y-1)]!, fd=fr[at(x,y+1)]!;
+      const isMin = (hit[at(x-1,y)]&&hit[at(x+1,y)]&&fr[i]!<=fl&&fr[i]!<=frr)
+                 || (hit[at(x,y-1)]&&hit[at(x,y+1)]&&fr[i]!<=fu&&fr[i]!<=fd);
+      if (isMin) contour = 1 - fr[i]!/0.32;
+    }
+    const val = sil ? 1 : Math.max(cr>0.45?Math.min(1,cr):0, contour*0.9);
+    if(val>0.15) parts.push(`<rect x="${x}" y="${y}" width="1.2" height="1.2" fill="#111" opacity="${val.toFixed(2)}"/>`);
   }
   parts.push('</svg>'); return parts.join('');
 };
