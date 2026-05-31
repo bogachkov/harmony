@@ -125,6 +125,22 @@ export class Canvas {
       this.stamp(pt.x, pt.y, hw, color, alpha);
     }
   }
+  downscale(f) {
+    const w = Math.floor(this.w / f), h = Math.floor(this.h / f);
+    const out = new Canvas(w, h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let r = 0, g = 0, b = 0;
+        for (let dy = 0; dy < f; dy++)
+          for (let dx = 0; dx < f; dx++) {
+            const i = ((y * f + dy) * this.w + (x * f + dx)) * 4;
+            r += this.buf[i]; g += this.buf[i + 1]; b += this.buf[i + 2];
+          }
+        const n = f * f, o = (y * w + x) * 4;
+        out.buf[o] = r / n; out.buf[o + 1] = g / n; out.buf[o + 2] = b / n; out.buf[o + 3] = 255;
+      }
+    return out;
+  }
   toPNG() {
     const w = this.w, h = this.h;
     const raw = Buffer.alloc(h * (w * 4 + 1));

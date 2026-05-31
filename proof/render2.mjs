@@ -89,6 +89,7 @@ angles.forEach((a, i) => {
   defects.push(...checkTile({ label: a.label, yawDeg: a.yaw, ...diag }));
 });
 fs.writeFileSync("proof/out/loomis_v2_contact.png", sheet.toPNG());
+fs.writeFileSync("proof/out/loomis_v2_contact_small.png", sheet.downscale(2).toPNG()); // critic-readable size
 console.log("wrote proof/out/loomis_v2_contact.png");
 console.log("REVIEW: " + (defects.length ? "\n - " + defects.join("\n - ") : "clean (all automated checks pass)"));
 if (defects.some((s) => /no usable outline/.test(s))) process.exit(1);
