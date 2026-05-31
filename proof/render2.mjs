@@ -2,7 +2,7 @@
 // coverage; construction curves are hidden-line tested against the same buffer.
 import fs from "node:fs";
 import { Canvas, rotateYawPitch, project, deg } from "./core.mjs";
-import { craniumPoints, jawPoints, buildZ, outlineScan, largestComponent, jawSection, smoothClosed, dp, R } from "./solid.mjs";
+import { craniumPoints, jawPoints, neckPoints, buildZ, outlineScan, largestComponent, jawSection, smoothClosed, dp, R } from "./solid.mjs";
 
 // the inked construction marks (curves only; the outline comes from the z-buffer)
 function curves() {
@@ -50,9 +50,9 @@ function runsVisible(pts, z, W, H, cx, cy, scale, yaw, pitch, tol = 0.06) {
 }
 
 function renderTile(yawDeg, pitchDeg) {
-  const W = 360, H = 520, scale = 150, cx = 180, cy = 188;
+  const W = 360, H = 560, scale = 120, cx = 180, cy = 150;
   const yaw = deg(yawDeg), pitch = deg(pitchDeg);
-  const z = buildZ(W, H, cx, cy, scale, yaw, pitch, [craniumPoints(), jawPoints()]);
+  const z = buildZ(W, H, cx, cy, scale, yaw, pitch, [craniumPoints(), jawPoints(), neckPoints()]);
   const cv = new Canvas(W, H);
   let seed = 11 + Math.round(yawDeg * 3 + pitchDeg * 5);
 
@@ -74,7 +74,7 @@ const angles = [
   { yaw: 0, pitch: 7 }, { yaw: 33, pitch: 7 },
   { yaw: 78, pitch: 4 }, { yaw: 30, pitch: -24 },
 ];
-const gut = 12, TW = 360, TH = 520;
+const gut = 12, TW = 360, TH = 560;
 const sheet = new Canvas(2 * TW + 3 * gut, 2 * TH + 3 * gut, [245, 244, 240]);
 angles.forEach((a, i) => {
   const tile = renderTile(a.yaw, a.pitch);

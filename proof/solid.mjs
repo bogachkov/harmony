@@ -9,13 +9,37 @@ const C = 0.80; // side cut-plane offset (how flat the temples are)
 // jaw/face cross-sections (cheek -> chin). wzF = forward depth (chin/face side),
 // wzB = back depth (flatter, tucks under the skull). Exported so curves ride the surface.
 export const JAW_LEVELS = [
-  { y: -0.20, wx: 0.66, wzF: 0.78, wzB: 0.50, zc: 0.02 },
-  { y: -0.70, wx: 0.72, wzF: 0.74, wzB: 0.46, zc: 0.10 },
-  { y: -1.10, wx: 0.66, wzF: 0.68, wzB: 0.38, zc: 0.16 },
-  { y: -1.50, wx: 0.50, wzF: 0.60, wzB: 0.28, zc: 0.22 },
-  { y: -1.80, wx: 0.33, wzF: 0.52, wzB: 0.20, zc: 0.26 },
-  { y: -2.00, wx: 0.12, wzF: 0.44, wzB: 0.15, zc: 0.30 },
+  { y: -0.20, wx: 0.70, wzF: 0.78, wzB: 0.55, zc: 0.02 }, // temple/cheek
+  { y: -0.70, wx: 0.74, wzF: 0.74, wzB: 0.50, zc: 0.10 }, // zygomatic (widest)
+  { y: -1.05, wx: 0.70, wzF: 0.70, wzB: 0.42, zc: 0.16 }, // jaw angle (gonial corner) - stays wide
+  { y: -1.35, wx: 0.55, wzF: 0.66, wzB: 0.34, zc: 0.22 }, // along the jawline
+  { y: -1.65, wx: 0.42, wzF: 0.62, wzB: 0.26, zc: 0.27 },
+  { y: -1.85, wx: 0.32, wzF: 0.58, wzB: 0.20, zc: 0.30 }, // chin block - keeps width
+  { y: -1.98, wx: 0.26, wzF: 0.52, wzB: 0.16, zc: 0.32 }, // chin base (flat-ish, not a point)
 ];
+
+// neck: a forward-set tapered cylinder so the silhouette doesn't pinch to a tip.
+export function neckPoints() {
+  const levels = [
+    { y: -1.45, r: 0.40, zc: -0.14 },
+    { y: -2.10, r: 0.44, zc: -0.07 },
+    { y: -2.90, r: 0.50, zc: 0.00 },
+  ];
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const pts = [];
+  const steps = 120;
+  for (let s = 0; s <= steps; s++) {
+    const u = (s / steps) * (levels.length - 1);
+    const k = Math.min(levels.length - 2, Math.floor(u)), f = u - k;
+    const L = levels[k], N = levels[k + 1];
+    const y = lerp(L.y, N.y, f), r = lerp(L.r, N.r, f), zc = lerp(L.zc, N.zc, f);
+    for (let a = 0; a < 72; a++) {
+      const t = (a / 72) * 2 * Math.PI;
+      pts.push([r * Math.cos(t), y, zc + r * Math.sin(t)]);
+    }
+  }
+  return pts;
+}
 export function jawSection(y) {
   const L = JAW_LEVELS;
   if (y >= L[0].y) return L[0];
