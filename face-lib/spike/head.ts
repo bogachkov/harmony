@@ -311,7 +311,23 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const neckZ = -rz * 0.30;                        // column sits well back, under the occiput
   const neckLean = 0.10;                           // radians forward from vertical
   const pNeck = rotate(translate(p, [0, -neckCenterY, -neckZ]), [1, 0, 0], -neckLean);
-  const dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
+  let dNeck = cylinder(pNeck, [0, 1, 0], neckR, neckHalf);
+
+  // SCM muscles (Bridgman): two cords running from behind the ear (mastoid)
+  // forward-and-DOWN to the front-center base (sternal notch), forming the
+  // neck's front V. Each is a long thin ellipsoid added to the front of the
+  // cylinder; they converge low and center so the V-notch falls out between
+  // them. Soft contour line, not a hard ridge.
+  const scmTopY = neckTopY - ry * 0.05;
+  const scmBotY = neckBotY + neckHalf * 0.6;
+  const scmCY = (scmTopY + scmBotY) / 2;
+  const scmZ = neckZ + neckR * 0.7;                // front of the cylinder
+  const scm = (cx: number) => ellipsoid(
+    p, [cx, scmCY, scmZ],
+    [neckR * 0.28, (scmTopY - scmBotY) / 2, neckR * 0.5],
+  );
+  const scmX = neckR * 0.42;
+  dNeck = smin(dNeck, min(scm(-scmX), scm(scmX)), 0.10);
   head = smin(head, dNeck, 0.14);
 
   // 7. Ears — Loomis "flattened C", top at BROW line, bottom at NOSE BASE.
