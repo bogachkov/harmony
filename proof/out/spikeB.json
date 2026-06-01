@@ -1,0 +1,14 @@
+{
+  "tol": 15.2,
+  "seated": {
+    "ring": true,
+    "notch": 22.11,
+    "clean": false
+  },
+  "underseated": {
+    "ring": true,
+    "notch": 43.46,
+    "flagged": true
+  },
+  "pass": false
+}
