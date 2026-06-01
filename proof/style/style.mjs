@@ -72,11 +72,9 @@ export function applyStyle(style, A, ctx) {
   feature(A.eyeR,  A.eyeR.frame.o,  style.eye);
   feature(A.nose,  A.nose.rootFrame.o, style.nose);
   feature(A.mouth, A.mouth.center,  style.mouth);
-  // ears are SIDE features: drawn only when the temple faces the camera AND the
-  // face (nose) is at least partly toward us — so they vanish from a back view.
-  const faceToward = vis(A.nose.rootFrame.o) || vis(A.mouth.center) || vis(A.eyeL.frame.o) || vis(A.eyeR.frame.o);
-  if (style.ear && faceToward) {
-    feature(A.earL, A.earL.frame.o, style.ear);
-    feature(A.earR, A.earR.frame.o, style.ear);
-  }
+  // ears are SIDE features: each is drawn whenever its OWN temple faces the
+  // camera — including from behind (ears stick out laterally and are visible
+  // from the back). Visibility is the per-anchor facing test, same as the face.
+  feature(A.earL, A.earL.frame.o, style.ear);
+  feature(A.earR, A.earR.frame.o, style.ear);
 }

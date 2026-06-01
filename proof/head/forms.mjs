@@ -141,7 +141,9 @@ export class Ovoid {
   _normal(alpha, tau) {
     const rp = this._dr_dtau(tau) / this.ry;
     const zcp = this._dzc_dtau(tau) / this.ry;
-    return norm([ -Math.cos(alpha), zcp*Math.sin(alpha) + rp, -Math.sin(alpha) ]);
+    // OUTWARD normal: +cos/+sin radial part (was negated, which pointed inward —
+    // harmless for the silhouette test n·v=0 but wrong for facing-based occlusion).
+    return norm([ Math.cos(alpha), -(zcp*Math.sin(alpha)) + rp, Math.sin(alpha) ]);
   }
   normalAt(p) {
     const tau = (p[1]-this.c[1])/this.ry;

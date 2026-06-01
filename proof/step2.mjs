@@ -36,14 +36,22 @@ function mergedOutline(cam){
 // front of) the nearest head surface along its view ray — using the analytic
 // frontDepth of the masses, not a radial-dot guess. This correctly hides the
 // far-side eye in profile and keeps near features.
+// A feature is visible if the SURFACE IT SITS ON faces the camera — facing test
+// (surfaceNormal · viewDir > threshold), the proper occlusion the spec calls for.
+// This is robust at grazing/silhouette angles where the raw depth compare wrongly
+// culled near features (blank profile). Threshold slightly below 0 includes the
+// grazing edge (so the near eye/nose show in profile); clearly back-facing points
+// are hidden. The point's "home" mass = the one whose surface it lies on.
 function visibleFn(cam){
+  const vd=norm(viewDir(cam));
   const masses=[F.cranium,F.jaw,F.neck];
   return (pLocal)=>{
-    const s=project(pLocal,cam);
-    let nearest=-Infinity;
-    for(const m of masses){ const d=m.frontDepth(s.x,s.y,cam); if(d!==null && d>nearest) nearest=d; }
-    if(nearest===-Infinity) return false;            // ray misses the head
-    return s.depth >= nearest - 0.06;                // on/just-in-front of the surface
+    // home mass = the one this point is closest to lying ON (contains ≈ 1)
+    let home=null, bestErr=Infinity;
+    for(const m of masses){ const e=Math.abs(m.contains(pLocal)-1); if(e<bestErr){ bestErr=e; home=m; } }
+    if(!home) return false;
+    const n=home.normalAt(pLocal);
+    return dot(n, vd) > -0.15;                        // surface faces (or grazes) camera
   };
 }
 
@@ -77,15 +85,23 @@ const styleIsRef = referenceStyle.name==="reference" && referenceStyle.shippable
 // style must read ONLY anchors: applyStyle takes (style, A, ctx) — A is anchors.
 // verify drawing happens for front (features visible) but NOT for the pure-back
 // view (all face anchors on the hidden hemisphere => no face strokes).
-let frontDrew=0, backDrew=0;
-const countCtx=(yaw)=>{ let n=0; const cam=makeCamera({yaw:yaw*Math.PI/180,pitch:0,scale:92,cx:120,cy:185});
+let frontDrew=0, backFaceDrew=0, backEarDrew=0, profileDrew=0;
+const countCtx=(yaw, styleObj)=>{ let n=0; const cam=makeCamera({yaw:yaw*Math.PI/180,pitch:0,scale:92,cx:120,cy:185});
   const vis=visibleFn(cam);
-  applyStyle(referenceStyle,A,{P:(p)=>{const s=project(p,cam);return{x:s.x,y:s.y};},vis,stroke:()=>{n++;},stamp:()=>{n++;}}); return n; };
-frontDrew=countCtx(0); backDrew=countCtx(180);
+  applyStyle(styleObj,A,{P:(p)=>{const s=project(p,cam);return{x:s.x,y:s.y};},vis,stroke:()=>{n++;},stamp:()=>{n++;}}); return n; };
+// face-only style (no ear drawer) so we can assert no FACE features on the back
+const faceOnly = { ...referenceStyle, ear: undefined };
+const earOnly  = { ...referenceStyle, eye:undefined, nose:undefined, mouth:undefined, brow:undefined };
+frontDrew=countCtx(0, referenceStyle);
+backFaceDrew=countCtx(180, faceOnly);
+backEarDrew=countCtx(180, earOnly);
+profileDrew=countCtx(90, referenceStyle);
 const checks=[
   ["reference style flagged non-shippable", styleIsRef, `name=${referenceStyle.name} ship=${referenceStyle.shippable}`],
   ["features drawn on the front view", frontDrew>=6, `strokes=${frontDrew}`],
-  ["NO face features drawn on the pure-back view (occluded)", backDrew===0, `strokes=${backDrew}`],
+  ["NO face features (eye/nose/mouth/brow) on the pure-back view", backFaceDrew===0, `faceStrokes=${backFaceDrew}`],
+  ["ears DO show from the back (they stick out laterally)", backEarDrew>=1, `earStrokes=${backEarDrew}`],
+  ["profile shows SOME near features (not blank)", profileDrew>=2, `strokes=${profileDrew}`],
 ];
 console.log("step2 sub-step 4 — reference style over anchors");
 let pass=true; for(const[n,ok,info]of checks){console.log(` ${ok?"PASS":"FAIL"}  ${n}  ${info}`); if(!ok)pass=false;}
