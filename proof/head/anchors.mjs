@@ -52,7 +52,10 @@ export function anchors(F = headForms()) {
     rootFrame: frameAt(L.noseRoot, HEAD),
     baseFrame: frameAt(L.noseBase, HEAD),
     boundingPlane: { o: L.noseBase, normal: norm([0,0,1]) },
-    extent: { halfW: L.eyeWidth * 0.5, project: L.surfZ * (1/3) }, proxy: "base" };
+    // project so the nose tip clears the cranium front by a visible margin — the
+    // tip reaches ~1.5 ball-radii forward, derived from the mass (not a guess), so
+    // the nose actually reads in profile.
+    extent: { halfW: L.eyeWidth * 0.5, project: L.faceHalfW * 1.5 - L.noseBase[2] }, proxy: "base" };
 
   // EARS: stub frame with long-axis ~15° back lean + flare; back third at hinge
   // level; vertical span derived from the head reference. Emits a silhouette proxy.
@@ -78,6 +81,56 @@ export function anchors(F = headForms()) {
     extent: { halfW: L.faceHalfW * 0.85 }, proxy: false };
 
   return { eyeL, eyeR, nose, earL, earR, mouth, brow, _landmarks: L };
+}
+
+// silhouetteProxy(anchor) -> array of head-local 3D points forming a small convex
+// solid the OUTLINE union should include, or null if the anchor emits no proxy.
+// §1b: nose base + ear stub emit proxies (so profile keeps them); eye does not.
+// These are MOUNTING-VOLUME proxies (where the feature's mass sits), not feature
+// shapes — a style still draws the actual nose/ear over the anchor.
+export function silhouetteProxy(a) {
+  if (!a.proxy) return null;
+  if (a.proxy === "base") {
+    // nose: a small 3D wedge — a triangular prism from the bridge (root) down to
+    // the base, projecting forward along +z so the tip clears the cranium front.
+    // Built with real width AND depth so it survives the 2D union from any angle
+    // (not a degenerate sliver). Mounting volume only; a style draws the nose.
+    const r = a.rootFrame.o, b = a.baseFrame.o;
+    const proj = a.extent.project, hw = a.extent.halfW;
+    // The wedge must OVERLAP the head (or the boolean union treats it as a
+    // separate component and drops it). So start the back face well INSIDE the
+    // face surface (root pulled back toward head center) and project the tip out.
+    const backZ = r[2] * 0.4;                         // back face sunk into the head
+    const tip = [b[0], b[1], b[2] + proj];            // nose tip, forward of base
+    const pts = [];
+    const ncs = 4;
+    for (let i = 0; i <= ncs; i++) {
+      const t = i / ncs;
+      const y = r[1] + (b[1]-r[1])*t;
+      const w = hw * (0.4 + 0.6*t);                  // widen toward the base
+      const zBack = backZ;                            // inside the head
+      const zFront = b[2] + proj * t;                // out toward the tip
+      pts.push([ w, y, zBack]); pts.push([-w, y, zBack]);   // sunk-in back face
+      pts.push([ w, y, zFront]); pts.push([-w, y, zFront]); // forward face
+    }
+    pts.push(tip);
+    return pts;
+  }
+  if (a.proxy === "stub") {
+    // ear: a small oval disc on the stub frame, spanning spanY vertically and
+    // stubR across, flared off the skull along the outward axis.
+    const o = a.frame.o, x = a.frame.x, y = a.frame.y, z = a.frame.z;
+    const R = a.extent.stubR, sy = a.extent.spanY * 0.5;
+    const flare = (a.extent.flare || 0) * Math.PI / 180;
+    const out = add(o, scale(z, R * Math.sin(flare) * 0.5));
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const t = (i / 10) * 2 * Math.PI;
+      pts.push(add(add(out, scale(x, Math.cos(t) * R)), scale(y, Math.sin(t) * sy)));
+    }
+    return pts;
+  }
+  return null;
 }
 
 // orthonormality check for a frame (used by self-checks)
