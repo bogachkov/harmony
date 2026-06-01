@@ -41,6 +41,18 @@ export function centerline(forms) {
   return centerlineCranium(forms.cranium).concat(centerlineJaw(forms.jaw));
 }
 
+// Sub-step 3: bundle the validation guides as a TOGGLEABLE set. Returns the named
+// guides enabled by `opts` so a renderer can switch them on/off independently.
+// Each entry: { name, pts:[3d...], color }. These are validation overlays only —
+// not shipped line; a renderer chooses whether to draw them.
+export function validationGuides(forms, browY, opts={}) {
+  const { centerline:cl=true, brow=true } = opts;
+  const guides=[];
+  if(cl)   guides.push({ name:"centerline", pts:centerline(forms),          color:[120,120,200] });
+  if(brow) guides.push({ name:"brow",       pts:browWrap(forms.cranium,browY), color:[40,150,70] });
+  return guides;
+}
+
 // Sub-step 2: the BROW RIDGE wrap. A real brow is NOT a flat latitude ring — it
 // dips downward (toward the nose) at the front center over the brow ridge and
 // rises toward the temples. We trace it as a band whose HEIGHT varies with the
