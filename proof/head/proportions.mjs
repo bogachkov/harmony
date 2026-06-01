@@ -33,7 +33,7 @@ export function landmarks(F = headForms()) {
   const noseBaseY  = browY - third;         // midpoint brow→chin (equal thirds)
   const hairlineY  = browY + third;         // one third above brow
   const eyeY       = (crownY + chinY) / 2;  // eye line halfway down total head
-  const mouthY     = noseBaseY - (chinY - noseBaseY) * (1/3); // 1/3 nose→chin (lip line)
+  const mouthY     = noseBaseY + (chinY - noseBaseY) * (1/3); // 1/3 DOWN nose→chin (lip line)
 
   // --- horizontal: face ~5 eyes wide, one eye-width between the eyes ---
   const faceHalfW  = cran.rxz;              // half of face width at the eyes (from THIS F's cranium)
@@ -48,15 +48,21 @@ export function landmarks(F = headForms()) {
   const earX       = faceHalfW;             // at the temple
   const earZ       = -cran.rxz * (1/3);     // back third
 
-  // Snap a landmark onto the FRONT surface of the cranium ovoid at (x,y): solve
-  // the ellipsoid for the front +z. This makes features ride the real bulging
-  // surface (not a flat plane), so depth-occlusion treats on-face points as
-  // visible and culls far-side ones in profile. Falls back to surfZ if (x,y) is
-  // past the silhouette (e.g. low jaw points).
-  const onSurfaceZ = (x, y) => {
-    const C=cran.c, rx=cran.rxz, ry=cran.ry, rz=cran.rxz;
+  // Snap a landmark onto the FRONT surface of whichever mass it sits on (cranium
+  // for the upper face, jaw for the lower face/mouth/chin): solve each ellipsoid
+  // for its front +z at (x,y) and take the FRONTMOST. This makes lower-face
+  // features ride the jaw surface (not the cranium, which doesn't reach there),
+  // so depth-occlusion doesn't wrongly cull them. Falls back to surfZ.
+  const ellipsoidFrontZ = (m, x, y) => {
+    const C=m.c, rx=m.r?m.r[0]:m.rxz, ry=m.r?m.r[1]:m.ry, rz=m.r?m.r[2]:m.rxz;
     const k = 1 - ((x-C[0])/rx)**2 - ((y-C[1])/ry)**2;
-    return k>0 ? C[2] + rz*Math.sqrt(k) : surfZ;
+    return k>0 ? C[2] + rz*Math.sqrt(k) : null;
+  };
+  const onSurfaceZ = (x, y) => {
+    const zc = ellipsoidFrontZ(cran, x, y);
+    const zj = ellipsoidFrontZ(F.jaw, x, y);
+    const cands = [zc, zj].filter(z=>z!==null);
+    return cands.length ? Math.max(...cands) : surfZ;
   };
   const pt = (x, y) => [x, y, onSurfaceZ(x, y)];
 
