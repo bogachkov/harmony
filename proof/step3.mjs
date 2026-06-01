@@ -9,11 +9,13 @@ import { headForms } from "./head/forms.mjs";
 import { unionOuter, convexHull } from "./head/union.mjs";
 import { dp, smoothClosed } from "./head/geom.mjs";
 import { anchors, silhouetteProxy } from "./head/anchors.mjs";
-import { centerline, centerlineCranium } from "./head/contours.mjs";
+import { centerline, centerlineCranium, browWrap } from "./head/contours.mjs";
+import { landmarks } from "./head/proportions.mjs";
 
 const F = headForms();
 const ORDER=["cranium","jaw","neck"];
 const A=anchors(F);
+const L = landmarks(F);
 
 function norm(v){const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
 function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
@@ -46,14 +48,15 @@ function renderCell(yawDeg,pitchDeg){
   const o=mergedOutline(cam); if(o)cv.stroke([...o,o[0]],{width:3.0,color:[22,22,28],wobble:0.4,seed:1,closed:true,taper:false});
   const vis=visibleFn(cam);
   drawContour(cv,cam,centerline(F),vis,[120,120,200]);   // the centerline wrap
+  drawContour(cv,cam,browWrap(F.cranium, L.browY),vis,[90,170,110]); // the brow wrap
   return cv;
 }
 
-const angles=[[0,3,"front"],[30,3,"3/4"],[60,2,"yaw60"],[90,0,"profile"],[20,-18,"below"],[200,3,"back"]];
+const angles=[[0,3,"front"],[30,3,"3/4"],[60,2,"yaw60"],[90,0,"profile"],[20,-15,"tilt"],[200,3,"back"]];
 const cols=3,rows=2,CW=240,CH=320,gut=8;
 const sheet=new Canvas(cols*CW+(cols+1)*gut,rows*CH+(rows+1)*gut,[246,245,242]);
 angles.forEach(([y,p],i)=>sheet.blit(renderCell(y,p),gut+(i%cols)*(CW+gut),gut+((i/cols)|0)*(CH+gut)));
-fs.writeFileSync("proof/out/step3_substep1.png",sheet.toPNG());
+fs.writeFileSync("proof/out/step3_substep2.png",sheet.toPNG());
 
 // --- self-checks ---
 // 1. centerline points lie ON the surface (contains ≈ 1 for cranium meridian).
@@ -68,12 +71,27 @@ const visF=visibleFn(makeCamera({yaw:0,pitch:0,scale:92,cx:120,cy:185}));
 const visB=visibleFn(makeCamera({yaw:180*Math.PI/180,pitch:0,scale:92,cx:120,cy:185}));
 const full=centerline(F);
 const frontVis=full.filter(visF).length, backVis=full.filter(visB).length;
+// brow wrap checks: on the cranium surface, a full ring (x AND z vary => it wraps
+// around the head), occlusion shows the front arc and hides the back arc.
+const bw=browWrap(F.cranium, L.browY);
+const browOnSurface = bw.every(p=>Math.abs(F.cranium.contains(p)-1)<1e-6);
+const bxs=bw.map(p=>p[0]), bzs=bw.map(p=>p[2]);
+const browWraps = (Math.max(...bxs)-Math.min(...bxs))>0.5 && (Math.max(...bzs)-Math.min(...bzs))>0.5; // rings around
+// a horizontal ring shows ~half from any side; correctness = front and back views
+// show DIFFERENT halves (the visible-from-front set is largely hidden from back).
+const browFrontSet=new Set(bw.map((p,i)=>visF(p)?i:-1).filter(i=>i>=0));
+const browBackSet =new Set(bw.map((p,i)=>visB(p)?i:-1).filter(i=>i>=0));
+let browOverlap=0; for(const i of browFrontSet) if(browBackSet.has(i)) browOverlap++;
+const browFront=browFrontSet.size, browBack=browBackSet.size;
 const checks=[
   ["centerline rides the cranium surface (contains≈1)", onSurface, `maxErr ok`],
   ["centerline is a CURVE not a flat plane (z varies)", zVar>0.3, `zVar=${zVar.toFixed(2)}`],
-  ["occlusion: front shows the meridian, back hides it", frontVis>full.length*0.4 && backVis<full.length*0.25, `front=${frontVis} back=${backVis}/${full.length}`],
+  ["centerline occlusion: front shows, back hides", frontVis>full.length*0.4 && backVis<full.length*0.25, `front=${frontVis} back=${backVis}/${full.length}`],
+  ["brow wrap rides the surface (contains≈1)", browOnSurface, ``],
+  ["brow wrap RINGS the head (x and z both vary)", browWraps, `dx=${(Math.max(...bxs)-Math.min(...bxs)).toFixed(2)} dz=${(Math.max(...bzs)-Math.min(...bzs)).toFixed(2)}`],
+  ["brow wrap occlusion: front & back views show DIFFERENT halves", browFront>bw.length*0.3 && browBack>bw.length*0.3 && browOverlap<bw.length*0.15, `front=${browFront} back=${browBack} overlap=${browOverlap}`],
 ];
-console.log("step3 sub-step 1 — vertical centerline wrap");
+console.log("step3 sub-step 2 — horizontal brow wrap");
 let pass=true; for(const[n,ok,info]of checks){console.log(` ${ok?"PASS":"FAIL"}  ${n}  ${info}`); if(!ok)pass=false;}
-console.log("wrote proof/out/step3_substep1.png");
+console.log("wrote proof/out/step3_substep2.png");
 process.exit(pass?0:1);

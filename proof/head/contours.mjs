@@ -40,3 +40,18 @@ export function centerlineJaw(jaw, yTop=null, yBot=null, n=24) {
 export function centerline(forms) {
   return centerlineCranium(forms.cranium).concat(centerlineJaw(forms.jaw));
 }
+
+// Sub-step 2: the HORIZONTAL BROW WRAP — the latitude circle around the head at
+// brow height. On the Ovoid that is _point(alpha, tauBrow) swept over alpha (a
+// full ring around the surface at that height). Rides the real surface (occiput
+// shaping included). browY is the head-local brow height; tau = browY/ry.
+export function browWrap(ovoid, browY, n=72) {
+  const tau = (browY - ovoid.c[1]) / ovoid.ry;
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const alpha = (i/n)*2*Math.PI;                  // full ring around the head
+    pts.push(ovoid._point(alpha, tau));             // on the ovoid surface
+  }
+  return pts;
+}
+
