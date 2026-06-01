@@ -41,16 +41,24 @@ export function centerline(forms) {
   return centerlineCranium(forms.cranium).concat(centerlineJaw(forms.jaw));
 }
 
-// Sub-step 2: the HORIZONTAL BROW WRAP — the latitude circle around the head at
-// brow height. On the Ovoid that is _point(alpha, tauBrow) swept over alpha (a
-// full ring around the surface at that height). Rides the real surface (occiput
-// shaping included). browY is the head-local brow height; tau = browY/ry.
-export function browWrap(ovoid, browY, n=72) {
-  const tau = (browY - ovoid.c[1]) / ovoid.ry;
+// Sub-step 2: the BROW RIDGE wrap. A real brow is NOT a flat latitude ring — it
+// dips downward (toward the nose) at the front center over the brow ridge and
+// rises toward the temples. We trace it as a band whose HEIGHT varies with the
+// ring angle: the front-facing arc (alpha near +pi/2, the +z meridian) is pulled
+// down by `dip`, easing back to the base brow height at the sides. Because the
+// front center now sits at a different height than the temples, the projected
+// contour genuinely CURVES under yaw — the 3D cross-contour cue, for the real
+// anatomical reason (not a flat ring, not a fake bend). Still rides the surface:
+// every point is ovoid._point(alpha, tauOfThisAngle).
+export function browWrap(ovoid, browY, n=72, dip=0.18) {
+  const tauBase = (browY - ovoid.c[1]) / ovoid.ry;
   const pts=[];
   for(let i=0;i<=n;i++){
-    const alpha = (i/n)*2*Math.PI;                  // full ring around the head
-    pts.push(ovoid._point(alpha, tau));             // on the ovoid surface
+    const alpha = (i/n)*2*Math.PI;
+    // front-facing weight: 1 at the +z meridian (alpha=pi/2), 0 at the sides/back.
+    const frontW = Math.max(0, Math.sin(alpha));
+    const tau = tauBase - dip*frontW;               // dip the brow down at the front
+    pts.push(ovoid._point(alpha, tau));             // still exactly on the surface
   }
   return pts;
 }

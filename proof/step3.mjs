@@ -83,6 +83,14 @@ const browFrontSet=new Set(bw.map((p,i)=>visF(p)?i:-1).filter(i=>i>=0));
 const browBackSet =new Set(bw.map((p,i)=>visB(p)?i:-1).filter(i=>i>=0));
 let browOverlap=0; for(const i of browFrontSet) if(browBackSet.has(i)) browOverlap++;
 const browFront=browFrontSet.size, browBack=browBackSet.size;
+// curvature: at yaw35, the visible (front-facing) brow arc should BOW — measure
+// sagitta (max deviation of its screen-y from the straight chord between its ends).
+const camYaw=makeCamera({yaw:35*Math.PI/180,pitch:0,scale:92,cx:120,cy:185});
+const visY=visibleFn(camYaw);
+const arc=bw.filter(visY).map(p=>{const s=project(p,camYaw);return{x:s.x,y:s.y};});
+let browSag=0;
+if(arc.length>=3){const a=arc[0],b=arc[arc.length-1];const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+  for(const q of arc){const t=((q.x-a.x)*dx+(q.y-a.y)*dy)/(len*len);const px=a.x+t*dx,py=a.y+t*dy;browSag=Math.max(browSag,Math.hypot(q.x-px,q.y-py));}}
 const checks=[
   ["centerline rides the cranium surface (contains≈1)", onSurface, `maxErr ok`],
   ["centerline is a CURVE not a flat plane (z varies)", zVar>0.3, `zVar=${zVar.toFixed(2)}`],
@@ -90,6 +98,7 @@ const checks=[
   ["brow wrap rides the surface (contains≈1)", browOnSurface, ``],
   ["brow wrap RINGS the head (x and z both vary)", browWraps, `dx=${(Math.max(...bxs)-Math.min(...bxs)).toFixed(2)} dz=${(Math.max(...bzs)-Math.min(...bzs)).toFixed(2)}`],
   ["brow wrap occlusion: front & back views show DIFFERENT halves", browFront>bw.length*0.3 && browBack>bw.length*0.3 && browOverlap<bw.length*0.15, `front=${browFront} back=${browBack} overlap=${browOverlap}`],
+  ["brow wrap CURVES under yaw (front-facing arc bows, not flat)", browSag>5, `sagitta=${browSag.toFixed(1)}px at yaw35`],
 ];
 console.log("step3 sub-step 2 — horizontal brow wrap");
 let pass=true; for(const[n,ok,info]of checks){console.log(` ${ok?"PASS":"FAIL"}  ${n}  ${info}`); if(!ok)pass=false;}
