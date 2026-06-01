@@ -1,199 +1,181 @@
-# Head — Technical Design Spec (v4)
+# Head — Technical Design Spec (v5)
 
-Supersedes v3.1. v4 folds in the second review round (eng/graphics/art) on top of
-the owner overrides. Central principle unchanged: **core builds structure +
-anchors only; feature shapes belong to styles.**
-
+Supersedes v4. v5 folds in the third review round. Central principle unchanged:
+**core builds structure + anchors only; feature shapes belong to styles.**
 Attaches to the skeleton joints via "a joint owns a form" (`figure.mjs`). Pure
 Node, no network. Orthographic camera.
 
 ---
 
-## 0. Governing principle (read first)
+## 0. Governing principle
 
-Three layers, no bleed between them.
+Three layers, no bleed.
 
-**CORE — structure + anchors only.** The skull and its construction: masses that
-decide form and how it turns, the orbital sockets, the proportions, the merged
-**outer outline**, and occlusion. Core renders as the "burned head": structure
-present, every outward feature reduced to an **anchor** (a socket recess, a nose
-root + base, an ear stub, a mouth band). No feature shapes. The instant core
-decides an eye is a dot/almond or an ear is pointy, it has stolen a style
-decision.
+**CORE** — structure + anchors + the **outer outline** + occlusion. Renders as
+the "burned head": structure present, every feature reduced to an **anchor**. No
+feature shapes.
+**STYLE** — features + interior creases + line/ink. Free rein (isolated,
+swappable).
+**REFERENCE STYLE** — a flagged, non-shippable stand-in so we judge a human, not
+a wraith.
 
-**STYLE — features + line + interior creases.** A style reads core's anchors,
-draws the actual features in its vocabulary, draws any interior creases/seams,
-and inks all lines. Free rein here (isolated, swappable). Parent/child style
-inheritance is later.
-
-**REFERENCE STYLE — a flagged stand-in** so we can judge a human, not a wraith.
-Plain eyes/nose/ears over the anchors; marked in code as non-shippable.
-
-**Scope now: CORE + one or two STYLES (one the plain reference).**
-
-Two prior cycles, opposite failures: cycle 1 floated features on a smooth ball
-(decals, no structure); cycle 2 built real sockets but **rendered the bare
-construction as the final surface** (a skinless wraith) and shipped that anchor
-stage as the face.
-
----
+Scope now: CORE + one or two STYLES (one the plain reference). Prior cycles:
+cycle 1 floated features on a ball (decals); cycle 2 rendered the bare
+construction as the surface (a wraith) and shipped it.
 
 ## 0.5 Owner overrides (LOCKED — do not re-open without the owner)
-
-1. **Core draws the OUTER OUTLINE only.** Interior seams/creases — mass-pair
-   intersections, plane-break lines — are NOT computed in core; they are style's
-   job. (Too early; baking creases into core would confuse styles. Cheap to add
-   later. At style level this returns — expected.)
-2. **Seating-overlap is a core invariant.** Child masses sink into their neighbor
-   with margin so the merged outline never scallops. Spike B enforces a concavity
-   check.
+1. **Core draws the OUTER OUTLINE only.** Interior seams/creases are style's job.
+2. **Seating-overlap is a core invariant** so the merged outline never scallops.
 
 ---
 
-## 1. CORE — what it builds
+## 1. CORE
 
-### 1a. Masses (structure that decides form)
-- **Cranium:** an **ovoid** (egg), not a true sphere — it bulges at the occiput
-  (back-low) and flattens at the crown; sides cut flat at the temples. (If we ship
-  a plain sphere first, it's an explicit stand-in, flagged, because it reads as an
-  egg from behind and throws the profile silhouette off.)
-- **Brow ridge** carrying the central **keystone** (glabella dip between the
-  brows) and the wrap into the **temple** — not a smooth bar.
-- **Cheekbone** + the **zygomatic arch** sweeping back to the ear (separates the
-  cranium side-plane above from the jaw mass below; without it the side of the
-  head is a featureless ball in 3/4 and profile).
-- **Nose mass**, **chin**, **mandible** (lower jaw).
-- Mandible is owned by the **jaw hinge**; all midface masses stay on the
-  **cranium** joint.
+### 1a. Masses (structure)
+- **Cranium:** an **ovoid** — occiput bulge (back-low), flattened crown, temple
+  cuts. It is a **quadric / superellipsoid-of-revolution, NOT an affine sphere**,
+  so its silhouette is computed analytically as the apparent contour
+  (`n·viewDir = 0`), not as a projected ellipse. (A plain sphere may ship first as
+  a flagged stand-in.)
+- **Brow ridge** (owned by the **cranium** joint) carrying the **keystone**
+  (glabella dip) and wrapping into the temple — not a smooth bar.
+- **Cheekbone** — includes BOTH the **front malar/infra-orbital plane** (the apple
+  of the cheek, makes the front read as a face) AND the **zygomatic arch** sweeping
+  back to the ear.
+- **Nose mass.**
+- **Mandible** (lower jaw), with the **chin as a landmark of the mandible**, not a
+  separate sibling mass (avoids a double-counted symphysis seam).
+- Mandible owned by the **jaw hinge**; all midface masses on the **cranium** joint.
+- The **neck / cranium base** is owned upstream in `figure.mjs` and MUST be in the
+  back/profile validation render (a head floating off the neck reads wrong behind).
 
 ### 1b. Anchors (typed mounting brackets — NO feature shape)
-Each anchor is a **frame** (origin + 3 axes, so "up/roll" is unambiguous) +
-**extent** (size/radii or a bounding plane) + **owning joint**. A frame says
-*where, what angle, what size* a feature mounts; never what it looks like.
-- **Eye:** socket frame + extent, carrying **canthal tilt** (the socket axis is
-  canted — bone fact) and **brow-overhang/recession depth** (how far back and
-  under the brow the seat sits). Not lid/iris shape.
-- **Nose:** **root (bridge) anchor + base anchor + bounding plane** only.
-  Projection length/width is a style dial — core does NOT supply a filled nose
-  outline (that edges into shape).
-- **Ears:** stub frame with **long-axis** (top leans back ~15°) and **flare**
-  angle off the skull, placed in the **back third** at the jaw-hinge level,
-  spanning brow line → nose base.
-- **Mouth:** the band that wraps the **dental barrel** (so lips curve in 3/4),
-  giving **corner points (modiolus)** + the barrel curvature. **Split: upper-lip
-  band owned by the midface/cranium, lower-lip band owned by the mandible** (or an
-  open mouth drags the upper lip — cycle-1 regression). Lip thickness/curve =
-  style.
+Frame (origin + 3 axes) + extent + owning joint. Says where/angle/size, never
+what it looks like.
+- **Eye:** socket frame + extent {socketR, seatDepth}, carrying **canthal tilt**
+  and **brow recession depth**. Eye socket does NOT contribute a silhouette proxy
+  (it's a recess; core stays featureless there).
+- **Nose:** root frame + base frame + bounding plane. **Nose base contributes a
+  silhouette proxy** into the union (so profile keeps the nose). No filled outline;
+  projection is a style dial.
+- **Ears:** stub frame with long-axis (~15° back lean) + flare, back third at hinge
+  level, vertical span derived from the **crown→chin head reference** (hinge sets
+  depth only, so it doesn't drift on jaw-open). **Ear stub contributes a
+  silhouette proxy.**
+- **Mouth:** wraps the dental barrel; modiolus corner points + barrel curvature.
+  Upper-lip band owned by midface/cranium, lower-lip band by mandible — but the
+  anchor is **emitted as a single resolved frame after FK** (not two independently
+  posed bands the union would see as a gap when the jaw opens). Lip shape = style.
 
-### 1c. Proportions (Loomis ratios → landmarks; ratios only, no magic offsets)
-Derived as ratios of the masses so one cranium dial moves every anchor for free.
-Reconciled, single reference = top-of-cranium → chin:
-- **Ball center at the brow line; ball bottom at the nose base; jaw (wedge) hangs
-  below** to the chin. (Resolves the v3 "2/3 ball vs eyeline-half" ambiguity.)
+### 1c. Proportions (ratios only; single reference = crown → chin)
+- Ball center at brow line; ball bottom at nose base; jaw hangs below to chin.
 - eye line halfway down total head; face in equal thirds (hairline→brow→nose→
   chin); hairline halfway brow→crown.
-- **cranium width:height stated** (ball flattened on the sides to ~2/3 width via
-  the temple cut) so 3/4 doesn't fatten.
-- eye spacing = one eye-width between eyes; face ~five eyes wide.
-- ear height = brow→nose base; ear depth = back third of the ball at hinge level.
+- cranium width:height stated (~2/3 width via temple cut) so 3/4 doesn't fatten.
+- eye spacing one eye-width; face ~five eyes wide.
+- ear vertical span = brow→nose base (off the head reference); ear depth = back
+  third at hinge.
 
-### 1d. Outline + occlusion (OUTER OUTLINE ONLY — override #1)
-- Each form's silhouette computed analytically, projected, then **2D-unioned**
-  into one ordered outer ring (jaw sections enter as polygons — no rails). Vendor
-  a union lib (commit source); snap vertices; assert each silhouette polygon is
-  simple before union.
-- **No interior crease / surface-pair computation in core** (override #1).
-- **Seating-overlap invariant** (override #2): masses overlap so no scallop.
-- Occlusion of anchor/guide lines via per-form `frontDepth` (defined as the
-  **nearest front-facing sheet**; null where no coverage). Tolerance precedence:
-  a single base tolerance, **scaled per-form by that form's local depth slope**;
-  at seams prefer "visible against the form it rides on" (so each guide carries
-  its owning form/joint).
+### 1d. Outline + occlusion (OUTER OUTLINE ONLY)
+- Each form's analytic silhouette + jaw cross-sections + **nose-base & ear-stub
+  silhouette proxies** projected → **2D-unioned**. Vendor a named union lib (§4).
+- **Outer-ring extraction:** take the outer boundary of the union's **largest
+  filled component, discarding interior holes** (analytic equivalent of the old
+  raster `largestComponent`; seated masses can still project to holes/extra rings
+  at some yaws).
+- Assert each silhouette polygon is simple **before** union AND assert the union
+  **output** ring is simple; snap epsilon tied to the union lib's tolerance; if an
+  assert fails, recover by re-sampling that silhouette (fallback path defined, not
+  a dead end).
+- **Seating-overlap invariant** (override #2).
+- **Occlusion:** per-form `frontDepth` = nearest front-facing sheet, defined as
+  **min over {curved sheet, cut-plane sheet}** of front-facing depth (so temple
+  cuts occlude correctly in profile); null where no coverage. Base tolerance
+  scaled per-form by local depth slope, **clamped at a max** (slope → ∞ at edge-on
+  must not blow up). At seams prefer "visible against the form it rides on."
 
-### 1e. Cross-contours (Vilppu) — validation guides only
-- Centerline + brow wrap, riding the real masses, as **toggleable validation
-  guides**, not shipped lines. Asaro plane-break lines are deferred to style
-  (override #1).
+### 1e. Cross-contours (Vilppu) — toggleable validation guides only
+Centerline + brow wrap, riding the masses. Asaro plane-breaks deferred to style.
 
-### 1f. Core render target (the validation image)
-Core + reference style renders the head from front/3-4/side **and back/profile**;
-we judge "is the structure sound" only here, never on the bare wraith.
-
----
-
-## 2. STYLE — what it adds
-`applyStyle(coreHead, style, seed)`: draws features on the typed anchors, draws
-interior creases, inks all lines. Ink pipeline: simplify → resample → width →
-wobble; each stroke is ONE filled polygon (no additive disc stamps); wobble
-frequency scaled by 1/scale; seed from content identity `hash(styleSeed, lineName,
-segIndex)`, never draw-order/camera. The reference style is the plainest such
-style, flagged non-shippable in code (a registry flag, not just prose).
+### 1f. Validation image
+Core + reference style, rendered front/3-4/side **and back/profile** (with neck);
+judge "is structure sound" only here.
 
 ---
 
-## 3. Modules + key contracts
+## 2. STYLE
+`applyStyle(coreHead, style, seed)`: features on anchors, interior creases, ink.
+Ink: simplify → resample → width → wobble; one filled polygon per stroke; wobble
+freq scaled by 1/scale; seed = `hash(styleSeed, lineName, segIndex)`. Reference
+style flagged non-shippable in the registry.
 
-- `head/camera.mjs` — view transform (matrix/frame), not yaw/pitch. One space for
-  projection + depth + viewDir. `viewDir` unit-length. Normals + viewDir resolved
-  into form-local space per form before any dot test.
-- `head/forms.mjs` — Form interface: `silhouette(cam)->simplePolygon`,
-  `frontDepth(x,y,cam)->z|null` (nearest front-facing sheet), `normalAt(p3)->n`,
-  `contains(p3)->bool`.
-  - **Ellipsoid silhouette = the projected ellipse** (affine image of the unit
-    sphere's view-circle); **normals via inverse-transpose** of the form's scale
-    (non-uniform scale ≠ rotated unit normal — gets every facing/occlusion test
-    wrong otherwise).
-  - Sphere/ovoid with cuts: facing test (toward/away/edge-on) gates the temple
-    chord, which IS part of the outer silhouette in profile.
-- `head/anchors.mjs` — typed records (the core↔style contract, no trailing "…"):
+---
+
+## 3. Modules + contracts
+- `head/camera.mjs` — view transform (matrix/frame), not yaw/pitch. **World axis
+  convention stated once and shared with `figure.mjs` FK** (X=flex/forward-back,
+  Y=twist/up, Z=lateral; bones run -Y). Under ortho, **viewDir = constant world
+  -Z, rotated into each form's local frame once per form** (not a per-pixel ray).
+- `head/forms.mjs` — Form: `silhouette(cam)->simplePolygon`,
+  `frontDepth(x,y,cam)->z|null` (nearest front-facing sheet incl. cut plane),
+  `normalAt(p3)` (ellipsoid via inverse-transpose; ovoid = true quadric normal),
+  `contains(p3)`. Ovoid silhouette = apparent contour (`n·viewDir=0`); projected-
+  ellipse path reserved for true ellipsoids.
+- `head/anchors.mjs` — typed records (core↔style contract):
   ```
-  Anchor = { name, joint, frame:{o:[x,y,z], x:[..],y:[..],z:[..]}, extent }
-  eye:   extent {socketR, seatDepth}, frame carries canthal tilt
-  nose:  {rootFrame, baseFrame, boundingPlane}            // no outline
-  ear:   frame carries longAxis + flare; extent {stubR}
-  mouth: {upperBand(joint=cranium), lowerBand(joint=mandible),
-          cornerL, cornerR, barrelCurve}
+  Anchor = { name, joint, frame:{o,x,y,z}, extent, silhouetteProxy?:Polygon }
+  eye:   extent {socketR, seatDepth}; canthal tilt in frame; no proxy
+  nose:  {rootFrame, baseFrame, boundingPlane, baseProxy}
+  ear:   frame {longAxis, flare}; extent {stubR}; stubProxy
+  mouth: single resolved frame post-FK; {cornerL, cornerR, barrelCurve,
+          upperJoint:cranium, lowerJoint:mandible}
+  Line = { name, points, sourceForm, joint }
   ```
-  `Line = { name, points:[{x,y}], sourceForm, joint }` is the other contract item.
 - `head/proportions.mjs` — §1c.
-- `head/outline.mjs` — silhouettes + jaw sections → vendored 2D union → outer ring
-  → DP simplify + light smooth. Owner-tag ring edges with source form (occlusion
-  only). No crease extraction.
-- `head/contours.mjs` — §1e validation guides.
-- `style/style.mjs`, `style/ink.mjs` — §2; reference style here, flagged.
+- `head/outline.mjs` — silhouettes+proxies → named union lib → largest-component
+  outer ring (drop holes) → DP simplify + smooth; owner-tag edges (occlusion only);
+  output-simple assert + recovery.
+- `head/contours.mjs` — §1e.
+- `style/style.mjs`, `style/ink.mjs` — §2.
 - `head/render.mjs` — orchestrate + automated checks + critic.
 
 ## 4. Decisions locked + retirement
-- Orthographic final for v1 (optional depth-scale fake-perspective knob later).
-- **`core.mjs` rewrite scope:** keep `Canvas`/PNG + `project`/`rotateYawPitch` as
-  shared utilities; **`Canvas.stroke`'s additive disc-stamp is replaced** by the
-  single-filled-polygon stroke (additive stamps double-darken). State which other
-  callers depend on the old `stroke` before changing it.
-- **Retire BOTH old head paths** when the union lands: `solid.mjs`
-  (imported today by `render2.mjs` AND `voltron_render.mjs` — migrate or delete
-  those callers, do not assume they're clean) and `head.mjs`+`render.mjs` (the
-  second stale Loomis path). No two outline systems coexist.
+- Orthographic final for v1.
+- **Union lib:** `polygon-clipping` (Martínez–Rueda, MIT) — **commit source +
+  license into the repo**; document its multipolygon/hole output and how we pick
+  the largest outer ring.
+- **`core.mjs` rewrite scope:** keep `Canvas`/PNG + `project`/`rotateYawPitch`.
+  The additive disc-stamp `Canvas.stroke` is replaced by a single-filled-polygon
+  stroke — but it has **five callers** (`figure_render`, `battle_render`,
+  `voltron_render`, `render2`, `render`). Gate the new stroke behind an option
+  (old additive stays default for the stick-figure renderers) OR snapshot+accept
+  the visual delta on all five. Do not silently change them.
+- **Retire BOTH old head paths** when the union lands: `solid.mjs` (callers
+  `render2`, `voltron_render`) and `head.mjs`+`render.mjs`. State the fate of
+  `check.mjs` (used by `render2`) and the `voltron` head-attach demo (migrate to
+  the new head or drop) — don't leave dangling imports.
 
-## 5. Build order (spikes first; look after each; judge back+profile too)
-0. Spike A — camera/frame: posed cranium stays a centered, symmetric circle
-   across yaw=0; `|viewDir|=1`.
-0. Spike B — union robustness: masses seated with overlap (no exact tangency) +
-   concave section stack → clean outer ring; concavity check fails on scallop
-   notches.
+## 5. Build order (spikes first; look after each; judge back+profile)
+0. **Spike A — camera/frame:** posed cranium stays a centered, symmetric circle
+   across yaw=0; `|viewDir|=1`; **assert head and `figure.mjs` agree on world
+   axes** (the convention bridge).
+0. **Spike B — union robustness:** masses seated with overlap (no exact tangency)
+   + concave section stack → single clean outer ring (largest component, holes
+   dropped); **concavity check = signed turn test against a max-notch-depth
+   tolerance at mass-pair seams only** (must NOT fire on the legitimate jaw-neck /
+   under-chin concavities of a real head silhouette).
 1. Core masses + anchors → one merged outline (burned head).
 2. Reference style over anchors → judge "reads as a human / structure sound."
-   Iterate STRUCTURE here, not feature shapes.
 3. Validation cross-contours, occluded.
-4. A second (non-reference) style to prove core/style separation holds.
+4. A second (non-reference) style to prove core/style separation.
 
 ## 6. Guardrails (against the two cycles)
 - **Decision boundary:** feature shapes inside a STYLE PACK are mine to choose
-  (isolated, discardable). CORE gets no solo shape/aesthetic calls — structure +
-  anchors only.
+  (isolated, discardable). CORE gets no solo shape/aesthetic calls.
 - Never draw the construction as the final surface (the wraith).
 - No additive offsets / magic multipliers — ratios only.
 - Don't collapse a categorical shape (jaw type) into one smooth knob.
-- Socket is an anchor frame, not a drawn ellipse — core must not imply eye shape.
+- Socket is an anchor frame, not a drawn ellipse.
 - Judge every render from back/profile before calling structure sound.
 - Feature shapes (later): never iterate a shape silently more than once without
   showing a render/reference and getting the call.

@@ -1,4 +1,11 @@
-# Head Plan — plain English
+# Head Plan — plain English  (SUPERSEDED)
+
+> **SUPERSEDED by HEAD_TECH_PLAN.md (v5+).** This early plain-English plan
+> describes the old ball+wedge model with planes computed in core and features
+> last — the wraith ordering. Kept for history only. Do NOT code from it.
+
+---
+
 
 How all the research fits into one head we can build, pose, and rotate.
 Think of it as a stack of layers, each one adding what the one below can't do.
