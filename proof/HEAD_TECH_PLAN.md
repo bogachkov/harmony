@@ -48,6 +48,23 @@ Why this matters (the two prior cycles, opposite failures):
 
 ---
 
+## 0.5 Owner overrides (LOCKED — do not re-open without the owner)
+
+Decided by the project owner after the v3 review. Future review rounds must not
+re-litigate these; revisit only if the owner reopens.
+
+1. **Core draws the OUTER OUTLINE only.** Interior seams/creases — where masses
+   meet, mass-pair surface intersections, plane-break lines — are NOT computed in
+   core. They are the STYLE's job. (Reviewers pushed to compute surface-pair
+   intersection creases in core; owner's call: too early, and baking creases into
+   core would confuse styles. May prove wrong; cheap to add later. At style level
+   this question returns — expected.)
+2. **Seating-overlap is a core invariant.** Child masses must sink into their
+   neighbor with margin so the merged outline never scallops (the notch between
+   two barely-touching bumps). Spike B enforces a concavity check.
+
+---
+
 ## 1. CORE — what it builds
 
 ### 1a. Masses (structure that decides form)
@@ -80,20 +97,24 @@ cycle-1 anti-pattern: `eyeY=(ry+chinY)/2`, `cheekY=-ry*0.35`).
 - eye spacing = one eye-width between eyes; face ~five eyes wide.
 - ears behind the centerline, spanning brow line → nose base.
 
-### 1d. Outline + occlusion
+### 1d. Outline + occlusion (OUTER OUTLINE ONLY — override #1)
 - Each form's silhouette computed analytically, projected, then **2D-unioned**
   into one ordered outer ring (jaw cross-sections enter the union as polygons —
   no rails). Vendor a proven union lib (commit its source); snap vertices,
   assert each silhouette polygon is simple before union.
-- Occlusion of contour/anchor lines via per-form `frontDepth` with a single
-  shared depth tolerance; at mass seams prefer "visible against the form it rides
-  on."
+- **No interior crease / surface-pair-intersection computation in core** (override
+  #1 — that's style's job). The union keeps the outer ring only.
+- **Seating-overlap invariant** (override #2): child masses overlap their parent
+  so the merged ring has no scallop notches.
+- Occlusion of anchor/guide lines via per-form `frontDepth` (nearest front-facing
+  sheet) with a shared tolerance; at seams, prefer "visible against the form it
+  rides on" (so the guide must carry its owning form).
 
-### 1e. Cross-contours (Vilppu) + plane edges (Asaro), as structure cues
-- Centerline + brow wrap (must ride the real masses — dip over brow/nose/chin).
-- Four load-bearing plane breaks: cheekbone front↔side turn, brow shelf, nose
-  side plane, chin/under-jaw. Tag crease (always) vs smooth-transition (view-
-  gated). Draw silhouette/crease edges, not the full facet graph.
+### 1e. Cross-contours (Vilppu) — validation guides only
+- Centerline + brow wrap (must ride the real masses — dip over brow/nose/chin),
+  rendered as **toggleable validation guides**, not shipped lines.
+- **Asaro plane-break lines are deferred to style** (override #1 — they are
+  interior creases). Core does not draw them.
 
 ### 1f. Core render target (the validation image)
 Core alone renders the "burned head": outline + masses + anchors + chosen
@@ -132,8 +153,8 @@ The **reference style** is the plainest possible such style, flagged as a stand-
   joint) for eye/nose/ear/mouth. Core's only "feature" output.
 - `head/proportions.mjs` — Loomis ratios → landmarks (§1c).
 - `head/outline.mjs` — silhouettes + jaw sections → vendored 2D union → ordered
-  ring → DP simplify + light smooth. **After union, re-link each output edge to
-  its source form so normals survive for crease/edge tests.**
+  outer ring → DP simplify + light smooth. Owner-tag each ring edge with its
+  source form (for occlusion only). No crease extraction (override #1).
 - `head/planes.mjs`, `head/contours.mjs` — §1e.
 - `style/style.mjs`, `style/ink.mjs` — §2. Reference style lives here, flagged.
 - `head/render.mjs` — orchestrate + automated checks + critic.
@@ -148,7 +169,8 @@ The **reference style** is the plainest possible such style, flagged as a stand-
 
 ## 5. Build order (spikes first; look after each; judge from several angles)
 0. Spike A — camera/frame: posed cranium stays a centered, symmetric circle.
-0. Spike B — union robustness: tangent circle + concave section stack → clean ring.
+0. Spike B — union robustness: masses seated with overlap (no exact tangency) +
+   concave section stack → clean outer ring; concavity check fails on scallop notches.
 1. Core masses + anchors → one merged outline (the burned head). First "reads as a
    skull-structure" look.
 2. Reference style over the anchors → judge "reads as a human / is the structure
