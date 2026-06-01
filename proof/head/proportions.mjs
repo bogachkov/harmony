@@ -48,19 +48,31 @@ export function landmarks(F = headForms()) {
   const earX       = faceHalfW;             // at the temple
   const earZ       = -cran.rxz * (1/3);     // back third
 
+  // Snap a landmark onto the FRONT surface of the cranium ovoid at (x,y): solve
+  // the ellipsoid for the front +z. This makes features ride the real bulging
+  // surface (not a flat plane), so depth-occlusion treats on-face points as
+  // visible and culls far-side ones in profile. Falls back to surfZ if (x,y) is
+  // past the silhouette (e.g. low jaw points).
+  const onSurfaceZ = (x, y) => {
+    const C=cran.c, rx=cran.rxz, ry=cran.ry, rz=cran.rxz;
+    const k = 1 - ((x-C[0])/rx)**2 - ((y-C[1])/ry)**2;
+    return k>0 ? C[2] + rz*Math.sqrt(k) : surfZ;
+  };
+  const pt = (x, y) => [x, y, onSurfaceZ(x, y)];
+
   return {
     // vertical landmarks (head-local y)
     crownY, browY, noseBaseY, hairlineY, eyeY, mouthY, chinY, ballBottomY,
-    // derived points (head-local [x,y,z])
+    // derived points (head-local [x,y,z]) — snapped to the cranium surface
     crown:    [0, crownY, 0],
-    brow:     [0, browY, surfZ],
-    eyeL:     [ eyeCenterX, eyeY, surfZ],
-    eyeR:     [-eyeCenterX, eyeY, surfZ],
-    noseRoot: [0, browY, surfZ],            // root at brow line
-    noseBase: [0, noseBaseY, surfZ],
-    mouthC:   [0, mouthY, surfZ],
-    mouthL:   [ eyeCenterX, mouthY, surfZ],
-    mouthR:   [-eyeCenterX, mouthY, surfZ],
+    brow:     pt(0, browY),
+    eyeL:     pt( eyeCenterX, eyeY),
+    eyeR:     pt(-eyeCenterX, eyeY),
+    noseRoot: pt(0, browY),
+    noseBase: pt(0, noseBaseY),
+    mouthC:   pt(0, mouthY),
+    mouthL:   pt( eyeCenterX, mouthY),
+    mouthR:   pt(-eyeCenterX, mouthY),
     chin:     [0, chinY, 0],
     earL:     [ earX, earY, earZ],
     earR:     [-earX, earY, earZ],
