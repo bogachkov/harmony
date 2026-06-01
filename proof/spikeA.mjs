@@ -18,15 +18,17 @@ const S = solve({});                       // neutral pose
 const cran = S.cranium, neck = S.neck;
 const ballCentre = add(cran.origin, apply(cran.frame, [0, LIFT, 0]));
 
+function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
 function renderCell(yawDeg, pitchDeg) {
   const W = 220, H = 300;
   const cam = makeCamera({ yaw: yawDeg * Math.PI / 180, pitch: pitchDeg * Math.PI / 180, scale: 95, cx: 110, cy: 150 });
   const cv = new Canvas(W, H);
   const ink = { width: 2.6, color: [30, 30, 38], wobble: 0.4, taper: false };
+  const P = (p) => project(sub(p, ballCentre), cam);   // recenter on the head
   // neck stick for context
-  cv.stroke([project(neck.origin, cam), project(cran.origin, cam)], { ...ink, seed: 1 });
+  cv.stroke([P(neck.origin), P(cran.origin)], { ...ink, seed: 1 });
   // sphere silhouette = circle at projected centre (ortho, uniform scale)
-  const c = project(ballCentre, cam), rad = R * cam.scale, ring = [];
+  const c = P(ballCentre), rad = R * cam.scale, ring = [];
   for (let i = 0; i <= 64; i++) { const t = (i / 64) * 2 * Math.PI; ring.push({ x: c.x + rad * Math.cos(t), y: c.y - rad * Math.sin(t) }); }
   cv.stroke(ring, { ...ink, seed: 2, closed: true });
   return { cv, centre: c, cam };

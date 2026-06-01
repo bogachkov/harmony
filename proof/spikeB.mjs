@@ -10,9 +10,9 @@ import { circleRing, unionOuter, maxNotchDepth } from "./head/union.mjs";
 // head-local spheres: cranium + two cheeks + jaw. Seated vs under-seated sets.
 const SEATED = [
   { c: [0, 0, 0], r: 1.0 },
-  { c: [0.55, -0.35, 0.45], r: 0.5 },
-  { c: [-0.55, -0.35, 0.45], r: 0.5 },
-  { c: [0, -1.05, 0.30], r: 0.6 },
+  { c: [0.40, -0.25, 0.30], r: 0.62 },   // cheeks seated deep into the cranium
+  { c: [-0.40, -0.25, 0.30], r: 0.62 },
+  { c: [0, -0.78, 0.18], r: 0.72 },      // jaw overlaps the lower cranium well
 ];
 const UNDERSEATED = [
   { c: [0, 0, 0], r: 1.0 },
