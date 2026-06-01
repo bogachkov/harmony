@@ -81,6 +81,159 @@ export class Ellipsoid {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sub-step 2: OVOID — a true non-affine egg (occiput bulge back-low, flattened
+// crown), NOT an affine sphere. Modeled as a surface of revolution about the
+// vertical (y) axis with a radius profile r(y) AND a spine that shifts backward
+// with height zc(y) (the occiput). Because it is non-affine, the apparent
+// contour is NOT a fixed great circle; we solve n·viewDir=0 EXACTLY per height.
+//
+// Surface: S(α,τ) = ( r(τ)cosα , ry·τ , zc(τ) + r(τ)sinα ),  τ∈(-1,1).
+// Normal ∝ (-cosα, zc'·sinα + r', -sinα)  (derived from S_α × S_y, /r).
+// Silhouette condition n·v=0  ⇒  A cosα + B sinα = C  with
+//   A=-vx,  B=(zc'·vy - vz),  C=-r'·vy   → closed-form α solutions per height.
+// Every emitted point therefore lies ON the true contour. Shape coefficients
+// (radii + profile knobs) are config, not in-formula geometry fudge.
+export class Ovoid {
+  constructor(c, {
+    rxz = 0.86,        // horizontal radius (width/depth) of the cranium ball
+    ry = 1.0,          // vertical half-height
+    crownExp = 0.42,   // <0.5 flattens the dome (crown); 0.5 = sphere
+    taper = 0.10,      // >0 narrows the top vs bottom (egg)
+    occ = 0.16,        // occiput: backward (-z) bulge magnitude
+    occCenter = -0.35, // height (τ) where the occiput bulge peaks (lower-back)
+    occWidth = 0.45,   // spread of the occiput bulge
+  } = {}) {
+    this.c = c;
+    Object.assign(this, { rxz, ry, crownExp, taper, occ, occCenter, occWidth });
+  }
+
+  // radius profile r(τ) and its τ-derivative.
+  _r(tau) {
+    const base = Math.pow(Math.max(1e-9, 1 - tau*tau), this.crownExp);
+    return this.rxz * base * (1 - this.taper*tau);
+  }
+  _dr_dtau(tau) {
+    const s = Math.max(1e-9, 1 - tau*tau);
+    const base = Math.pow(s, this.crownExp);
+    const dbase = this.crownExp * Math.pow(s, this.crownExp - 1) * (-2*tau);
+    const taperF = (1 - this.taper*tau);
+    return this.rxz * (dbase*taperF + base*(-this.taper));
+  }
+  // spine back-shift zc(τ) (occiput) and its τ-derivative — a smooth Gaussian lobe.
+  _zc(tau) {
+    const z = (tau - this.occCenter) / this.occWidth;
+    return -this.occ * Math.exp(-z*z);
+  }
+  _dzc_dtau(tau) {
+    const z = (tau - this.occCenter) / this.occWidth;
+    return -this.occ * Math.exp(-z*z) * (-2*z / this.occWidth);
+  }
+
+  // surface point at (alpha, tau)
+  _point(alpha, tau) {
+    const r = this._r(tau), zc = this._zc(tau);
+    return [ r*Math.cos(alpha), this.ry*tau, zc + r*Math.sin(alpha) ];
+  }
+
+  // exact outward normal at (alpha, tau): ∝ (-cosα, zc'·sinα + r', -sinα),
+  // where r',zc' are d/dy = (1/ry) d/dτ.
+  _normal(alpha, tau) {
+    const rp = this._dr_dtau(tau) / this.ry;
+    const zcp = this._dzc_dtau(tau) / this.ry;
+    return norm([ -Math.cos(alpha), zcp*Math.sin(alpha) + rp, -Math.sin(alpha) ]);
+  }
+  normalAt(p) {
+    const tau = (p[1]-this.c[1])/this.ry;
+    const r = this._r(tau), zc = this._zc(tau);
+    const alpha = Math.atan2((p[2]-this.c[2]) - zc, (p[0]-this.c[0]));
+    return this._normal(alpha, tau);
+  }
+
+  // Solve A cosα + B sinα = C → up to two α in [0,2π). Returns [] if |C|>R.
+  _solveAlpha(A, B, C) {
+    const R = Math.hypot(A, B);
+    if (R < 1e-12 || Math.abs(C) > R + 1e-12) return [];
+    const phi = Math.atan2(B, A);              // A cosα+B sinα = R cos(α-phi)
+    const d = Math.acos(Math.max(-1, Math.min(1, C / R)));
+    return [phi + d, phi - d];
+  }
+
+  // height range where the silhouette exists = where A cosα+B sinα=C has roots,
+  // i.e. |C| <= sqrt(A²+B²). Returns [tauLo, tauHi], the true turning points
+  // (where the two α roots merge), found by bisection so the contour closes at
+  // the real top/bottom instead of a fixed grid leaving a flat chord.
+  _tauRange(v) {
+    const hasRoots = (t) => {
+      const rp = this._dr_dtau(t)/this.ry, zcp = this._dzc_dtau(t)/this.ry;
+      const A=-v[0], B=(zcp*v[1]-v[2]), C=-rp*v[1];
+      return (A*A+B*B) - C*C;                  // >=0 => roots exist
+    };
+    const bisect = (inT, outT) => { // inT has roots, outT doesn't
+      for (let k=0;k<50;k++){ const m=(inT+outT)/2; if (hasRoots(m)>=0) inT=m; else outT=m; }
+      return inT;
+    };
+    // assume mid has roots; march out to each pole to find the edges.
+    let hi = 0.999, lo = -0.999;
+    if (hasRoots(0) < 0) return null;
+    if (hasRoots(hi) < 0) hi = bisect(0, 0.999);
+    if (hasRoots(lo) < 0) lo = bisect(0, -0.999);
+    return [lo, hi];
+  }
+
+  // Apparent contour, traced by branch continuity between the true turning
+  // points. Two silhouette points per height; up the right rail, down the left.
+  silhouette(cam, n = 140) {
+    const v = norm(camViewDir(cam));
+    const rng = this._tauRange(v);
+    if (!rng) return [];
+    const [lo, hi] = rng;
+    const steps = Math.max(60, n >> 1);
+    const upper = [], lower = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = lo + (hi - lo) * (i / steps);
+      const rp = this._dr_dtau(t) / this.ry;
+      const zcp = this._dzc_dtau(t) / this.ry;
+      const roots = this._solveAlpha(-v[0], zcp*v[1] - v[2], -rp*v[1]);
+      if (roots.length < 2) {                   // at the very turning point: one merged pt
+        if (roots.length === 1) { const s=camProject(add(this.c,this._point(roots[0],t)),cam); upper.push({x:s.x,y:s.y}); }
+        continue;
+      }
+      const pts = roots.map((a) => { const s = camProject(add(this.c, this._point(a, t)), cam); return { x: s.x, y: s.y }; });
+      pts.sort((p, q) => p.x - q.x);
+      lower.push(pts[0]);                        // left rail
+      upper.push(pts[1]);                        // right rail
+    }
+    if (upper.length + lower.length < 4) return [];
+    return upper.concat(lower.reverse());        // closed loop, meets at turning points
+  }
+
+  contains(p) {
+    const tau = (p[1]-this.c[1])/this.ry;
+    if (Math.abs(tau) >= 1) return 2;           // outside vertical extent
+    const r = this._r(tau), zc = this._zc(tau);
+    const dx = p[0]-this.c[0], dz = (p[2]-this.c[2]) - zc;
+    return (dx*dx + dz*dz) / (r*r);             // <1 inside, =1 surface
+  }
+
+  // nearest front-facing surface depth along the view ray through (sx,sy):
+  // bisection on contains()-1 sign change (root of the analytic implicit, not a hull).
+  frontDepth(sx, sy, cam) {
+    const { invBasis } = camBasis(cam);
+    const ox = (sx-cam.cx)/cam.scale, oy = -(sy-cam.cy)/cam.scale;
+    const Xw=invBasis.X, Yw=invBasis.Y, dir=invBasis.Z;
+    const base = [ox*Xw[0]+oy*Yw[0], ox*Xw[1]+oy*Yw[1], ox*Xw[2]+oy*Yw[2]];
+    const g = (d) => this.contains([base[0]+d*dir[0], base[1]+d*dir[1], base[2]+d*dir[2]]) - 1;
+    // scan outward-to-inward for a sign change (front surface = larger d)
+    let lo=null, hi=null, prevD=3, prevG=g(3);
+    for (let d=3; d>=-3; d-=0.05) { const gd=g(d); if (prevG>0 && gd<=0){ lo=d; hi=prevD; break; } prevD=d; prevG=gd; }
+    if (lo===null) return null;
+    for (let k=0;k<40;k++){ const m=(lo+hi)/2; if (g(m)<=0) hi=m; else lo=m; }
+    const d=(lo+hi)/2, p=[base[0]+d*dir[0], base[1]+d*dir[1], base[2]+d*dir[2]];
+    return camProject(p, cam).depth;
+  }
+}
+
 // camera world basis (columns of the inverse of rotateYawPitch).
 function camBasis(cam) {
   const inv = (p) => {
