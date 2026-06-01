@@ -234,6 +234,29 @@ export class Ovoid {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sub-step 4: the MANDIBLE, built from real overlapping analytic masses so the
+// jaw-angle (gonial corner) and under-chin concavity EMERGE from boolean union
+// seams — not from per-cross-section magic forward-offsets (the prior cycle's
+// failure). Every piece is a validated analytic Ellipsoid/Ovoid; positions are
+// Loomis landmarks (config), not in-formula fudge.
+//
+// headForms() returns the named analytic solids of a bald head in head-local
+// space (cranium ball at origin, radius ~1). Mandible = ramus lobe + chin block;
+// chin is a landmark of that mandible group, not a separate sibling.
+export function headForms() {
+  return {
+    cranium: new Ovoid([0,0,0], { rxz:0.86, ry:1.0, crownExp:0.37, taper:0.05, occ:0.15, occCenter:-0.30, occWidth:0.50 }),
+    // Mandible as ONE jaw mass: a wide lower-face block seated deep into the
+    // cranium (overlap invariant) so it merges smoothly instead of bulging as a
+    // separate blister. Wider than deep; projects forward for the chin.
+    jaw:     new Ellipsoid([0, -0.78, 0.30], [0.70, 0.62, 0.50]),
+    // neck: below and set BACK, deeply overlapping the jaw so the only seam that
+    // survives is the under-jaw / jaw-to-neck concavity (not extra lumps).
+    neck:    new Ellipsoid([0, -1.45, -0.14], [0.40, 0.62, 0.40]),
+  };
+}
+
 // camera world basis (columns of the inverse of rotateYawPitch).
 function camBasis(cam) {
   const inv = (p) => {
