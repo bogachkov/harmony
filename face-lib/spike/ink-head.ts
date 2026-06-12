@@ -433,43 +433,52 @@ const drawHairStrokes = (cv: any, cam: Camera, ss: number) => {
   };
   const rnd = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5; return x - Math.floor(x); };
 
-  // one strand: theta th0->th1 at longitude ph0, with drift + gentle wave
-  const strand = (ph0: number, th0: number, th1: number, drift: number, waveA: number, waveF: number, width: number, col: number[], seed: number) => {
-    const N = 22;
+  // one LOCK: a tapered ribbon (thick at the root, point at the tip) following
+  // the scalp flow, clipped to visible hair. The lock IS the hair — the mass is
+  // built by overlapping these, not by a shaded fill. Optional bright highlight
+  // down the spine (the lit crest of the lock).
+  const lock = (ph0: number, th0: number, th1: number, drift: number, waveA: number, width: number, col: number[], seed: number, hi: boolean) => {
+    const N = 18;
     let seg: P2[] = [];
-    const flush = () => { if (seg.length > 1) cv.stroke(seg, { width, color: col, wobble: 0.5, seed, taper: true }); seg = []; };
+    const flush = () => {
+      if (seg.length > 1) {
+        cv.stroke(seg, { width, color: col, wobble: 0.9, seed, taper: true });
+        if (hi) cv.stroke(seg, { width: width * 0.26, color: [158, 134, 140], wobble: 0.5, seed: seed + 9, taper: true });
+      }
+      seg = [];
+    };
     for (let i = 0; i <= N; i++) {
       const t = i / N;
       const th = th0 + (th1 - th0) * t;
-      const ph = ph0 + drift * t + waveA * Math.sin(waveF * Math.PI * t + seed);
+      const ph = ph0 + drift * t + waveA * Math.sin(1.4 * Math.PI * t + seed);
       const P = surf(th, ph);
       const toCam = normalize(sub(cam.origin, P));
-      const vis = onHairSide(P) && dot(nrmOf(th, ph), toCam) > 0.12;
-      if (vis) { const q = projectPoint(cam, P); seg.push({ x: q.px * ss, y: q.py * ss }); }
+      if (onHairSide(P) && dot(nrmOf(th, ph), toCam) > 0.1) { const q = projectPoint(cam, P); seg.push({ x: q.px * ss, y: q.py * ss }); }
       else flush();
     }
     flush();
   };
 
-  const dark = [30, 24, 30], mid = [64, 50, 58], light = [120, 98, 106];
-  // LEADS — a sweep of longitudinal flow lines all around the crown
-  const LEADS = 16;
-  for (let i = 0; i < LEADS; i++) {
-    const ph = (i / LEADS) * Math.PI * 2;
-    const drift = (rnd(i + 1) - 0.5) * 0.5;
-    strand(ph, 0.16, 1.45, drift, 0.05, 1.5, 2.4, i % 5 === 0 ? light : mid, 100 + i);
+  const dark = [32, 25, 31], mid = [58, 45, 53];
+  // crown PART — locks fan away from a part meridian toward the front-top
+  const phPart = Math.PI * 0.5;
+  // dominant LEAD locks: a few wide ones that set the main flow and shape
+  for (let i = 0; i < 7; i++) {
+    lock(phPart + (i - 3) * 0.52, 0.15, 1.5, (i - 3) * 0.12, 0.05, 16, mid, 100 + i, true);
   }
-  // FILLER — clumps of short strands jittered around each lead longitude
-  const CLUMPS = 18;
+  // CLUMPS — tight fans of locks that build the mass; varied width/tone/length
+  const CLUMPS = 13;
   for (let c = 0; c < CLUMPS; c++) {
     const phC = (c / CLUMPS) * Math.PI * 2 + (rnd(c + 9) - 0.5) * 0.2;
-    const m = 5 + Math.floor(rnd(c + 3) * 4);
+    const m = 4 + Math.floor(rnd(c + 3) * 4);
     for (let k = 0; k < m; k++) {
-      const ph = phC + (rnd(c * 13 + k) - 0.5) * 0.28;
-      const th0 = 0.2 + rnd(c * 7 + k) * 0.25;
-      const th1 = th0 + 0.7 + rnd(c * 5 + k) * 0.5;
-      const col = rnd(c * 3 + k) > 0.8 ? light : (rnd(c * 17 + k) > 0.5 ? mid : dark);
-      strand(ph, th0, th1, (rnd(c + k) - 0.5) * 0.3, 0.04, 1.8, 1.3, col, 500 + c * 20 + k);
+      const ph = phC + (rnd(c * 13 + k) - 0.5) * 0.42;
+      const th0 = 0.14 + rnd(c * 7 + k) * 0.22;
+      const th1 = th0 + 0.85 + rnd(c * 5 + k) * 0.7;
+      const width = 7 + rnd(c * 11 + k) * 9;
+      const drift = (rnd(c + k) - 0.5) * 0.45;
+      const tone = rnd(c * 3 + k) > 0.55 ? mid : dark;
+      lock(ph, th0, th1, drift, 0.05, width, tone, 500 + c * 20 + k, rnd(c * 17 + k) > 0.72);
     }
   }
 };
@@ -551,8 +560,8 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
       cam.right[2] * u * cam.tanHalf + cam.up[2] * vv * cam.tanHalf + cam.forward[2],
     ]);
     const wp: Vec3 = [cam.origin[0] + rd[0] * g.depth[i], cam.origin[1] + rd[1] * g.depth[i], cam.origin[2] + rd[2] * g.depth[i]];
-    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR (the hit surface is the hair shell)
-      const sh = 0.55 + 0.5 * lam;
+    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR — flat dark UNDERCOAT only
+      const sh = 0.82 + 0.12 * lam;               // nearly flat; locks carry the form
       cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [hairCol[0] * sh, hairCol[1] * sh, hairCol[2] * sh], 1);
     } else {                                      // SKIN
       let sh = 0.76 + 0.24 * lam;
