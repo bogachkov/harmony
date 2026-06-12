@@ -483,11 +483,50 @@ const drawHairStrokes = (cv: any, cam: Camera, ss: number) => {
   }
 };
 
+// ---------------- ligne-claire (Hergé/Tintin) feature marks ----------------
+// Iconic + minimal: uniform crisp lines, dot eyes, a tiny nose hook, flat hair
+// drawn with a few clean flow lines (flat clumpMode). No wobble, no taper.
+type Style = 'natural' | 'ligne';
+const INK_L = [24, 22, 30];
+const cleanArc = (cv: any, a: P2, b: P2, bulge: number, width: number) =>
+  cv.stroke(arc(a, b, bulge), { width, color: INK_L, wobble: 0, taper: false });
+
+const drawEyeLigne = (cv: any, cL: P2, cR: P2) => {
+  const w = dist2(cL, cR), cx = (cL.x + cR.x) / 2, cy = (cL.y + cR.y) / 2;
+  cleanArc(cv, cL, cR, -w * 0.16, 3);                 // clean upper lid
+  cv.stamp(cx, cy + w * 0.06, w * 0.16, INK_L, 1);    // the eye dot
+};
+
+const drawHairLigne = (cv: any, cam: Camera, ss: number) => {
+  const [cx, cy, cz] = HAIR_CAP_C, [rx, ry, rz] = HAIR_CAP_R;
+  const surf = (th: number, ph: number): Vec3 => {
+    const d: Vec3 = [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)];
+    return [cx + d[0] * rx * 1.01, cy + d[1] * ry * 1.01, cz + d[2] * rz * 1.01];
+  };
+  const nrmOf = (th: number, ph: number): Vec3 => {
+    const d: Vec3 = [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)];
+    return normalize([d[0] / rx, d[1] / ry, d[2] / rz]);
+  };
+  for (let i = 0; i < 9; i++) {                       // a few clean flow lines
+    const ph = (i / 9) * Math.PI * 2;
+    let seg: P2[] = [];
+    const flush = () => { if (seg.length > 1) cv.stroke(seg, { width: 2.4, color: INK_L, wobble: 0, taper: false }); seg = []; };
+    for (let s = 0; s <= 20; s++) {
+      const th = 0.16 + (1.42 - 0.16) * (s / 20);
+      const P = surf(th, ph);
+      if (onHairSide(P) && dot(nrmOf(th, ph), normalize(sub(cam.origin, P))) > 0.12) {
+        const q = projectPoint(cam, P); seg.push({ x: q.px * ss, y: q.py * ss });
+      } else flush();
+    }
+    flush();
+  }
+};
+
 // Compose a full face from the projected anchors.
-const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
+const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number, style: Style = 'natural') => {
   const pc = (P: Vec3): P2 => { const q = projectPoint(cam, P); return { x: q.px * ss, y: q.py * ss }; };
   const es = HEAD_C.eyeSpacing;
-  drawHairStrokes(cv, cam, ss);
+  if (style === 'ligne') drawHairLigne(cv, cam, ss); else drawHairStrokes(cv, cam, ss);
   for (const sign of [-1, 1]) {
     const ex = sign * es, ez = surfZc(es, HEAD_C.eyeY);
     const eye3D: Vec3 = [ex, HEAD_C.eyeY + es * 0.04, ez];
@@ -495,33 +534,39 @@ const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
     if (-(nrm[0] * cam.forward[0] + nrm[1] * cam.forward[1] + nrm[2] * cam.forward[2]) < 0.12) continue;
     const inner: Vec3 = [ex - sign * es * 0.42, eye3D[1], ez], outer: Vec3 = [ex + sign * es * 0.42, eye3D[1], ez];
     const cL = pc(sign < 0 ? outer : inner), cR = pc(sign < 0 ? inner : outer);
-    drawEye(cv, cL, cR, 300 + sign);
-    const browY = HEAD_C.eyeY + es * 0.62;             // just above the eye, not at the ridge
-    drawBrow(cv, pc([ex - sign * es * 0.5, browY, surfZc(es, browY)]),
-      pc([ex + sign * es * 0.5, browY, surfZc(es, browY)]), 320 + sign);
+    const browY = HEAD_C.eyeY + es * 0.62;
+    const bL = pc([ex - sign * es * 0.5, browY, surfZc(es, browY)]), bR = pc([ex + sign * es * 0.5, browY, surfZc(es, browY)]);
+    if (style === 'ligne') { drawEyeLigne(cv, cL, cR); cleanArc(cv, bL, bR, -dist2(bL, bR) * 0.14, 2.6); }
+    else { drawEye(cv, cL, cR, 300 + sign); drawBrow(cv, bL, bR, 320 + sign); }
   }
-  // nose + ears are now 3D form (style3d.ts), inked by the G-buffer like the
-  // skull — not drawn here. Only surface marks remain in 2D.
-  // Mouth is a front-facing surface mark: skip it when the head is edge-on
-  // (otherwise it mis-projects onto the neck in profile).
+  // Mouth (+ ligne nose hook): front-facing surface marks only.
   const faceFront = -cam.forward[2];
   if (faceFront > 0.3) {
     const mw = es * 0.85;
-    drawMouth(cv, pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]),
-      pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), 380);
+    const mL = pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), mR = pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]);
+    if (style === 'ligne') {
+      cleanArc(cv, mL, mR, mw * 6 * 0.012 * SS, 2.6);   // simple mouth line, slight smile
+      const nz = surfZc(0, HEAD_C.noseBaseY) + HEAD_C.craniumRadii[2] * 0.1;
+      cleanArc(cv, pc([es * 0.04, HEAD_C.noseBaseY + es * 0.18, nz]), pc([es * 0.16, HEAD_C.noseBaseY - es * 0.02, nz]), es * 4, 2.6); // tiny nose hook
+    } else {
+      drawMouth(cv, mL, mR, 380);
+    }
   }
 };
 
 // ---------------- render one view to a Canvas ----------------
 const SS = 3; // supersample factor for ink
-const renderView = (sdf: SDF, yaw: number, pitch: number) => {
+const renderView = (sdf: SDF, yaw: number, pitch: number, style: Style = 'natural') => {
   const cam = makeCamera(yaw, pitch);
   const g = renderGBuffer(sdf, cam);
   const cv = new Canvas(IMG * SS, IMG * SS);
+  const ligne = style === 'ligne';
   const ink = (poly: Pt[], width: number, seed: number, closed = false) => {
-    const s = simplify(poly, 0.8).map((p) => ({ x: p.x * SS, y: p.y * SS }));
+    const s = simplify(poly, ligne ? 1.2 : 0.8).map((p) => ({ x: p.x * SS, y: p.y * SS }));
     if (s.length < 2) return;
-    cv.stroke(s, { width, color: [25, 25, 30], wobble: 1.1, seed, closed, taper: !closed });
+    cv.stroke(s, ligne
+      ? { width: closed ? 4.5 : 3, color: [24, 22, 30], wobble: 0, seed, closed, taper: false }
+      : { width, color: [25, 25, 30], wobble: 1.1, seed, closed, taper: !closed });
   };
   // Tone first (under the strokes): darken the RECESSES so hollows read as
   // hollows. Screen-space depth cavity — how much further a pixel is than its
@@ -560,8 +605,16 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
       cam.right[2] * u * cam.tanHalf + cam.up[2] * vv * cam.tanHalf + cam.forward[2],
     ]);
     const wp: Vec3 = [cam.origin[0] + rd[0] * g.depth[i], cam.origin[1] + rd[1] * g.depth[i], cam.origin[2] + rd[2] * g.depth[i]];
-    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR — light the big WIG form
-      const sh = 0.5 + 0.55 * lam;                // real big-form value: top lit, under/back dark
+    const isHair = hairShellSDF(wp) < styledHead(wp);
+    if (ligne) {
+      // FLAT fills with a single hard cel shadow (ligne claire)
+      const hairFlat = [196, 120, 56], hairSh = [150, 86, 40];   // Tintin auburn
+      const skinFlat = [247, 220, 198], skinSh = [226, 192, 168];
+      const shadow = cavity[i] > 0.02 || lam < 0.32;
+      const c = isHair ? (shadow ? hairSh : hairFlat) : (shadow ? skinSh : skinFlat);
+      cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, c, 1);
+    } else if (isHair) {                          // HAIR — light the big WIG form
+      const sh = 0.5 + 0.55 * lam;
       cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [hairCol[0] * sh, hairCol[1] * sh, hairCol[2] * sh], 1);
     } else {                                      // SKIN
       let sh = 0.76 + 0.24 * lam;
@@ -577,8 +630,7 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   for (let i = 0; i < recessed.length; i++) if (cavity[i] > 0.006) recessed[i] = 1;
   traceThin(creaseMask(g, dilate(recessed, 5))).forEach((p, i) => ink(p, 3.2, 200 + i, false));
 
-  // STYLE: draw a full normal face onto the scaffold.
-  drawFace(cv, cam, g, SS);
+  drawFace(cv, cam, g, SS, style);
   return cv.downscale(2);
 };
 
@@ -624,6 +676,13 @@ const main = () => {
   tiles.forEach((t, i) => sheet.blit(t, pad + i * (tw + pad), pad));
   writeFileSync(`${outDir}/sdf_ink.png`, sheet.toPNG());
   console.log(`wrote ${outDir}/sdf_ink.png`);
+
+  // SECOND STYLE: Hergé / ligne claire — same core, swapped style layer.
+  const ltiles = views.map(([, yaw, pitch]) => renderView(sdf, yaw, pitch, 'ligne'));
+  const lsheet = new Canvas(tw * 3 + pad * 4, th + pad * 2);
+  ltiles.forEach((t, i) => lsheet.blit(t, pad + i * (tw + pad), pad));
+  writeFileSync(`${outDir}/sdf_ligne.png`, lsheet.toPNG());
+  console.log(`wrote ${outDir}/sdf_ligne.png`);
 
   // form diagnostic sheet
   const ftiles = views.map(([, yaw, pitch]) => renderForm(sdf, yaw, pitch));
