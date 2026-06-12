@@ -152,15 +152,34 @@ const mooreTrace = (mask: Uint8Array, w: number, h: number): Pt[] => {
 
 // ---------------- interior crease / depth-step lines ----------------
 // Build a thin edge mask of interior contours, then walk it into polylines.
-const creaseMask = (g: GBuf): Uint8Array => {
+// Dilate a boolean mask by a disc of radius R (grow the suppression zone so
+// the crease RIM around a hollow is removed too, not just the floor).
+const dilate = (src: Uint8Array, R: number): Uint8Array => {
+  const out = new Uint8Array(IMG * IMG);
+  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
+    if (!src[y * IMG + x]) continue;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      if (dx * dx + dy * dy > R * R) continue;
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < IMG && yy < IMG) out[yy * IMG + xx] = 1;
+    }
+  }
+  return out;
+};
+
+const creaseMask = (g: GBuf, suppress: Uint8Array): Uint8Array => {
   const m = new Uint8Array(IMG * IMG);
   const at = (x: number, y: number) => y * IMG + x;
   for (let y = 1; y < IMG - 1; y++) {
     for (let x = 1; x < IMG - 1; x++) {
       const i = at(x, y);
       if (!g.hit[i]) continue;
-      // skip the silhouette band — that line is owned by marching squares
+      // skip the silhouette band — that line is owned by the Moore trace
       if (!g.hit[at(x - 1, y)] || !g.hit[at(x + 1, y)] || !g.hit[at(x, y - 1)] || !g.hit[at(x, y + 1)]) continue;
+      // skip recessed regions AND their rim — tone owns those (eye sockets,
+      // under-brow). A crease ring around a hollow reads as a convex eyeball;
+      // let the shadow carry it instead. Keeps the core style-neutral.
+      if (suppress[i]) continue;
       let depthJump = 0, crease = 0;
       const ni: Vec3 = [g.nx[i], g.ny[i], g.nz[i]];
       for (const j of [at(x + 1, y), at(x, y + 1), at(x - 1, y), at(x, y - 1)]) {
@@ -295,25 +314,35 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   // neighbourhood — fills the whole socket (deepest = darkest), unlike
   // normal-AO which leaves the socket floor bright (a donut that reads convex).
   // The core shades the SOCKET; it does not draw the eye.
+  // Cavity map: how much further each pixel is than its facing neighbourhood,
+  // gated so the grazing silhouette fringe (surface turning away, depth rising
+  // for free) does not count as a recess. Drives BOTH tone and crease removal.
   const blur = blurDepthOverHits(g, 16);
-  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
-    const i = y * IMG + x;
+  const cavity = new Float32Array(IMG * IMG);
+  for (let i = 0; i < IMG * IMG; i++) {
     if (!g.hit[i]) continue;
-    // Reject the grazing silhouette fringe: only shade pixels that FACE the
-    // camera. At the limb the surface turns away (facing -> 0) and depth rises
-    // for free — that is not a real cavity, so gate it out.
     const facing = -(g.nx[i] * cam.forward[0] + g.ny[i] * cam.forward[1] + g.nz[i] * cam.forward[2]);
     if (facing < 0.35) continue;
-    const cavity = g.depth[i] - blur[i];        // >0 = recessed behind surround
-    if (cavity <= 0.01) continue;
-    const a = Math.min(0.8, (cavity - 0.01) * 11) * Math.min(1, (facing - 0.35) / 0.4);
+    const c = (g.depth[i] - blur[i]) * Math.min(1, (facing - 0.35) / 0.4);
+    if (c > 0) cavity[i] = c;
+  }
+  // Tone first (under the strokes): darken recesses so hollows read as hollows.
+  // Fills the whole socket (deepest = darkest), so the eye region reads as a
+  // shadowed orbit, not an outlined bulge. The core shades the SOCKET; it does
+  // not draw the eye.
+  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
+    const i = y * IMG + x;
+    const a = Math.min(0.82, (cavity[i] - 0.008) * 12);
     if (a <= 0.02) continue;
     cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [50, 50, 60], a);
   }
   // silhouette (heaviest) — one closed outer loop
   ink(mooreTrace(g.hit, IMG, IMG), 5.5, 100, true);
-  // interior creases / depth-steps (lighter)
-  traceThin(creaseMask(g)).forEach((p, i) => ink(p, 3.2, 200 + i, false));
+  // interior creases / depth-steps (lighter) — recessed regions + their rim
+  // removed so no socket/brow ring; only true form-breaks survive (nose, jaw).
+  const recessed = new Uint8Array(IMG * IMG);
+  for (let i = 0; i < recessed.length; i++) if (cavity[i] > 0.006) recessed[i] = 1;
+  traceThin(creaseMask(g, dilate(recessed, 5))).forEach((p, i) => ink(p, 3.2, 200 + i, false));
   return cv.downscale(2);
 };
 
