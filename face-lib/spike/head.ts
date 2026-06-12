@@ -188,15 +188,17 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //    over a hollow; the eye is the most RECESSED thing, in shadow under it.
   const surfZ = c.frontZ(c.eyeY);
 
-  // 3a. Brow ridge — a bar across the brow line projecting forward + down,
-  //     a real supraorbital shelf the eye tucks beneath. Bridgman: the
-  //     supraorbital margin projects forward of the orbit.
-  const browRidgeZ = c.frontZ(c.browY) + rz * d.browRidge;
+  // 3a. Brow ridge — NOT a forward visor bar (that read as a Klingon shelf and
+  //     framed the eye into goggles). The supraorbital ridge is a gentle
+  //     fullness that is continuous with the forehead plane; it barely projects
+  //     past the cranium surface and melts in with a WIDE blend. Its job is only
+  //     to cap the orbit, letting the eye recess BELOW it — not to stick out.
+  const browRidgeZ = c.frontZ(c.browY) + rz * d.browRidge * 0.25;
   const ridge = ellipsoid(
-    p, [0, c.browY - c.eyeSpacing * 0.10, browRidgeZ],
-    [rx * 0.62, c.eyeSpacing * 0.34, rz * 0.14],
+    p, [0, c.browY - c.eyeSpacing * 0.04, browRidgeZ],
+    [rx * 0.50, c.eyeSpacing * 0.26, rz * 0.09],
   );
-  head = smin(head, ridge, 0.05);
+  head = smin(head, ridge, 0.22);
 
   // 3b. The eye — REBUILT minimal + stable. The prior version unioned an
   //     eyeball SPHERE into the head (min), so the sphere's silhouette inked
@@ -222,14 +224,18 @@ export const spikeHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   //  (surfZ - depth) and bites deep, so the eye region genuinely sinks in. (The
   //  prior version centered it in FRONT of the surface — that was the bug-eye
   //  cause: a forward poke instead of a backward hollow.)
-  // front pole of the carve = center + halfDepth must sit BEHIND surfZ so the
-  // recess actually bites the skin. halfDepth 0.20, center surfZ-0.24 → front
-  // pole at surfZ-0.04 (bites in 0.04, then hollows back 0.44 deep).
-  const socketDepthHalf = rz * 0.20;
-  const socketCZ = surfZ - rz * 0.04 - socketDepthHalf;
-  const socketHalf: Vec3 = [c.eyeSpacing * 0.56, c.eyeSpacing * 0.40, socketDepthHalf];
+  // The front pole of the carve must sit IN FRONT of the skin so the subtract
+  // actually removes surface material and scoops a real hollow. The prior math
+  // put the front pole at surfZ - rz*0.04 (BEHIND the skin) — so the carve only
+  // hollowed interior the skin hid, and the eye stayed at full cranium fullness
+  // (the proud "goggle" pad). Fix: front pole = surfZ + bite, biting in, then
+  // the ellipsoid hollows back deep behind it.
+  const socketDepthHalf = rz * 0.26;
+  const socketBite = rz * 0.09;                       // carve reaches this far IN FRONT of skin
+  const socketCZ = surfZ + socketBite - socketDepthHalf;
+  const socketHalf: Vec3 = [c.eyeSpacing * 0.60, c.eyeSpacing * 0.44, socketDepthHalf];
   const socket = (cx: number) => ellipsoid(p, [cx, socketY, socketCZ], socketHalf);
-  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.05);
+  head = smoothSubtract(head, min(socket(-c.eyeSpacing), socket(c.eyeSpacing)), 0.06);
 
   // 4. Nose — Loomis 5-plane wedge. Root at the brow (nasal root) between the
   //    eyes; the KEEL (bridge ridge) runs root->tip and is the line that

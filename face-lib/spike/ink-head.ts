@@ -19,7 +19,8 @@ import { mkdirSync } from 'node:fs';
 
 import type { Vec3 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
-import { spikeHead, DEFAULT_HEAD } from './head.ts';
+import { DEFAULT_HEAD } from './head.ts';
+import { skull } from './skull.ts';
 
 // proof/core.mjs is a self-contained rasterizer + hand-drawn stroke + PNG writer.
 const require = createRequire(import.meta.url);
@@ -346,11 +347,32 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   return cv.downscale(2);
 };
 
+// ---------------- diagnostic: plain shaded matte (SEE the geometry) ----------------
+// No lines, no cavity tone — just lambert from the G-buffer normals + light AO.
+// This is for reading the FORM (brow shelf, socket recession) decoupled from
+// all the ink extraction, so geometry bugs don't hide behind shading choices.
+const renderForm = (sdf: SDF, yaw: number, pitch: number) => {
+  const cam = makeCamera(yaw, pitch);
+  const g = renderGBuffer(sdf, cam);
+  const cv = new Canvas(IMG * SS, IMG * SS);
+  const L: Vec3 = normalize([-0.35, 0.55, 0.78]); // lamp: above, front, subject-left
+  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
+    const i = y * IMG + x;
+    if (!g.hit[i]) continue;
+    const lam = Math.max(0, g.nx[i] * L[0] + g.ny[i] * L[1] + g.nz[i] * L[2]);
+    const ao = g.ao[i];
+    const shade = (0.22 + 0.78 * lam) * (0.55 + 0.45 * ao); // 0..1
+    const v = Math.round(235 * shade + 18);
+    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [v, v, v], 1);
+  }
+  return cv.downscale(2);
+};
+
 // ---------------- contact sheet ----------------
 const main = () => {
   const outDir = '/home/user/harmony/proof/out';
   mkdirSync(outDir, { recursive: true });
-  const sdf: SDF = (p) => spikeHead(p);
+  const sdf: SDF = (p) => skull(p);
   const views: [string, number, number][] = [
     ['front', 0, 0],
     ['tq', -Math.PI / 4, 0],
@@ -367,5 +389,12 @@ const main = () => {
   tiles.forEach((t, i) => sheet.blit(t, pad + i * (tw + pad), pad));
   writeFileSync(`${outDir}/sdf_ink.png`, sheet.toPNG());
   console.log(`wrote ${outDir}/sdf_ink.png`);
+
+  // form diagnostic sheet
+  const ftiles = views.map(([, yaw, pitch]) => renderForm(sdf, yaw, pitch));
+  const fsheet = new Canvas(tw * 3 + pad * 4, th + pad * 2, [255, 255, 255]);
+  ftiles.forEach((t, i) => fsheet.blit(t, pad + i * (tw + pad), pad));
+  writeFileSync(`${outDir}/sdf_form.png`, fsheet.toPNG());
+  console.log(`wrote ${outDir}/sdf_form.png`);
 };
 main();
