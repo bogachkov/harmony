@@ -75,13 +75,29 @@ const normalAt = (sdf: SDF, p: Vec3): Vec3 => {
   ]);
 };
 
-type GBuf = { hit: Uint8Array; depth: Float32Array; nx: Float32Array; ny: Float32Array; nz: Float32Array };
+// Cheap SDF ambient occlusion: march a few steps along the surface normal and
+// measure how much the field undershoots the free-space distance. Concavities
+// (eye sockets, under the brow ridge, under nose + jaw) come back occluded.
+// This is what makes a recess READ as a recess instead of an outlined bulge.
+const ambientOcclusion = (sdf: SDF, p: Vec3, n: Vec3): number => {
+  let occ = 0, sca = 1;
+  for (let i = 1; i <= 6; i++) {
+    const h = 0.022 * i;           // sample out to ~0.13 (head half-width ~0.5)
+    const d = sdf([p[0] + n[0] * h, p[1] + n[1] * h, p[2] + n[2] * h]);
+    occ += (h - d) * sca;
+    sca *= 0.88;
+  }
+  return Math.max(0, Math.min(1, 1 - 4.5 * occ)); // 1 = open, 0 = deep recess
+};
+
+type GBuf = { hit: Uint8Array; depth: Float32Array; nx: Float32Array; ny: Float32Array; nz: Float32Array; ao: Float32Array };
 const renderGBuffer = (sdf: SDF, cam: Camera): GBuf => {
   const hit = new Uint8Array(IMG * IMG);
   const depth = new Float32Array(IMG * IMG);
   const nx = new Float32Array(IMG * IMG);
   const ny = new Float32Array(IMG * IMG);
   const nz = new Float32Array(IMG * IMG);
+  const ao = new Float32Array(IMG * IMG);
   for (let py = 0; py < IMG; py++) {
     const v = 1 - (2 * (py + 0.5)) / IMG;
     for (let px = 0; px < IMG; px++) {
@@ -97,10 +113,11 @@ const renderGBuffer = (sdf: SDF, cam: Camera): GBuf => {
         hit[i] = 1; depth[i] = r.t;
         const n = normalAt(sdf, r.p);
         nx[i] = n[0]; ny[i] = n[1]; nz[i] = n[2];
+        ao[i] = ambientOcclusion(sdf, r.p, n);
       }
     }
   }
-  return { hit, depth, nx, ny, nz };
+  return { hit, depth, nx, ny, nz, ao };
 };
 
 // ---------------- silhouette via Moore boundary following ----------------
@@ -230,16 +247,69 @@ const simplify = (pts: Pt[], eps: number): Pt[] => {
   return [a, b];
 };
 
+// Separable box blur of depth, averaged over HIT pixels only (so the
+// background never bleeds into the silhouette). Returns the local surface
+// depth envelope; depth - blur = how recessed a pixel is.
+const blurDepthOverHits = (g: GBuf, R: number): Float32Array => {
+  const sH = new Float32Array(IMG * IMG), cH = new Float32Array(IMG * IMG);
+  for (let y = 0; y < IMG; y++) {
+    for (let x = 0; x < IMG; x++) {
+      let s = 0, c = 0;
+      for (let dx = -R; dx <= R; dx++) {
+        const xx = x + dx;
+        if (xx < 0 || xx >= IMG) continue;
+        const j = y * IMG + xx;
+        if (g.hit[j]) { s += g.depth[j]; c++; }
+      }
+      sH[y * IMG + x] = s; cH[y * IMG + x] = c;
+    }
+  }
+  const out = new Float32Array(IMG * IMG);
+  for (let y = 0; y < IMG; y++) {
+    for (let x = 0; x < IMG; x++) {
+      let s = 0, c = 0;
+      for (let dy = -R; dy <= R; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= IMG) continue;
+        s += sH[yy * IMG + x]; c += cH[yy * IMG + x];
+      }
+      out[y * IMG + x] = c > 0 ? s / c : g.depth[y * IMG + x];
+    }
+  }
+  return out;
+};
+
 // ---------------- render one view to a Canvas ----------------
 const SS = 3; // supersample factor for ink
 const renderView = (sdf: SDF, yaw: number, pitch: number) => {
-  const g = renderGBuffer(sdf, makeCamera(yaw, pitch));
+  const cam = makeCamera(yaw, pitch);
+  const g = renderGBuffer(sdf, cam);
   const cv = new Canvas(IMG * SS, IMG * SS);
   const ink = (poly: Pt[], width: number, seed: number, closed = false) => {
     const s = simplify(poly, 0.8).map((p) => ({ x: p.x * SS, y: p.y * SS }));
     if (s.length < 2) return;
     cv.stroke(s, { width, color: [25, 25, 30], wobble: 1.1, seed, closed, taper: !closed });
   };
+  // Tone first (under the strokes): darken the RECESSES so hollows read as
+  // hollows. Screen-space depth cavity — how much further a pixel is than its
+  // neighbourhood — fills the whole socket (deepest = darkest), unlike
+  // normal-AO which leaves the socket floor bright (a donut that reads convex).
+  // The core shades the SOCKET; it does not draw the eye.
+  const blur = blurDepthOverHits(g, 16);
+  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
+    const i = y * IMG + x;
+    if (!g.hit[i]) continue;
+    // Reject the grazing silhouette fringe: only shade pixels that FACE the
+    // camera. At the limb the surface turns away (facing -> 0) and depth rises
+    // for free — that is not a real cavity, so gate it out.
+    const facing = -(g.nx[i] * cam.forward[0] + g.ny[i] * cam.forward[1] + g.nz[i] * cam.forward[2]);
+    if (facing < 0.35) continue;
+    const cavity = g.depth[i] - blur[i];        // >0 = recessed behind surround
+    if (cavity <= 0.01) continue;
+    const a = Math.min(0.8, (cavity - 0.01) * 11) * Math.min(1, (facing - 0.35) / 0.4);
+    if (a <= 0.02) continue;
+    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [50, 50, 60], a);
+  }
   // silhouette (heaviest) — one closed outer loop
   ink(mooreTrace(g.hit, IMG, IMG), 5.5, 100, true);
   // interior creases / depth-steps (lighter)
