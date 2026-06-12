@@ -60,9 +60,22 @@ const earSDF = (p: Vec3, sign: number): number => {
   return smin(ear, lobe, 0.03);
 };
 
+// ---- eyeball / lid mound: fills the core's deep orbit so the style's skin
+// covers it as a normal eye area instead of a sunken wraith hollow. The drawn
+// eye (iris, lids) then sits on this mound. Front pole ~ at the skin (gentle
+// convex lid), not a bulging frog-eye.
+const eyeballSDF = (p: Vec3, sign: number): number => {
+  const ex = sign * C.eyeSpacing;
+  const ey = C.eyeY + C.eyeSpacing * 0.04;
+  const ez = surfZ(C.eyeSpacing, ey);
+  const r = C.eyeSpacing * 0.64;
+  return sphere(p, [ex, ey, ez - r * 0.88], r);   // front pole ~ ez + 0.12r
+};
+
 // Core skull + the style's 3D form features.
 export const styledHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   let h = skull(p, dial);
+  h = smin(h, min(eyeballSDF(p, -1), eyeballSDF(p, 1)), 0.06); // fill the sockets first
   h = smin(h, noseSDF(p), 0.04);
   h = smin(h, min(earSDF(p, -1), earSDF(p, 1)), 0.02);
   return h;
