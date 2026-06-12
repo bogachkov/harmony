@@ -20,7 +20,7 @@ import { mkdirSync } from 'node:fs';
 import type { Vec3 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
 import { DEFAULT_HEAD, construct } from './head.ts';
-import { styledHead } from './style3d.ts';
+import { styledHead, hairShellSDF } from './style3d.ts';
 
 // proof/core.mjs is a self-contained rasterizer + hand-drawn stroke + PNG writer.
 const require = createRequire(import.meta.url);
@@ -419,7 +419,6 @@ const drawHair = (cv: any, cam: Camera, g: GBuf, ss: number) => {
 const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
   const pc = (P: Vec3): P2 => { const q = projectPoint(cam, P); return { x: q.px * ss, y: q.py * ss }; };
   const es = HEAD_C.eyeSpacing;
-  drawHair(cv, cam, g, ss);
   for (const sign of [-1, 1]) {
     const ex = sign * es, ez = surfZc(es, HEAD_C.eyeY);
     const eye3D: Vec3 = [ex, HEAD_C.eyeY + es * 0.04, ez];
@@ -471,15 +470,30 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   // darkened in the cavities. This is what makes it read as a FACE instead of
   // lines floating on white — and it covers the wraith core's hollows. Features
   // draw on top.
+  // Each hit pixel is HAIR or SKIN: reconstruct its world position and test the
+  // bare-head SDF — if the hit sits off the face (positive), it is on the hair
+  // shell. Hair gets a dark shaded fill, skin a flesh fill.
   const Lx = -0.3, Ly = 0.5, Lz = 0.82, Ln = Math.hypot(Lx, Ly, Lz);
-  const skin = [240, 211, 190];
+  const skin = [240, 211, 190], hairCol = [58, 46, 54];
   for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
     const i = y * IMG + x;
     if (!g.hit[i]) continue;
     const lam = Math.max(0, (g.nx[i] * Lx + g.ny[i] * Ly + g.nz[i] * Lz) / Ln);
-    let sh = 0.76 + 0.24 * lam;                 // soft front lighting
-    sh *= 1 - Math.min(0.38, cavity[i] * 9);    // recesses a touch darker
-    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [skin[0] * sh, skin[1] * sh, skin[2] * sh], 1);
+    const u = (2 * (x + 0.5)) / IMG - 1, vv = 1 - (2 * (y + 0.5)) / IMG;
+    const rd = normalize([
+      cam.right[0] * u * cam.tanHalf + cam.up[0] * vv * cam.tanHalf + cam.forward[0],
+      cam.right[1] * u * cam.tanHalf + cam.up[1] * vv * cam.tanHalf + cam.forward[1],
+      cam.right[2] * u * cam.tanHalf + cam.up[2] * vv * cam.tanHalf + cam.forward[2],
+    ]);
+    const wp: Vec3 = [cam.origin[0] + rd[0] * g.depth[i], cam.origin[1] + rd[1] * g.depth[i], cam.origin[2] + rd[2] * g.depth[i]];
+    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR (the hit surface is the hair shell)
+      const sh = 0.55 + 0.5 * lam;
+      cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [hairCol[0] * sh, hairCol[1] * sh, hairCol[2] * sh], 1);
+    } else {                                      // SKIN
+      let sh = 0.76 + 0.24 * lam;
+      sh *= 1 - Math.min(0.38, cavity[i] * 9);
+      cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [skin[0] * sh, skin[1] * sh, skin[2] * sh], 1);
+    }
   }
   // silhouette (heaviest) — one closed outer loop
   ink(mooreTrace(g.hit, IMG, IMG), 5.5, 100, true);
@@ -519,7 +533,7 @@ const renderForm = (sdf: SDF, yaw: number, pitch: number) => {
 const main = () => {
   const outDir = '/home/user/harmony/proof/out';
   mkdirSync(outDir, { recursive: true });
-  const sdf: SDF = (p) => styledHead(p);
+  const sdf: SDF = (p) => Math.min(styledHead(p), hairShellSDF(p));
   const views: [string, number, number][] = [
     ['front', 0, 0.16],
     ['tq', -Math.PI / 4, 0.16],

@@ -72,6 +72,43 @@ const eyeballSDF = (p: Vec3, sign: number): number => {
   return sphere(p, [ex, ey, ez - r * 0.88], r);   // front pole ~ ez + 0.12r
 };
 
+// ---- hair as a 3D "hat" shell: an inflated cap over the scalp, its front
+// carved to a hairline, with clump lumps so the silhouette is broken (a smooth
+// offset reads as a helmet). Rendered through the same G-buffer as the head, so
+// the hair volume foreshortens/occludes correctly. Strand strokes go on top.
+const CAP_R: Vec3 = [RX * 1.16, RY * 1.20, RZ * 1.30];
+const CAP_C: Vec3 = [0, RY * 0.10, -RZ * 0.14];
+const HAIR_CLUMPS: number[][] = (() => {
+  const out: number[][] = [];
+  const N = 22;
+  for (let i = 0; i < N; i++) {
+    const u = (i + 0.5) / N;
+    const theta = Math.acos(1 - 1.55 * u);          // from the crown down
+    const phi = i * 2.399963;                        // golden-angle spread
+    const cx = CAP_C[0] + Math.sin(theta) * Math.cos(phi) * CAP_R[0] * 0.96;
+    const cy = CAP_C[1] + Math.cos(theta) * CAP_R[1] * 0.96;
+    const cz = CAP_C[2] + Math.sin(theta) * Math.sin(phi) * CAP_R[2] * 0.96;
+    if (cz > RZ * 0.28 && cy < 0.14) continue;        // skip the face region
+    out.push([cx, cy, cz, RX * (0.12 + 0.06 * ((i * 0.618) % 1))]);
+  }
+  return out;
+})();
+
+// Hairline as a tilted plane: hair lives BEHIND/ABOVE it, face in front. Normal
+// points forward-and-down; distance set so it passes through the forehead
+// hairline (~y 0.22, front of the skull).
+const NHAT: Vec3 = [0, -0.371, 0.928];
+const DHAIR = 0.36;
+export const hairShellSDF = (p: Vec3): number => {
+  // Clean hair MASS (volume + silhouette). Texture/locks come from flow strokes
+  // in the ink pass, not from all-over 3D bumps (those read as measles).
+  let hair = ellipsoid(p, CAP_C, CAP_R);
+  // carve everything in front of / below the hairline plane
+  const faceHalf = -(p[0] * NHAT[0] + p[1] * NHAT[1] + p[2] * NHAT[2] - DHAIR);
+  hair = smoothSubtract(hair, faceHalf, 0.05);
+  return hair;
+};
+
 // Core skull + the style's 3D form features.
 export const styledHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   let h = skull(p, dial);
