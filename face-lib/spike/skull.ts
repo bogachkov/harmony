@@ -70,16 +70,24 @@ export const skull = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   // brow fullness or fleshy nose-wedge is the core drawing style's features, and
   // it read alien. The fleshy nose + eyebrows belong to the style layer.
 
-  // 4. Nasal aperture — a recess (the piriform opening), not a protrusion.
-  //    A narrow vertical hollow on the midline from just under the glabella down
-  //    to the nasal spine. Conveys the nose PLANE for style without a bump.
-  const apTopY = c.eyeY - c.eyeSpacing * 0.15;
-  const apBotY = c.noseBaseY + c.eyeSpacing * 0.05;
-  const apY = (apTopY + apBotY) / 2;
-  const apR: Vec3 = [rx * 0.11, (apTopY - apBotY) / 2, rz * 0.30];
-  const apCZ = surfZ(0, apY) - apR[2] * 0.58; // front pole = skin + 0.42*depth (bites in)
-  const aperture = ellipsoid(p, [0, apY, apCZ], apR);
-  head = smoothSubtract(head, aperture, 0.04);
+  // 4. Nasal aperture — a recess (the piriform opening), not a protrusion. Pear
+  //    shaped: it starts narrow at the bridge (below the inner eye) and opens
+  //    DOWN toward the nasal spine. Lowered from the first pass (it sat too high,
+  //    reading as a third socket). Two stacked carves give the teardrop.
+  const apTopY = c.eyeY - c.eyeSpacing * 0.34;
+  const apBotY = c.noseBaseY - c.eyeSpacing * 0.02;
+  const apMidY = apTopY * 0.35 + apBotY * 0.65;          // weight the opening low
+  const apUpper = ellipsoid(p, [0, (apTopY + apMidY) / 2, surfZ(0, apTopY) - rz * 0.16],
+    [rx * 0.07, (apTopY - apMidY) / 2, rz * 0.30]);      // narrow bridge slot
+  const apLower = ellipsoid(p, [0, apMidY, surfZ(0, apMidY) - rz * 0.30 * 0.55],
+    [rx * 0.14, (apMidY - apBotY) / 2 * 1.15, rz * 0.30]); // wide low opening
+  head = smoothSubtract(head, min(apUpper, apLower), 0.04);
+
+  // NOTE: gaunt cheek shaping (zygomatic + sunken cheek) deferred. Every quick
+  // attempt — bumps, high hollows, low hollows — fought the form (chipmunk
+  // puffs / dents by the nose / a muzzle bulge). It needs the cheekbone and its
+  // hollow built as a PAIR, which belongs with the dial work (child/old/monster
+  // gauntness). The default wraith reads without it; the profile is a touch full.
 
   // 5. Mouth — a faint groove anchor (style draws the lips). Subtle so it never
   //    reads as a drawn mouth on its own.
