@@ -95,14 +95,10 @@ export const skull = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const mouthCut = ellipsoid(p, [0, c.mouthY, surfZ(0, c.mouthY) + rz * 0.02], [mouthW * 0.5, ry * d.mouthThickness, rz * 0.08]);
   head = smoothSubtract(head, mouthCut, 0.02);
 
-  // 6. Ears — flattened C on the side plane, brow-line to nose-base (Loomis),
-  //    neutral anchor.
-  const earY = (c.browY + c.noseBaseY) / 2;
-  const ear = (sx: number) => ellipsoid(
-    p, [sx, earY, -rz * 0.12],
-    [rx * d.earWidth * 0.5, (c.browY - c.noseBaseY) / 2 * 1.1, rz * 0.26],
-  );
-  head = smin(head, min(ear(-rx * 0.98), ear(rx * 0.98)), 0.05);
+  // NOTE: ears and the fleshy nose live in the STYLE layer now, not the core.
+  // Not every style has ears, and features with volume need 3D geometry that
+  // rides on the core anchors so they foreshorten/occlude across head turns.
+  // The core keeps only the neutral skull (incl. the nasal aperture anchor).
 
   // 7. Neck — Bridgman cylinder the head balances on, set back and leaning
   //    forward from the nape. (Carried; read correctly.)

@@ -20,7 +20,7 @@ import { mkdirSync } from 'node:fs';
 import type { Vec3 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
 import { DEFAULT_HEAD, construct } from './head.ts';
-import { skull } from './skull.ts';
+import { styledHead } from './style3d.ts';
 
 // proof/core.mjs is a self-contained rasterizer + hand-drawn stroke + PNG writer.
 const require = createRequire(import.meta.url);
@@ -431,14 +431,10 @@ const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
     const browY = HEAD_C.eyeY + es * 0.62;             // just above the eye, not at the ridge
     drawBrow(cv, pc([ex - sign * es * 0.5, browY, surfZc(es, browY)]),
       pc([ex + sign * es * 0.5, browY, surfZc(es, browY)]), 320 + sign);
-    drawEar(cv, pc([sign * HEAD_C.craniumRadii[0], HEAD_C.browY, 0]),
-      pc([sign * HEAD_C.craniumRadii[0], HEAD_C.noseBaseY, 0]), sign, 340 + sign);
   }
-  const nz = surfZc(0, HEAD_C.noseBaseY);
-  drawNose(cv, pc([0, HEAD_C.browY, surfZc(0, HEAD_C.browY)]),
-    pc([0, HEAD_C.noseBaseY, nz + HEAD_C.craniumRadii[2] * 0.12]),
-    pc([-es * 0.42, HEAD_C.noseBaseY, nz]), pc([es * 0.42, HEAD_C.noseBaseY, nz]), 360);
-  const mw = es * HEAD_C.eyeSpacing > 0 ? es * 0.85 : es;
+  // nose + ears are now 3D form (style3d.ts), inked by the G-buffer like the
+  // skull — not drawn here. Only surface marks remain in 2D.
+  const mw = es * 0.85;
   drawMouth(cv, pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]),
     pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), 380);
 };
@@ -477,7 +473,7 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   // not draw the eye.
   for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
     const i = y * IMG + x;
-    const a = Math.min(0.2, (cavity[i] - 0.02) * 5);     // very soft skin shading
+    const a = Math.min(0.12, (cavity[i] - 0.03) * 4);    // faint skin shading only
     if (a <= 0.02) continue;
     cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [150, 138, 134], a);
   }
@@ -519,7 +515,7 @@ const renderForm = (sdf: SDF, yaw: number, pitch: number) => {
 const main = () => {
   const outDir = '/home/user/harmony/proof/out';
   mkdirSync(outDir, { recursive: true });
-  const sdf: SDF = (p) => skull(p);
+  const sdf: SDF = (p) => styledHead(p);
   const views: [string, number, number][] = [
     ['front', 0, 0.16],
     ['tq', -Math.PI / 4, 0.16],
