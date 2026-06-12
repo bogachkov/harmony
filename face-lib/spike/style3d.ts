@@ -99,6 +99,13 @@ const HAIR_CLUMPS: number[][] = (() => {
 // hairline (~y 0.22, front of the skull).
 const NHAT: Vec3 = [0, -0.371, 0.928];
 const DHAIR = 0.36;
+
+// Exposed so the ink pass can place flow strokes on the hair surface.
+export const HAIR_CAP_C = CAP_C;
+export const HAIR_CAP_R = CAP_R;
+// Is world point P on the hair side of the hairline (vs the face)?
+export const onHairSide = (p: Vec3): boolean =>
+  p[0] * NHAT[0] + p[1] * NHAT[1] + p[2] * NHAT[2] < DHAIR;
 export const hairShellSDF = (p: Vec3): number => {
   // Clean hair MASS (volume + silhouette). Texture/locks come from flow strokes
   // in the ink pass, not from all-over 3D bumps (those read as measles).

@@ -20,7 +20,7 @@ import { mkdirSync } from 'node:fs';
 import type { Vec3 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
 import { DEFAULT_HEAD, construct } from './head.ts';
-import { styledHead, hairShellSDF } from './style3d.ts';
+import { styledHead, hairShellSDF, HAIR_CAP_C, HAIR_CAP_R, onHairSide } from './style3d.ts';
 
 // proof/core.mjs is a self-contained rasterizer + hand-drawn stroke + PNG writer.
 const require = createRequire(import.meta.url);
@@ -415,10 +415,70 @@ const drawHair = (cv: any, cam: Camera, g: GBuf, ss: number) => {
   }
 };
 
+// HAIR FLOW STROKES: lead lines flowing from the crown whorl down the scalp,
+// plus clumped filler. Each strand is a 3D polyline on the hair-cap surface,
+// projected per view and clipped to the VISIBLE hair (front-facing + hair side),
+// so it tracks the head. Texture comes from these strokes, not 3D bumps.
+const drawHairStrokes = (cv: any, cam: Camera, ss: number) => {
+  const [cx, cy, cz] = HAIR_CAP_C, [rx, ry, rz] = HAIR_CAP_R;
+  const dirOf = (th: number, ph: number): Vec3 =>
+    [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)];
+  const surf = (th: number, ph: number): Vec3 => {
+    const d = dirOf(th, ph);
+    return [cx + d[0] * rx * 1.012, cy + d[1] * ry * 1.012, cz + d[2] * rz * 1.012];
+  };
+  const nrmOf = (th: number, ph: number): Vec3 => {
+    const d = dirOf(th, ph);
+    return normalize([d[0] / rx, d[1] / ry, d[2] / rz]);
+  };
+  const rnd = (s: number) => { const x = Math.sin(s * 127.1) * 43758.5; return x - Math.floor(x); };
+
+  // one strand: theta th0->th1 at longitude ph0, with drift + gentle wave
+  const strand = (ph0: number, th0: number, th1: number, drift: number, waveA: number, waveF: number, width: number, col: number[], seed: number) => {
+    const N = 22;
+    let seg: P2[] = [];
+    const flush = () => { if (seg.length > 1) cv.stroke(seg, { width, color: col, wobble: 0.5, seed, taper: true }); seg = []; };
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const th = th0 + (th1 - th0) * t;
+      const ph = ph0 + drift * t + waveA * Math.sin(waveF * Math.PI * t + seed);
+      const P = surf(th, ph);
+      const toCam = normalize(sub(cam.origin, P));
+      const vis = onHairSide(P) && dot(nrmOf(th, ph), toCam) > 0.12;
+      if (vis) { const q = projectPoint(cam, P); seg.push({ x: q.px * ss, y: q.py * ss }); }
+      else flush();
+    }
+    flush();
+  };
+
+  const dark = [30, 24, 30], mid = [64, 50, 58], light = [120, 98, 106];
+  // LEADS — a sweep of longitudinal flow lines all around the crown
+  const LEADS = 16;
+  for (let i = 0; i < LEADS; i++) {
+    const ph = (i / LEADS) * Math.PI * 2;
+    const drift = (rnd(i + 1) - 0.5) * 0.5;
+    strand(ph, 0.16, 1.45, drift, 0.05, 1.5, 2.4, i % 5 === 0 ? light : mid, 100 + i);
+  }
+  // FILLER — clumps of short strands jittered around each lead longitude
+  const CLUMPS = 18;
+  for (let c = 0; c < CLUMPS; c++) {
+    const phC = (c / CLUMPS) * Math.PI * 2 + (rnd(c + 9) - 0.5) * 0.2;
+    const m = 5 + Math.floor(rnd(c + 3) * 4);
+    for (let k = 0; k < m; k++) {
+      const ph = phC + (rnd(c * 13 + k) - 0.5) * 0.28;
+      const th0 = 0.2 + rnd(c * 7 + k) * 0.25;
+      const th1 = th0 + 0.7 + rnd(c * 5 + k) * 0.5;
+      const col = rnd(c * 3 + k) > 0.8 ? light : (rnd(c * 17 + k) > 0.5 ? mid : dark);
+      strand(ph, th0, th1, (rnd(c + k) - 0.5) * 0.3, 0.04, 1.8, 1.3, col, 500 + c * 20 + k);
+    }
+  }
+};
+
 // Compose a full face from the projected anchors.
 const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
   const pc = (P: Vec3): P2 => { const q = projectPoint(cam, P); return { x: q.px * ss, y: q.py * ss }; };
   const es = HEAD_C.eyeSpacing;
+  drawHairStrokes(cv, cam, ss);
   for (const sign of [-1, 1]) {
     const ex = sign * es, ez = surfZc(es, HEAD_C.eyeY);
     const eye3D: Vec3 = [ex, HEAD_C.eyeY + es * 0.04, ez];
