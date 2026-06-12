@@ -19,7 +19,7 @@ import { mkdirSync } from 'node:fs';
 
 import type { Vec3 } from '../src/math/vec3.ts';
 import { add, sub, dot, normalize, rotateYX } from '../src/math/vec3.ts';
-import { DEFAULT_HEAD } from './head.ts';
+import { DEFAULT_HEAD, construct } from './head.ts';
 import { skull } from './skull.ts';
 
 // proof/core.mjs is a self-contained rasterizer + hand-drawn stroke + PNG writer.
@@ -299,6 +299,49 @@ const blurDepthOverHits = (g: GBuf, R: number): Float32Array => {
   return out;
 };
 
+// ---------------- STYLE LAYER (experiment) ----------------
+// The core gives style-neutral anchors; the style draws the feature INTO them.
+// First mark: the eye, seated in the projected socket anchor and occluded when
+// the head turns away. This is the test of the core/style boundary.
+type Proj = { px: number; py: number; cz: number };
+const projectPoint = (cam: Camera, P: Vec3): Proj => {
+  const v = sub(P, cam.origin);
+  const cz = dot(v, cam.forward);
+  const u = (dot(v, cam.right) / cz) / cam.tanHalf;
+  const w = (dot(v, cam.up) / cz) / cam.tanHalf;
+  return { px: (u + 1) / 2 * IMG - 0.5, py: (1 - w) / 2 * IMG - 0.5, cz };
+};
+
+const HEAD_C = construct(DEFAULT_HEAD);
+const surfZc = (x: number, y: number): number => {
+  const [rx, ry, rz] = HEAD_C.craniumRadii;
+  return rz * Math.sqrt(Math.max(0, 1 - (x / rx) ** 2 - (y / ry) ** 2));
+};
+
+// Draw a stylized eye centred at canvas (cx,cy), width w (canvas px).
+const drawEye = (cv: any, cx: number, cy: number, w: number, seed: number) => {
+  const h = w * 0.5;
+  const N = 44;
+  const lid: { x: number; y: number }[] = [];
+  const lower: { x: number; y: number }[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * Math.PI;                 // corner -> corner
+    const x = cx + (w / 2) * Math.cos(t);
+    lid.push({ x, y: cy - (h / 2) * Math.sin(t) ** 0.8 });
+    lower.push({ x, y: cy + (h / 2 * 0.7) * Math.sin(t) ** 0.9 });
+  }
+  // sclera fill seats the eyeball, then iris / pupil / catchlight on top
+  for (let i = 0; i <= N; i++)
+    for (let yy = lid[i].y; yy <= lower[i].y; yy += 1) cv.stamp(lid[i].x, yy, 1.0, [248, 248, 250], 1);
+  const irisR = h * 0.52, iy = cy + h * 0.04;
+  cv.stamp(cx, iy, irisR, [62, 62, 74], 1);
+  cv.stamp(cx, iy, irisR * 0.5, [12, 12, 16], 1);
+  cv.stamp(cx - irisR * 0.3, iy - irisR * 0.3, irisR * 0.2, [255, 255, 255], 1);
+  // lid lines: upper heavier than lower
+  cv.stroke(lid, { width: 3.4, color: [22, 22, 28], wobble: 0.8, seed, taper: true });
+  cv.stroke(lower, { width: 2.0, color: [30, 30, 38], wobble: 0.8, seed: seed + 1, taper: true });
+};
+
 // ---------------- render one view to a Canvas ----------------
 const SS = 3; // supersample factor for ink
 const renderView = (sdf: SDF, yaw: number, pitch: number) => {
@@ -344,6 +387,21 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   const recessed = new Uint8Array(IMG * IMG);
   for (let i = 0; i < recessed.length; i++) if (cavity[i] > 0.006) recessed[i] = 1;
   traceThin(creaseMask(g, dilate(recessed, 5))).forEach((p, i) => ink(p, 3.2, 200 + i, false));
+
+  // STYLE: draw the eyes into the projected socket anchors. Far eye is dropped
+  // when its outward normal turns away from the camera (occlusion on the turn).
+  const eyeY = HEAD_C.eyeY + HEAD_C.eyeSpacing * 0.04;
+  for (const sign of [-1, 1]) {
+    const ex = sign * HEAD_C.eyeSpacing;
+    const eye3D: Vec3 = [ex, eyeY, surfZc(HEAD_C.eyeSpacing, eyeY)];
+    const nrm = normalize(sub(eye3D, HEAD_C.craniumCenter));
+    const facing = -(nrm[0] * cam.forward[0] + nrm[1] * cam.forward[1] + nrm[2] * cam.forward[2]);
+    if (facing < 0.12) continue;                 // far eye hidden on the turn
+    const ctr = projectPoint(cam, eye3D);
+    const out = projectPoint(cam, [ex + sign * HEAD_C.eyeSpacing * 0.42, eyeY, eye3D[2]]);
+    const w = Math.hypot(out.px - ctr.px, out.py - ctr.py) * 2 * SS;
+    drawEye(cv, ctr.px * SS, ctr.py * SS, w, 300 + sign);
+  }
   return cv.downscale(2);
 };
 
