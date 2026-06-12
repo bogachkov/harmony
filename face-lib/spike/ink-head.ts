@@ -548,7 +548,7 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   // bare-head SDF — if the hit sits off the face (positive), it is on the hair
   // shell. Hair gets a dark shaded fill, skin a flesh fill.
   const Lx = -0.3, Ly = 0.5, Lz = 0.82, Ln = Math.hypot(Lx, Ly, Lz);
-  const skin = [240, 211, 190], hairCol = [58, 46, 54];
+  const skin = [240, 211, 190], hairCol = [70, 55, 63];
   for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
     const i = y * IMG + x;
     if (!g.hit[i]) continue;
@@ -560,8 +560,8 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
       cam.right[2] * u * cam.tanHalf + cam.up[2] * vv * cam.tanHalf + cam.forward[2],
     ]);
     const wp: Vec3 = [cam.origin[0] + rd[0] * g.depth[i], cam.origin[1] + rd[1] * g.depth[i], cam.origin[2] + rd[2] * g.depth[i]];
-    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR — flat dark UNDERCOAT only
-      const sh = 0.82 + 0.12 * lam;               // nearly flat; locks carry the form
+    if (hairShellSDF(wp) < styledHead(wp)) {      // HAIR — light the big WIG form
+      const sh = 0.5 + 0.55 * lam;                // real big-form value: top lit, under/back dark
       cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [hairCol[0] * sh, hairCol[1] * sh, hairCol[2] * sh], 1);
     } else {                                      // SKIN
       let sh = 0.76 + 0.24 * lam;

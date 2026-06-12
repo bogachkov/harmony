@@ -76,8 +76,11 @@ const eyeballSDF = (p: Vec3, sign: number): number => {
 // carved to a hairline, with clump lumps so the silhouette is broken (a smooth
 // offset reads as a helmet). Rendered through the same G-buffer as the head, so
 // the hair volume foreshortens/occludes correctly. Strand strokes go on top.
-const CAP_R: Vec3 = [RX * 1.16, RY * 1.20, RZ * 1.30];
-const CAP_C: Vec3 = [0, RY * 0.10, -RZ * 0.14];
+// The hair is a WIG: its own sculpted big-form mass with crown lift and length
+// that the head sits INSIDE — not a thin offset of the skull. The outer surface
+// is the haircut silhouette; locks (in the ink pass) subdivide this big form.
+const CAP_R: Vec3 = [RX * 1.20, RY * 1.30, RZ * 1.34];
+const CAP_C: Vec3 = [0, RY * 0.18, -RZ * 0.12];
 const HAIR_CLUMPS: number[][] = (() => {
   const out: number[][] = [];
   const N = 22;
