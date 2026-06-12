@@ -106,6 +106,12 @@ export const hairShellSDF = (p: Vec3): number => {
   // carve everything in front of / below the hairline plane
   const faceHalf = -(p[0] * NHAT[0] + p[1] * NHAT[1] + p[2] * NHAT[2] - DHAIR);
   hair = smoothSubtract(hair, faceHalf, 0.05);
+  // keep the ears clear: the big cap otherwise drapes over them and the ear
+  // pokes through as a skin blob. Carve a ball around each ear (and just below),
+  // leaving hair above and behind.
+  const eY = (C.browY + C.noseBaseY) / 2;
+  const earClear = (sx: number) => sphere(p, [sx * RX * 0.95, eY - 0.05, -RZ * 0.02], 0.25);
+  hair = smoothSubtract(hair, min(earClear(-1), earClear(1)), 0.04);
   return hair;
 };
 

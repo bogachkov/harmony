@@ -433,9 +433,14 @@ const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
   }
   // nose + ears are now 3D form (style3d.ts), inked by the G-buffer like the
   // skull — not drawn here. Only surface marks remain in 2D.
-  const mw = es * 0.85;
-  drawMouth(cv, pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]),
-    pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), 380);
+  // Mouth is a front-facing surface mark: skip it when the head is edge-on
+  // (otherwise it mis-projects onto the neck in profile).
+  const faceFront = -cam.forward[2];
+  if (faceFront > 0.3) {
+    const mw = es * 0.85;
+    drawMouth(cv, pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]),
+      pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), 380);
+  }
 };
 
 // ---------------- render one view to a Canvas ----------------
