@@ -64,26 +64,22 @@ export const skull = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   const socket = (sx: number) => ellipsoid(p, [sx, eyeY, socketCZ], socketR);
   head = smoothSubtract(head, min(socket(-eyeX), socket(eyeX)), 0.05);
 
-  // 3b. Brow ridge — only a SUBTLE fullness on the bone bridging forehead and
-  //     orbit rim. Barely proud, wide blend, so it is part of the plane, not a
-  //     visor. Sits just above the orbit's upper edge.
-  const browY = eyeY + socketR[1] * 0.85;
-  const ridge = ellipsoid(
-    p, [0, browY, surfZ(0, browY) + rz * 0.02],
-    [rx * 0.46, c.eyeSpacing * 0.16, rz * 0.08],
-  );
-  head = smin(head, ridge, 0.20);
+  // NOTE: no brow ridge and no nose PROTRUSION. On a skull the brow is just the
+  // bony upper rim of the orbit (made by the carve above), and the nose is not a
+  // bump at all — it is the nasal APERTURE, a hollow, like the eyes. A modeled
+  // brow fullness or fleshy nose-wedge is the core drawing style's features, and
+  // it read alien. The fleshy nose + eyebrows belong to the style layer.
 
-  // 4. Nose — ONE neutral Loomis wedge (dorsum + tip), no ala balls. A
-  //    style-neutral anchor: it just marks the nose plane for the style to fill.
-  const rootY = c.browY, baseY = c.noseBaseY;
-  const dorsum = ellipsoid(
-    p, [0, (rootY + baseY) / 2, surfZ(0, (rootY + baseY) / 2) + rz * 0.05],
-    [rx * d.noseBridgeWidth * 0.9, (rootY - baseY) / 2 * 1.05, rz * 0.12],
-  );
-  const tip = sphere(p, [0, baseY + rx * d.noseTipBulge * 0.3, surfZ(0, baseY) + rz * d.noseProjection], rx * d.noseTipBulge);
-  const nose = smin(dorsum, tip, 0.05);
-  head = smin(head, nose, 0.05);
+  // 4. Nasal aperture — a recess (the piriform opening), not a protrusion.
+  //    A narrow vertical hollow on the midline from just under the glabella down
+  //    to the nasal spine. Conveys the nose PLANE for style without a bump.
+  const apTopY = c.eyeY - c.eyeSpacing * 0.15;
+  const apBotY = c.noseBaseY + c.eyeSpacing * 0.05;
+  const apY = (apTopY + apBotY) / 2;
+  const apR: Vec3 = [rx * 0.11, (apTopY - apBotY) / 2, rz * 0.30];
+  const apCZ = surfZ(0, apY) - apR[2] * 0.58; // front pole = skin + 0.42*depth (bites in)
+  const aperture = ellipsoid(p, [0, apY, apCZ], apR);
+  head = smoothSubtract(head, aperture, 0.04);
 
   // 5. Mouth — a faint groove anchor (style draws the lips). Subtle so it never
   //    reads as a drawn mouth on its own.
