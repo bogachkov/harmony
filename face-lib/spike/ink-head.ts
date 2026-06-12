@@ -45,7 +45,7 @@ const cross = (a: Vec3, b: Vec3): Vec3 => [
 
 type Camera = { origin: Vec3; forward: Vec3; right: Vec3; up: Vec3; tanHalf: number };
 const CAM_RADIUS = 4.4 * Math.max(...DEFAULT_HEAD.craniumRadii);
-const CAM_TARGET: Vec3 = [0, -0.45, 0];
+const CAM_TARGET: Vec3 = [0, -0.18, 0];   // near eye level: frames the face + scalp
 const makeCamera = (yaw: number, pitch: number): Camera => {
   const eyeRot = rotateYX([0, 0, CAM_RADIUS], yaw, pitch);
   const origin = add(CAM_TARGET, eyeRot);
@@ -299,10 +299,10 @@ const blurDepthOverHits = (g: GBuf, R: number): Float32Array => {
   return out;
 };
 
-// ---------------- STYLE LAYER (experiment) ----------------
-// The core gives style-neutral anchors; the style draws the feature INTO them.
-// First mark: the eye, seated in the projected socket anchor and occluded when
-// the head turns away. This is the test of the core/style boundary.
+// ---------------- STYLE LAYER ----------------
+// The core is a style-neutral skull; the style draws a NORMAL face onto it,
+// every feature anchored to the core's projected landmarks (so it holds across
+// the head turn): eyes, brows, nose, mouth, ears, hair.
 type Proj = { px: number; py: number; cz: number };
 const projectPoint = (cam: Camera, P: Vec3): Proj => {
   const v = sub(P, cam.origin);
@@ -318,28 +318,129 @@ const surfZc = (x: number, y: number): number => {
   return rz * Math.sqrt(Math.max(0, 1 - (x / rx) ** 2 - (y / ry) ** 2));
 };
 
-// Draw a stylized eye centred at canvas (cx,cy), width w (canvas px).
-const drawEye = (cv: any, cx: number, cy: number, w: number, seed: number) => {
-  const h = w * 0.5;
-  const N = 44;
-  const lid: { x: number; y: number }[] = [];
-  const lower: { x: number; y: number }[] = [];
-  for (let i = 0; i <= N; i++) {
-    const t = (i / N) * Math.PI;                 // corner -> corner
-    const x = cx + (w / 2) * Math.cos(t);
-    lid.push({ x, y: cy - (h / 2) * Math.sin(t) ** 0.8 });
-    lower.push({ x, y: cy + (h / 2 * 0.7) * Math.sin(t) ** 0.9 });
+type P2 = { x: number; y: number };
+const dist2 = (a: P2, b: P2) => Math.hypot(b.x - a.x, b.y - a.y);
+// Arc polyline from a to b, bulging perpendicular by `bulge` px at the middle.
+const arc = (a: P2, b: P2, bulge: number, n = 20): P2[] => {
+  const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len, out: P2[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, s = Math.sin(Math.PI * t) * bulge;
+    out.push({ x: a.x + dx * t + nx * s, y: a.y + dy * t + ny * s });
   }
-  // sclera fill seats the eyeball, then iris / pupil / catchlight on top
-  for (let i = 0; i <= N; i++)
-    for (let yy = lid[i].y; yy <= lower[i].y; yy += 1) cv.stamp(lid[i].x, yy, 1.0, [248, 248, 250], 1);
-  const irisR = h * 0.52, iy = cy + h * 0.04;
-  cv.stamp(cx, iy, irisR, [62, 62, 74], 1);
-  cv.stamp(cx, iy, irisR * 0.5, [12, 12, 16], 1);
-  cv.stamp(cx - irisR * 0.3, iy - irisR * 0.3, irisR * 0.2, [255, 255, 255], 1);
-  // lid lines: upper heavier than lower
-  cv.stroke(lid, { width: 3.4, color: [22, 22, 28], wobble: 0.8, seed, taper: true });
-  cv.stroke(lower, { width: 2.0, color: [30, 30, 38], wobble: 0.8, seed: seed + 1, taper: true });
+  return out;
+};
+const fillBetween = (cv: any, top: P2[], bot: P2[], col: number[]) => {
+  for (let i = 0; i < top.length; i++)
+    for (let y = top[i].y; y <= bot[i].y; y += 1) cv.stamp(top[i].x, y, 1.0, col, 1);
+};
+
+// A normal eye: almond between two lid arcs, iris tucked under the upper lid,
+// pupil, catchlight, a faint crease above.
+const drawEye = (cv: any, cL: P2, cR: P2, seed: number) => {
+  const w = dist2(cL, cR), h = w * 0.34;
+  const cx = (cL.x + cR.x) / 2, cy = (cL.y + cR.y) / 2;
+  const upper = arc(cL, cR, -h), lower = arc(cL, cR, h * 0.62);
+  fillBetween(cv, upper, lower, [250, 250, 252]);
+  const irisR = h * 0.62, iy = cy + h * 0.02;
+  cv.stamp(cx, iy, irisR, [78, 56, 40], 1);
+  cv.stamp(cx, iy, irisR * 0.46, [14, 10, 12], 1);
+  cv.stamp(cx - irisR * 0.3, iy - irisR * 0.32, irisR * 0.2, [255, 255, 255], 1);
+  cv.stroke(upper, { width: 2.8, color: [30, 26, 30], wobble: 0.5, seed, taper: true });
+  cv.stroke(lower, { width: 1.5, color: [70, 60, 62], wobble: 0.5, seed: seed + 1, taper: true });
+  const crease = arc({ x: cL.x + w * 0.1, y: cL.y - h * 0.2 }, { x: cR.x - w * 0.1, y: cR.y - h * 0.2 }, -h * 0.9);
+  cv.stroke(crease, { width: 1.1, color: [150, 135, 135], wobble: 0.4, seed: seed + 2, taper: true });
+};
+
+const drawBrow = (cv: any, bL: P2, bR: P2, seed: number) => {
+  const a = arc(bL, bR, -dist2(bL, bR) * 0.16);
+  cv.stroke(a, { width: 4.2, color: [70, 50, 42], wobble: 0.7, seed, taper: true });
+};
+
+// Nose: soft underside + alae + two nostril marks + a faint bridge line.
+const drawNose = (cv: any, glab: P2, tip: P2, alaL: P2, alaR: P2, seed: number) => {
+  const w = dist2(alaL, alaR);
+  cv.stroke(arc(alaL, alaR, w * 0.30), { width: 1.6, color: [140, 115, 108], wobble: 0.5, seed, taper: true });
+  cv.stroke(arc(alaL, { x: tip.x - w * 0.12, y: tip.y }, -w * 0.12), { width: 1.3, color: [150, 122, 115], wobble: 0.4, seed: seed + 1, taper: true });
+  cv.stroke(arc({ x: tip.x + w * 0.12, y: tip.y }, alaR, -w * 0.12), { width: 1.3, color: [150, 122, 115], wobble: 0.4, seed: seed + 2, taper: true });
+  cv.stamp((alaL.x + tip.x) / 2 - w * 0.04, tip.y + w * 0.06, w * 0.05, [60, 45, 45], 0.8);
+  cv.stamp((alaR.x + tip.x) / 2 + w * 0.04, tip.y + w * 0.06, w * 0.05, [60, 45, 45], 0.8);
+  cv.stroke([glab, { x: tip.x - w * 0.16, y: tip.y - w * 0.1 }], { width: 1.1, color: [170, 150, 145], wobble: 0.4, seed: seed + 3, taper: true });
+};
+
+// Lips: cupid-bow upper, fuller lower, dark seam between.
+const drawMouth = (cv: any, mL: P2, mR: P2, seed: number) => {
+  const w = dist2(mL, mR), cx = (mL.x + mR.x) / 2, cy = (mL.y + mR.y) / 2;
+  const peakL = { x: cx - w * 0.12, y: cy - w * 0.02 }, peakR = { x: cx + w * 0.12, y: cy - w * 0.02 };
+  cv.stroke(arc(mL, mR, w * 0.03), { width: 2.4, color: [120, 70, 66], wobble: 0.5, seed, taper: true });
+  cv.stroke(arc(mL, peakL, -w * 0.03).concat(arc(peakL, peakR, w * 0.02), arc(peakR, mR, -w * 0.03)),
+    { width: 1.4, color: [150, 95, 92], wobble: 0.4, seed: seed + 1, taper: true });
+  cv.stroke(arc(mL, mR, w * 0.13), { width: 1.6, color: [150, 95, 92], wobble: 0.4, seed: seed + 2, taper: true });
+};
+
+const drawEar = (cv: any, top: P2, bot: P2, sign: number, seed: number) => {
+  const d = dist2(top, bot);
+  cv.stroke(arc(top, bot, sign * d * 0.5), { width: 2.4, color: [60, 45, 45], wobble: 0.6, seed, taper: true });
+  cv.stroke(arc({ x: top.x + sign * d * 0.05, y: top.y + d * 0.18 }, { x: bot.x + sign * d * 0.04, y: bot.y - d * 0.2 }, sign * d * 0.22),
+    { width: 1.4, color: [110, 85, 82], wobble: 0.5, seed: seed + 1, taper: true });
+};
+
+// Hair: a dark cap over the scalp. Robust across views — reconstruct each hit
+// pixel's WORLD position from the depth buffer and mark it hair if it is above
+// the front hairline OR on the back of the skull (so the back of the head is
+// covered too). The hairline is a constant world-Y, so it projects as a natural
+// curve that follows the head from any angle.
+const drawHair = (cv: any, cam: Camera, g: GBuf, ss: number) => {
+  const [rx, , rz] = HEAD_C.craniumRadii;
+  const hairY = HEAD_C.browY + HEAD_C.eyeSpacing * 0.30;   // front hairline height
+  const backZ = -rz * 0.08;                                // behind this = back of skull
+  const lowY = HEAD_C.noseBaseY;                           // do not run onto the neck
+  const peak = rx * 0.18;                                  // slight widow's peak at centre
+  const hair = [38, 33, 42];
+  for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
+    const i = y * IMG + x;
+    if (!g.hit[i]) continue;
+    const u = (2 * (x + 0.5)) / IMG - 1, v = 1 - (2 * (y + 0.5)) / IMG;
+    const rd = normalize([
+      cam.right[0] * u * cam.tanHalf + cam.up[0] * v * cam.tanHalf + cam.forward[0],
+      cam.right[1] * u * cam.tanHalf + cam.up[1] * v * cam.tanHalf + cam.forward[1],
+      cam.right[2] * u * cam.tanHalf + cam.up[2] * v * cam.tanHalf + cam.forward[2],
+    ]);
+    const wx = cam.origin[0] + rd[0] * g.depth[i];
+    const wy = cam.origin[1] + rd[1] * g.depth[i];
+    const wz = cam.origin[2] + rd[2] * g.depth[i];
+    const line = hairY - peak * Math.max(0, 1 - (wx / (rx * 0.6)) ** 2); // dip at centre
+    if (wy > lowY && (wy > line || wz < backZ))
+      cv.stamp((x + 0.5) * ss, (y + 0.5) * ss, ss * 0.72, hair, 1);
+  }
+};
+
+// Compose a full face from the projected anchors.
+const drawFace = (cv: any, cam: Camera, g: GBuf, ss: number) => {
+  const pc = (P: Vec3): P2 => { const q = projectPoint(cam, P); return { x: q.px * ss, y: q.py * ss }; };
+  const es = HEAD_C.eyeSpacing;
+  drawHair(cv, cam, g, ss);
+  for (const sign of [-1, 1]) {
+    const ex = sign * es, ez = surfZc(es, HEAD_C.eyeY);
+    const eye3D: Vec3 = [ex, HEAD_C.eyeY + es * 0.04, ez];
+    const nrm = normalize(sub(eye3D, HEAD_C.craniumCenter));
+    if (-(nrm[0] * cam.forward[0] + nrm[1] * cam.forward[1] + nrm[2] * cam.forward[2]) < 0.12) continue;
+    const inner: Vec3 = [ex - sign * es * 0.42, eye3D[1], ez], outer: Vec3 = [ex + sign * es * 0.42, eye3D[1], ez];
+    const cL = pc(sign < 0 ? outer : inner), cR = pc(sign < 0 ? inner : outer);
+    drawEye(cv, cL, cR, 300 + sign);
+    const browY = HEAD_C.eyeY + es * 0.62;             // just above the eye, not at the ridge
+    drawBrow(cv, pc([ex - sign * es * 0.5, browY, surfZc(es, browY)]),
+      pc([ex + sign * es * 0.5, browY, surfZc(es, browY)]), 320 + sign);
+    drawEar(cv, pc([sign * HEAD_C.craniumRadii[0], HEAD_C.browY, 0]),
+      pc([sign * HEAD_C.craniumRadii[0], HEAD_C.noseBaseY, 0]), sign, 340 + sign);
+  }
+  const nz = surfZc(0, HEAD_C.noseBaseY);
+  drawNose(cv, pc([0, HEAD_C.browY, surfZc(0, HEAD_C.browY)]),
+    pc([0, HEAD_C.noseBaseY, nz + HEAD_C.craniumRadii[2] * 0.12]),
+    pc([-es * 0.42, HEAD_C.noseBaseY, nz]), pc([es * 0.42, HEAD_C.noseBaseY, nz]), 360);
+  const mw = es * HEAD_C.eyeSpacing > 0 ? es * 0.85 : es;
+  drawMouth(cv, pc([-mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]),
+    pc([mw, HEAD_C.mouthY, surfZc(mw, HEAD_C.mouthY)]), 380);
 };
 
 // ---------------- render one view to a Canvas ----------------
@@ -376,9 +477,9 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   // not draw the eye.
   for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
     const i = y * IMG + x;
-    const a = Math.min(0.82, (cavity[i] - 0.008) * 12);
+    const a = Math.min(0.2, (cavity[i] - 0.02) * 5);     // very soft skin shading
     if (a <= 0.02) continue;
-    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [50, 50, 60], a);
+    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [150, 138, 134], a);
   }
   // silhouette (heaviest) — one closed outer loop
   ink(mooreTrace(g.hit, IMG, IMG), 5.5, 100, true);
@@ -388,20 +489,8 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
   for (let i = 0; i < recessed.length; i++) if (cavity[i] > 0.006) recessed[i] = 1;
   traceThin(creaseMask(g, dilate(recessed, 5))).forEach((p, i) => ink(p, 3.2, 200 + i, false));
 
-  // STYLE: draw the eyes into the projected socket anchors. Far eye is dropped
-  // when its outward normal turns away from the camera (occlusion on the turn).
-  const eyeY = HEAD_C.eyeY + HEAD_C.eyeSpacing * 0.04;
-  for (const sign of [-1, 1]) {
-    const ex = sign * HEAD_C.eyeSpacing;
-    const eye3D: Vec3 = [ex, eyeY, surfZc(HEAD_C.eyeSpacing, eyeY)];
-    const nrm = normalize(sub(eye3D, HEAD_C.craniumCenter));
-    const facing = -(nrm[0] * cam.forward[0] + nrm[1] * cam.forward[1] + nrm[2] * cam.forward[2]);
-    if (facing < 0.12) continue;                 // far eye hidden on the turn
-    const ctr = projectPoint(cam, eye3D);
-    const out = projectPoint(cam, [ex + sign * HEAD_C.eyeSpacing * 0.42, eyeY, eye3D[2]]);
-    const w = Math.hypot(out.px - ctr.px, out.py - ctr.py) * 2 * SS;
-    drawEye(cv, ctr.px * SS, ctr.py * SS, w, 300 + sign);
-  }
+  // STYLE: draw a full normal face onto the scaffold.
+  drawFace(cv, cam, g, SS);
   return cv.downscale(2);
 };
 
@@ -432,9 +521,9 @@ const main = () => {
   mkdirSync(outDir, { recursive: true });
   const sdf: SDF = (p) => skull(p);
   const views: [string, number, number][] = [
-    ['front', 0, 0],
-    ['tq', -Math.PI / 4, 0],
-    ['profile', -Math.PI / 2, 0],
+    ['front', 0, 0.16],
+    ['tq', -Math.PI / 4, 0.16],
+    ['profile', -Math.PI / 2, 0.12],
   ];
   const tiles = views.map(([name, yaw, pitch]) => {
     const t0 = Date.now();
