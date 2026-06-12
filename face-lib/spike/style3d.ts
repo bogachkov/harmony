@@ -40,23 +40,23 @@ const noseSDF = (p: Vec3): number => {
   return nose;
 };
 
-// ---- ear: flattened C-shell, tilted back ~15°, helix rim + concha bowl + lobe ----
+// ---- ear: flattened C-shell that PROTRUDES past the head silhouette, tilted
+// back ~17°, helix rim + concha bowl + lobe. Centred just outside the cranium
+// edge so its outer half pokes out (visible head-on) and inner half blends in.
 const earSDF = (p: Vec3, sign: number): number => {
   const earY = (C.browY + C.noseBaseY) / 2;
-  const earX = sign * RX * 0.9;
-  const earZ = -RZ * 0.04;
-  const half = (C.browY - C.noseBaseY) / 2;
-  // tilt the local frame back ~15° (top leans toward the occiput)
-  const lp = rotate([p[0] - earX, p[1] - earY, p[2] - earZ], [0, 0, 1], sign * 0.26);
-  const q: Vec3 = [lp[0] + earX, lp[1] + earY, lp[2] + earZ];
-  // ear plate: thin in X, oval in Y, deep in Z (the flattened C)
-  const plate = ellipsoid(q, [earX, earY, earZ], [RX * 0.05, half * 1.0, RZ * 0.19]);
-  // concha bowl carved from the outer face -> leaves the helix rim
-  const concha = ellipsoid(q, [earX + sign * RX * 0.03, earY + half * 0.05, earZ + RZ * 0.04],
-    [RX * 0.07, half * 0.52, RZ * 0.12]);
-  let ear = smoothSubtract(plate, concha, 0.02);
+  const earX = sign * RX * 1.0;           // centre at the cranium edge so it protrudes
+  const earZ = -RZ * 0.05;                // near the widest part so it bulges the FRONT outline
+  const half = (C.browY - C.noseBaseY) / 2 * 1.1;
+  // plate: protrudes outward in X, tall in Y, spans front-back in Z (the C)
+  const plate = ellipsoid(p, [earX, earY, earZ], [RX * 0.19, half, RZ * 0.22]);
+  // concha bowl carved from the outer face -> leaves the helix rim (a modest
+  // bite so it does not eat the whole plate)
+  const concha = ellipsoid(p, [earX + sign * RX * 0.10, earY + half * 0.05, earZ + RZ * 0.02],
+    [RX * 0.09, half * 0.5, RZ * 0.13]);
+  let ear = smoothSubtract(plate, concha, 0.03);
   // lobe at the bottom (the comma)
-  const lobe = sphere(q, [earX, earY - half * 0.95, earZ], RX * 0.045);
+  const lobe = sphere(p, [earX, earY - half * 0.88, earZ], RX * 0.06);
   return smin(ear, lobe, 0.03);
 };
 
@@ -64,6 +64,6 @@ const earSDF = (p: Vec3, sign: number): number => {
 export const styledHead = (p: Vec3, dial: Partial<HeadDial> = {}): number => {
   let h = skull(p, dial);
   h = smin(h, noseSDF(p), 0.04);
-  h = smin(h, min(earSDF(p, -1), earSDF(p, 1)), 0.05);
+  h = smin(h, min(earSDF(p, -1), earSDF(p, 1)), 0.02);
   return h;
 };

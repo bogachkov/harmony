@@ -467,15 +467,19 @@ const renderView = (sdf: SDF, yaw: number, pitch: number) => {
     const c = (g.depth[i] - blur[i]) * Math.min(1, (facing - 0.35) / 0.4);
     if (c > 0) cavity[i] = c;
   }
-  // Tone first (under the strokes): darken recesses so hollows read as hollows.
-  // Fills the whole socket (deepest = darkest), so the eye region reads as a
-  // shadowed orbit, not an outlined bulge. The core shades the SOCKET; it does
-  // not draw the eye.
+  // SKIN: fill the whole head with a flesh ground, shaded by lambert (form) and
+  // darkened in the cavities. This is what makes it read as a FACE instead of
+  // lines floating on white — and it covers the wraith core's hollows. Features
+  // draw on top.
+  const Lx = -0.3, Ly = 0.5, Lz = 0.82, Ln = Math.hypot(Lx, Ly, Lz);
+  const skin = [240, 211, 190];
   for (let y = 0; y < IMG; y++) for (let x = 0; x < IMG; x++) {
     const i = y * IMG + x;
-    const a = Math.min(0.12, (cavity[i] - 0.03) * 4);    // faint skin shading only
-    if (a <= 0.02) continue;
-    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.7, [150, 138, 134], a);
+    if (!g.hit[i]) continue;
+    const lam = Math.max(0, (g.nx[i] * Lx + g.ny[i] * Ly + g.nz[i] * Lz) / Ln);
+    let sh = 0.76 + 0.24 * lam;                 // soft front lighting
+    sh *= 1 - Math.min(0.38, cavity[i] * 9);    // recesses a touch darker
+    cv.stamp((x + 0.5) * SS, (y + 0.5) * SS, SS * 0.72, [skin[0] * sh, skin[1] * sh, skin[2] * sh], 1);
   }
   // silhouette (heaviest) — one closed outer loop
   ink(mooreTrace(g.hit, IMG, IMG), 5.5, 100, true);
